@@ -40,7 +40,7 @@ func SpeedtestParser(textLines []string) []SpeedtestResults {
 				} else if strings.Contains(line, endCase) {
 					break
 				}
-				data := strings.Fields(line)
+				data := strings.Fields(strings.ReplaceAll(line, "失败", "失败 Mbps"))
 				spdIdx := 0
 				spot := ""
 				for j, d := range data {

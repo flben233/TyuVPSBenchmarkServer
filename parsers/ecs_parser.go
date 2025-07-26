@@ -32,14 +32,14 @@ type ECSResult struct {
 	Mem       MemResult
 	Disk      DiskResult
 	Tiktok    string
-	IpQuality string
+	IPQuality string
 	Mail      map[string][]bool // bool数组定义：SMTP SMTPS POP3 POP3S IMAP MAPS
 	Trace     TraceResult
 	Time      string
 }
 
 func ECSParser(textLines []string) ECSResult {
-	blocks := []string{"基础信息查询", "CPU测试", "内存测试", "磁盘dd读写测试", "TikTok解锁", "IP质量检测", "邮件端口检测", "三网回程", "回程路由", "----------------"}
+	blocks := []string{"基础信息查询", "CPU测试", "内存测试", "磁盘dd读写测试", "TikTok解锁", "IP质量检测", "邮件端口检测", "三网回程", "回程路由--", "----------------"}
 	blkIdx := -1
 	result := ECSResult{}
 	tmpTypes := make(map[string]string)
@@ -63,7 +63,7 @@ func ECSParser(textLines []string) ECSResult {
 			case 4:
 				result.Tiktok = tiktokParser(textLines[i:j])
 			case 5:
-				result.IpQuality = strings.Join(textLines[i:j], "\n")
+				result.IPQuality = strings.Join(textLines[i:j], "\n")
 			case 6:
 				result.Mail = mailParser(textLines[i:j])
 			case 7:
@@ -89,7 +89,8 @@ func infoParser(textLines []string) map[string]string {
 	info := make(map[string]string)
 	for _, line := range textLines {
 		parts := strings.Split(line, ":")
-		info[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		val := strings.Join(parts[1:], "")
+		info[strings.TrimSpace(parts[0])] = strings.TrimSpace(val)
 	}
 	return info
 }
@@ -163,7 +164,11 @@ func typeParser(textLines []string) map[string]string {
 	types := make(map[string]string)
 	for _, line := range textLines {
 		parts := strings.Fields(line)
-		types[parts[0]] = parts[2] + " " + parts[3]
+		if len(parts) == 3 {
+			types[parts[0]] = parts[2] // Handle cases with fewer parts
+		} else if len(parts) >= 4 {
+			types[parts[0]] = parts[2] + " " + parts[3]
+		}
 	}
 	return types
 }

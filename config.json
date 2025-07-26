@@ -1,0 +1,5 @@
+{
+  "outputDir": ".\\statics\\reports",
+  "inputDir": ".\\statics\\test_results",
+  "staticsDir": ".\\statics"
+}
