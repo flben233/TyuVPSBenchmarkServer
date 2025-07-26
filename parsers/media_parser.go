@@ -36,7 +36,7 @@ func MediaParser(textLines []string) MediaResults {
 			if idx+1 < len(starts) && strings.Contains(textLines[i], starts[idx+1]) ||
 				strings.Contains(textLines[i], "当前主机不支持") {
 				break
-			} else if strings.Contains(textLines[i], "============[") {
+			} else if strings.Contains(textLines[i], "==[") {
 				l, r := processMBlk(textLines[i:], result)
 				result = r
 				i += l
