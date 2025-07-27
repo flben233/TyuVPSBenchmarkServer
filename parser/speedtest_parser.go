@@ -1,33 +1,21 @@
-package parsers
+package parser
 
 import (
+	"VPSBenchmarkBackend/model"
 	"strconv"
 	"strings"
 )
 
-type SpeedtestResult struct {
-	Spot     string
-	Download float32
-	Upload   float32
-	Latency  float32
-	Jitter   float32
-}
-
-type SpeedtestResults struct {
-	Results []SpeedtestResult
-	Time    string
-}
-
-func SpeedtestParser(textLines []string) []SpeedtestResults {
+func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 	startCases := []string{
 		"大陆三网+教育网 IPv4 多线程测速，v",
 		"大陆三网+教育网 IPv4 单线程测速，v",
 		"各大洲 IPv4 八线程测速，v"}
 	endCase := "系统时间："
-	finalResults := make([]SpeedtestResults, 0)
+	finalResults := make([]model.SpeedtestResults, 0)
 	for _, startCase := range startCases {
 		inBlock, i := false, 0
-		results := make([]SpeedtestResult, 0)
+		results := make([]model.SpeedtestResult, 0)
 		time := ""
 		head := 0
 		for _, line := range textLines[head:] {
@@ -62,14 +50,14 @@ func SpeedtestParser(textLines []string) []SpeedtestResults {
 					lat, _ = strconv.ParseFloat(data[spdIdx+4], 32)
 					jit, _ = strconv.ParseFloat(data[spdIdx+6], 32)
 				}
-				results = append(results, SpeedtestResult{spot, float32(down), float32(up), float32(lat), float32(jit)})
+				results = append(results, model.SpeedtestResult{spot, float32(down), float32(up), float32(lat), float32(jit)})
 			} else {
 				head++
 			}
 		}
 		head += i + 2
 		time = strings.Replace(textLines[head-1], "北京时间：", "", 1)
-		finalResults = append(finalResults, SpeedtestResults{results, time})
+		finalResults = append(finalResults, model.SpeedtestResults{results, time})
 	}
 	return finalResults
 }

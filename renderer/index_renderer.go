@@ -2,7 +2,9 @@ package renderer
 
 import (
 	"VPSBenchmarkBackend/config"
-	"VPSBenchmarkBackend/parsers"
+	"VPSBenchmarkBackend/model"
+	"VPSBenchmarkBackend/parser"
+	"VPSBenchmarkBackend/repo"
 	"VPSBenchmarkBackend/utils"
 	"html/template"
 	"log"
@@ -13,13 +15,7 @@ import (
 	"time"
 )
 
-type ReportInfo struct {
-	Name string
-	Path string
-	Date string
-}
-
-func RenderIndex(reportsCache map[string]ReportInfo) {
+func RenderIndex(reportsCache map[string]model.ReportInfo) {
 	tmpl, err := template.ParseFiles("templates/index.gohtml")
 	if err != nil {
 		log.Println(err)
@@ -27,7 +23,7 @@ func RenderIndex(reportsCache map[string]ReportInfo) {
 	}
 	outputDir := config.Get().OutputDir
 	file, _ := os.OpenFile(filepath.Join(outputDir, "index.html"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	reports := make([]ReportInfo, 0, len(reportsCache))
+	reports := make([]model.ReportInfo, 0, len(reportsCache))
 	for _, v := range reportsCache {
 		reports = append(reports, v)
 	}
@@ -46,7 +42,7 @@ func RenderIndex(reportsCache map[string]ReportInfo) {
 
 func RegularlyRenderIndex(interval int) chan bool {
 	path := config.Get().InputDir
-	resultsCache := make(map[string]ReportInfo)
+	resultsCache := make(map[string]model.ReportInfo)
 	return utils.SetInterval(func() {
 		files, err := os.ReadDir(path)
 		modified := false
@@ -64,6 +60,11 @@ func RegularlyRenderIndex(interval int) chan bool {
 				}
 			}
 			if deleted {
+				err := repo.CascadeDeleteReport(resultsCache[fileName].Name)
+				if err != nil {
+					log.Printf("Error deleting report in database %s: %+v", fileName, err)
+					return
+				}
 				delete(resultsCache, fileName)
 				modified = true
 			}
@@ -79,11 +80,17 @@ func RegularlyRenderIndex(interval int) chan bool {
 				log.Printf("Error reading file %s: %+v", inputFile, err)
 				continue
 			}
-			results := parsers.MainParser(string(textLines))
-			resultsCache[file.Name()] = ReportInfo{
-				Name: file.Name(),
+			results := parser.MainParser(string(textLines))
+			info := model.ReportInfo{
+				Name: results.Title,
 				Path: "/reports/" + file.Name(),
 				Date: results.Time}
+			resultsCache[file.Name()] = info
+			err = repo.CascadeInsertReport(info, results.SpdTest[0].Results, results.ECS.Trace)
+			if err != nil {
+				log.Printf("Error inserting report into database %s: %+v", file.Name(), err)
+				return
+			}
 			modified = true
 		}
 		if modified {

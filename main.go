@@ -2,10 +2,11 @@ package main
 
 import (
 	"VPSBenchmarkBackend/config"
+	"VPSBenchmarkBackend/handler"
 	"VPSBenchmarkBackend/renderer"
+	"VPSBenchmarkBackend/repo"
 	"fmt"
 	"net/http"
-	"path/filepath"
 )
 
 func main() {
@@ -15,14 +16,20 @@ func main() {
 		return
 	}
 
+	// Initialize the database
+	repo.InitDatabase()
+
 	// Start the scheduler
 	renderer.RegularlyRenderIndex(60000)
 	renderer.RegularlyRenderReports(60000)
 
 	// Set up HTTP server
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(config.Get().StaticsDir, "index.html"))
-	})
+	http.HandleFunc("/", handler.IndexHandler)
+
+	http.HandleFunc("/search", handler.SearchHandler)
+
+	http.HandleFunc("/api/search", handler.SearchAPIHandler)
+
 	http.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir(config.Get().OutputDir))))
 
 	port := ":8080"
