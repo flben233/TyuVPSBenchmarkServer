@@ -1,47 +1,16 @@
-package parsers
+package parser
 
 import (
+	"VPSBenchmarkBackend/model"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-type CPUResult struct {
-	Single int32
-	Multi  int32
-}
-
-type MemResult struct {
-	Read  float32
-	Write float32
-}
-
-type DiskResult struct {
-	SeqRead  string
-	SeqWrite string
-}
-
-type TraceResult struct {
-	Types     map[string]string
-	BackRoute string
-}
-
-type ECSResult struct {
-	Info      map[string]string
-	Cpu       CPUResult
-	Mem       MemResult
-	Disk      DiskResult
-	Tiktok    string
-	IPQuality string
-	Mail      map[string][]bool // bool数组定义：SMTP SMTPS POP3 POP3S IMAP MAPS
-	Trace     TraceResult
-	Time      string
-}
-
-func ECSParser(textLines []string) ECSResult {
+func ECSParser(textLines []string) model.ECSResult {
 	blocks := []string{"基础信息查询", "CPU测试", "内存测试", "磁盘dd读写测试", "TikTok解锁", "IP质量检测", "邮件端口检测", "三网回程", "回程路由--", "----------------"}
 	blkIdx := -1
-	result := ECSResult{}
+	result := model.ECSResult{}
 	tmpTypes := make(map[string]string)
 	for i, j := 0, 0; blkIdx < len(blocks); j++ {
 		if !strings.Contains(textLines[j], blocks[0]) && blkIdx == -1 {
@@ -69,7 +38,7 @@ func ECSParser(textLines []string) ECSResult {
 			case 7:
 				tmpTypes = typeParser(textLines[i:j])
 			case 8:
-				result.Trace = TraceResult{
+				result.Trace = model.TraceResult{
 					Types:     tmpTypes,
 					BackRoute: strings.Join(textLines[i:j], "\n"),
 				}
@@ -95,8 +64,8 @@ func infoParser(textLines []string) map[string]string {
 	return info
 }
 
-func cpuParser(textLines []string) CPUResult {
-	result := CPUResult{}
+func cpuParser(textLines []string) model.CPUResult {
+	result := model.CPUResult{}
 	for _, line := range textLines {
 		if strings.Contains(line, "(单核)得分") {
 			parts := strings.Fields(line)
@@ -111,8 +80,8 @@ func cpuParser(textLines []string) CPUResult {
 	return result
 }
 
-func memParser(textLines []string) MemResult {
-	result := MemResult{}
+func memParser(textLines []string) model.MemResult {
+	result := model.MemResult{}
 	for _, line := range textLines {
 		if strings.Contains(line, "单线程读测试") {
 			parts := strings.Fields(line)
@@ -127,8 +96,8 @@ func memParser(textLines []string) MemResult {
 	return result
 }
 
-func diskParser(textLines []string) DiskResult {
-	result := DiskResult{}
+func diskParser(textLines []string) model.DiskResult {
+	result := model.DiskResult{}
 	re, _ := regexp.Compile("\\t+")
 	for _, line := range textLines {
 		if strings.Contains(line, "1GB-1M Block") {

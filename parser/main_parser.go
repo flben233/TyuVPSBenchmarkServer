@@ -1,23 +1,13 @@
-package parsers
+package parser
 
 import (
+	"VPSBenchmarkBackend/model"
 	"VPSBenchmarkBackend/utils"
 	"github.com/PuerkitoBio/goquery"
 	"strings"
 )
 
-type BenchmarkResult struct {
-	SpdTest   []SpeedtestResults
-	ECS       ECSResult
-	Media     MediaResults
-	BestTrace []BestTraceResult
-	Itdog     ItdogResult
-	Title     string
-	Time      string
-	Link      string
-}
-
-func MainParser(html string) BenchmarkResult {
+func MainParser(html string) model.BenchmarkResult {
 	doc, _ := goquery.NewDocumentFromReader(strings.NewReader(html))
 	textLines := strings.Split(doc.Text(), "\n")
 	title, time, link := "", "", ""
@@ -33,5 +23,5 @@ func MainParser(html string) BenchmarkResult {
 			link = content
 		}
 	}
-	return BenchmarkResult{SpeedtestParser(textLines), ECSParser(textLines), MediaParser(textLines), BestTraceParser(textLines), ItdogParser(doc), title, time, link}
+	return model.BenchmarkResult{SpeedtestParser(textLines), ECSParser(textLines), MediaParser(textLines), BestTraceParser(textLines), ItdogParser(doc), title, time, link}
 }
