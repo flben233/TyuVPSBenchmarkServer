@@ -32,7 +32,7 @@ jobs:
       run: go mod tidy
     
     - name: Build
-      run: go build -o VPSBenchmarkBackend -v ./...
+      run: go build -o VPSBenchmarkBackend main.go
   
     - name: Login to Docker Hub
       uses: docker/login-action@v3
