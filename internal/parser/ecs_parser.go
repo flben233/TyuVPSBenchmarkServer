@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"VPSBenchmarkBackend/model"
+	"VPSBenchmarkBackend/internal/model"
 	"regexp"
 	"strconv"
 	"strings"

@@ -6,8 +6,10 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
+var dataSource = "data/index.db"
+
 func InitDatabase() {
-	db, err := sql.Open("sqlite3", "index.db")
+	db, err := sql.Open("sqlite3", dataSource)
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +50,7 @@ func InitDatabase() {
 }
 
 func GetDatabase() *sql.DB {
-	db, err := sql.Open("sqlite3", "index.db")
+	db, err := sql.Open("sqlite3", dataSource)
 	if err != nil {
 		panic(err)
 	}

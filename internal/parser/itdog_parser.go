@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"VPSBenchmarkBackend/model"
-	"VPSBenchmarkBackend/utils"
+	"VPSBenchmarkBackend/internal/model"
+	"VPSBenchmarkBackend/internal/utils"
 	"github.com/PuerkitoBio/goquery"
 	"html/template"
 )

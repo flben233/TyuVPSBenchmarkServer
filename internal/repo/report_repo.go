@@ -1,7 +1,7 @@
 package repo
 
 import (
-	"VPSBenchmarkBackend/model"
+	"VPSBenchmarkBackend/internal/model"
 	"database/sql"
 	"fmt"
 )
