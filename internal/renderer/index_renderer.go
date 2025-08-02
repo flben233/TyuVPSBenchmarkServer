@@ -51,6 +51,7 @@ func RegularlyRenderIndex(interval int) chan bool {
 			log.Printf("Error reading directory: %+v", err)
 			return
 		}
+
 		// Check deleted files
 		for fileName := range resultsCache {
 			deleted := true
@@ -94,7 +95,7 @@ func RegularlyRenderIndex(interval int) chan bool {
 			}
 			modified = true
 		}
-		if modified {
+		if modified || !utils.FileExists(filepath.Join(config.Get().StaticsDir, "index.html")) {
 			log.Println("Rendering index page with updated reports")
 			RenderIndex(resultsCache)
 		}

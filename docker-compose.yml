@@ -8,6 +8,10 @@ services:
       - ./data:/app/data
       - ./statics/test_results:/app/statics/test_results
       - ./statics/reports:/app/statics/reports
+      - type: bind
+      - source: ./config.json
+      - target: /app/config.json
+
   watchtower:
     image: "containrrr/watchtower:latest-dev"
     volumes:
