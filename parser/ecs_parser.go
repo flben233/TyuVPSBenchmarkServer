@@ -12,7 +12,7 @@ func ECSParser(textLines []string) model.ECSResult {
 	blkIdx := -1
 	result := model.ECSResult{}
 	tmpTypes := make(map[string]string)
-	for i, j := 0, 0; blkIdx < len(blocks); j++ {
+	for i, j := 0, 0; blkIdx < len(blocks) && j < len(textLines); j++ {
 		if !strings.Contains(textLines[j], blocks[0]) && blkIdx == -1 {
 			continue
 		} else if blkIdx == -1 {

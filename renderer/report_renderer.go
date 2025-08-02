@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func RenderReports(filename string, results model.BenchmarkResult) {
+func RenderReports(filename string, result model.BenchmarkResult) {
 	outputFilePath := config.Get().OutputDir + string(filepath.Separator) + filename
 	tmpl, err := template.New("report.gohtml").Funcs(
 		map[string]any{"contains": strings.Contains}).ParseFiles(
@@ -24,7 +24,11 @@ func RenderReports(filename string, results model.BenchmarkResult) {
 	}
 	if _, err := os.Stat(outputFilePath); os.IsNotExist(err) {
 		file, _ := os.OpenFile(outputFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		err = tmpl.Execute(file, results)
+		defer file.Close()
+		if result.Title == "" {
+			result.Title = strings.Split(filename, ".")[0]
+		}
+		err = tmpl.Execute(file, result)
 		if err != nil {
 			log.Println(err)
 		}

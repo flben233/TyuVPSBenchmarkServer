@@ -21,15 +21,16 @@ func RenderIndex(reportsCache map[string]model.ReportInfo) {
 		log.Println(err)
 		return
 	}
-	outputDir := config.Get().OutputDir
+	outputDir := config.Get().StaticsDir
 	file, _ := os.OpenFile(filepath.Join(outputDir, "index.html"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	defer file.Close()
 	reports := make([]model.ReportInfo, 0, len(reportsCache))
 	for _, v := range reportsCache {
 		reports = append(reports, v)
 	}
 	sort.Slice(reports, func(i, j int) bool {
-		time1, _ := time.Parse(reports[i].Date, "2006-01-02 15:04:05")
-		time2, _ := time.Parse(reports[j].Date, "2006-01-02 15:04:05")
+		time1, _ := time.Parse("2006-01-02 15:04:05", reports[i].Date)
+		time2, _ := time.Parse("2006-01-02 15:04:05", reports[j].Date)
 		return time1.After(time2)
 	})
 	err = tmpl.Execute(file, reports)

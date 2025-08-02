@@ -9,6 +9,7 @@ type Config struct {
 	OutputDir  string `json:"outputDir"`
 	InputDir   string `json:"inputDir"`
 	StaticsDir string `json:"staticsDir"`
+	Port       int    `json:"port"`
 }
 
 var cfg *Config
