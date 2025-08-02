@@ -8,3 +8,17 @@ services:
       - ./data:/app/data
       - ./statics/test_results:/app/statics/test_results
       - ./statics/reports:/app/statics/reports
+  watchtower:
+    image: "containrrr/watchtower:latest-dev"
+    volumes:
+      - "/root/.docker/config.json:/config.json"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: --interval 60
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_NOTIFICATION_URL: "generic+http://"
+      WATCHTOWER_NOTIFICATION_LOG_STDOUT: "true"
+      WATCHTOWER_NOTIFICATION_REPORT: "true"
+      WATCHTOWER_NOTIFICATIONS: "shoutrrr"
