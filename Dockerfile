@@ -3,7 +3,8 @@ LABEL authors="ShirakawaTyu"
 
 WORKDIR /app
 COPY VPSBenchmarkBackend .
-COPY ./config.json .
+COPY config.json .
+COPY templates .
 RUN chmod +x VPSBenchmarkBackend
 RUN mkdir /statics
 COPY statics/search.html /statics/

@@ -22,7 +22,7 @@ func RenderReports(filename string, result model.BenchmarkResult) {
 		fmt.Println("Error parsing template:", err)
 		return
 	}
-	if _, err := os.Stat(outputFilePath); os.IsNotExist(err) {
+	if !utils.FileExists(outputFilePath) {
 		file, _ := os.OpenFile(outputFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		defer file.Close()
 		if result.Title == "" {
