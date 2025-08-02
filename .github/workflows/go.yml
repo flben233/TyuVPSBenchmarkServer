@@ -49,5 +49,5 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/vps-benchmark:latest
+        tags: aliothmoon/vps-benchmark:latest
             
