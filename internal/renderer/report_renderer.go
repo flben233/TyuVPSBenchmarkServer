@@ -1,10 +1,10 @@
 package renderer
 
 import (
-	"VPSBenchmarkBackend/config"
-	"VPSBenchmarkBackend/model"
-	"VPSBenchmarkBackend/parser"
-	"VPSBenchmarkBackend/utils"
+	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/model"
+	"VPSBenchmarkBackend/internal/parser"
+	"VPSBenchmarkBackend/internal/utils"
 	"fmt"
 	"html/template"
 	"log"

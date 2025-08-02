@@ -1,11 +1,12 @@
 package main
 
 import (
-	"VPSBenchmarkBackend/config"
-	"VPSBenchmarkBackend/handler"
-	"VPSBenchmarkBackend/renderer"
-	"VPSBenchmarkBackend/repo"
+	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/handler"
+	"VPSBenchmarkBackend/internal/renderer"
+	"VPSBenchmarkBackend/internal/repo"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -33,8 +34,8 @@ func main() {
 	http.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir(config.Get().OutputDir))))
 
 	port := ":" + fmt.Sprintf("%d", config.Get().Port)
-	fmt.Printf("Starting server on port %s\n", port)
+	log.Printf("Starting server on port %s\n", port)
 	if err := http.ListenAndServe(port, nil); err != nil {
-		fmt.Printf("Server failed to start: %v\n", err)
+		log.Printf("Server failed to start: %v\n", err)
 	}
 }

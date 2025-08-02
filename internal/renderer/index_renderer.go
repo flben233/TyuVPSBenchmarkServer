@@ -1,11 +1,11 @@
 package renderer
 
 import (
-	"VPSBenchmarkBackend/config"
-	"VPSBenchmarkBackend/model"
-	"VPSBenchmarkBackend/parser"
-	"VPSBenchmarkBackend/repo"
-	"VPSBenchmarkBackend/utils"
+	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/model"
+	"VPSBenchmarkBackend/internal/parser"
+	"VPSBenchmarkBackend/internal/repo"
+	"VPSBenchmarkBackend/internal/utils"
 	"html/template"
 	"log"
 	"os"

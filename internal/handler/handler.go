@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"VPSBenchmarkBackend/config"
-	"VPSBenchmarkBackend/model"
-	"VPSBenchmarkBackend/repo"
+	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/model"
+	"VPSBenchmarkBackend/internal/repo"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
