@@ -8,4 +8,4 @@ COPY templates .
 RUN chmod +x VPSBenchmarkBackend
 RUN mkdir /statics
 COPY statics/search.html /statics/
-CMD /VPSBenchmarkBackend
+CMD ["./VPSBenchmarkBackend"]
