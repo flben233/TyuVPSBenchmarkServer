@@ -40,23 +40,32 @@ func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 						break
 					}
 				}
-				down, _ := strconv.ParseFloat(data[spdIdx], 32)
-				up, _ := strconv.ParseFloat(data[spdIdx+2], 32)
-				lat, jit := 0.0, 0.0
-				if len(data) < spdIdx+7 {
-					lat, _ = strconv.ParseFloat(data[spdIdx+4], 32)
-					jit, _ = strconv.ParseFloat(data[spdIdx+5], 32)
-				} else {
-					lat, _ = strconv.ParseFloat(data[spdIdx+4], 32)
-					jit, _ = strconv.ParseFloat(data[spdIdx+6], 32)
+				if len(data) < spdIdx+3 {
+					continue
 				}
-				results = append(results, model.SpeedtestResult{spot, float32(down), float32(up), float32(lat), float32(jit)})
+				down, err := strconv.ParseFloat(data[spdIdx], 32)
+				up, err := strconv.ParseFloat(data[spdIdx+2], 32)
+				lat, jit := 0.0, 0.0
+				if len(data) == spdIdx+6 {
+					lat, err = strconv.ParseFloat(data[spdIdx+4], 32)
+					jit, err = strconv.ParseFloat(data[spdIdx+5], 32)
+				} else if len(data) >= spdIdx+7 {
+					lat, err = strconv.ParseFloat(data[spdIdx+4], 32)
+					jit, err = strconv.ParseFloat(data[spdIdx+6], 32)
+				}
+				if err == nil {
+					results = append(results, model.SpeedtestResult{spot, float32(down), float32(up), float32(lat), float32(jit)})
+				}
 			} else {
 				head++
 			}
 		}
 		head += i + 2
-		time = strings.Replace(textLines[head-1], "北京时间：", "", 1)
+		if head >= len(textLines) {
+			time = ""
+		} else {
+			time = strings.Replace(textLines[head-1], "北京时间：", "", 1)
+		}
 		finalResults = append(finalResults, model.SpeedtestResults{results, time})
 	}
 	return finalResults

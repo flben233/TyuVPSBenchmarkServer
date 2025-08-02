@@ -32,7 +32,7 @@ func main() {
 
 	http.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir(config.Get().OutputDir))))
 
-	port := ":8080"
+	port := ":" + fmt.Sprintf("%d", config.Get().Port)
 	fmt.Printf("Starting server on port %s\n", port)
 	if err := http.ListenAndServe(port, nil); err != nil {
 		fmt.Printf("Server failed to start: %v\n", err)
