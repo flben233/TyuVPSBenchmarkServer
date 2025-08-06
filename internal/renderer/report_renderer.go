@@ -37,13 +37,12 @@ func RenderReports(filename string, result model.BenchmarkResult) {
 
 func RegularlyRenderReports(interval int) chan bool {
 	path := config.Get().InputDir
-	files, err := os.ReadDir(path)
-	if err != nil {
-		fmt.Printf("Error reading directory: %+v", err)
-		return nil
-	}
 	fileSet := make(map[string]struct{})
 	return utils.SetInterval(func() {
+		files, err := os.ReadDir(path)
+		if err != nil {
+			fmt.Printf("Error reading directory: %+v", err)
+		}
 		for _, file := range files {
 			inputFile := path + string(filepath.Separator) + file.Name()
 			if _, exists := fileSet[inputFile]; exists || file.IsDir() {
