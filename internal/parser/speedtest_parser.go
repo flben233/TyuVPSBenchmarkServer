@@ -47,11 +47,11 @@ func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 				up, err := strconv.ParseFloat(data[spdIdx+2], 32)
 				lat, jit := 0.0, 0.0
 				if len(data) == spdIdx+6 {
-					lat, err = strconv.ParseFloat(data[spdIdx+4], 32)
-					jit, err = strconv.ParseFloat(data[spdIdx+5], 32)
+					lat, _ = strconv.ParseFloat(data[spdIdx+4], 32)
+					jit, _ = strconv.ParseFloat(data[spdIdx+5], 32)
 				} else if len(data) >= spdIdx+7 {
-					lat, err = strconv.ParseFloat(data[spdIdx+4], 32)
-					jit, err = strconv.ParseFloat(data[spdIdx+6], 32)
+					lat, _ = strconv.ParseFloat(data[spdIdx+4], 32)
+					jit, _ = strconv.ParseFloat(data[spdIdx+6], 32)
 				}
 				if err == nil {
 					results = append(results, model.SpeedtestResult{spot, float32(down), float32(up), float32(lat), float32(jit)})
