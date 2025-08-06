@@ -136,7 +136,7 @@ func typeParser(textLines []string) map[string]string {
 		if len(parts) == 3 {
 			types[parts[0]] = parts[2] // Handle cases with fewer parts
 		} else if len(parts) >= 4 {
-			types[parts[0]] = parts[2] + " " + parts[3]
+			types[parts[0]] = parts[2] + " " + strings.Join(parts[3:], " ")
 		}
 	}
 	return types

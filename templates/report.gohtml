@@ -465,7 +465,7 @@
             <div class="shell">脚本: https://github.com/spiritLHLS/ecs</div>
             {{range $k, $v := .ECS.Trace.Types}}
                 {{$etc := "e-trace-normal"}}
-                {{if contains $v "精品线路"}}
+                {{if or (contains $v "精品线路") (contains $v "9929")}}
                     {{$etc = "e-trace-good"}}
                 {{end}}
                 <div class="e-trace-item {{$etc}}">
