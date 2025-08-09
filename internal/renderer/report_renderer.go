@@ -11,13 +11,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func RenderReports(filename string, result model.BenchmarkResult) {
 	outputFilePath := config.Get().OutputDir + string(filepath.Separator) + filename
-	tmpl, err := template.New("report.gohtml").Funcs(
-		map[string]any{"contains": strings.Contains}).ParseFiles(
-		"templates" + string(filepath.Separator) + "report.gohtml")
+	tmplName := "report_20250809.gohtml"
+	if t, err := time.Parse("2006-01-02 15:04:05", result.Time); err == nil {
+		if t.Unix() < 1754668800 {
+			tmplName = "report_20250802.gohtml"
+		}
+	}
+	tmpl, err := template.New(tmplName).Funcs(
+		map[string]any{"contains": strings.Contains}).ParseFiles("templates" + string(filepath.Separator) + tmplName)
 	if err != nil {
 		fmt.Println("Error parsing template:", err)
 		return
