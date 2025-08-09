@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-adsense-account" content="ca-pub-6527659514161224">
+    <meta name="title" content="{{.Title}}"/>
+    <meta name="time" content="{{.Time}}"/>
+    <title>潼雨VPS云服务器测评 - {{.Title}}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f6f6f6;
+            color: #333;
+        }
+
+        /* 导航栏 */
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            font-size: 0.9rem;
+            font-weight: lighter;
+            background: linear-gradient(180deg,rgb(201, 201, 201) 0%, rgba(237, 221, 83, 0) 100%);
+            position: fixed;
+            top: 0;
+            width: 100%;
+        }
+
+        .nav-title {
+            background-color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 64px;
+            box-shadow: 0 0 8px #cdcccc;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: black;
+            margin-left: 1rem;
+            background-color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 64px;
+            box-shadow: 0 0 8px #cdcccc;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+        }
+
+        /* 内容区域 */
+        .content {
+            margin: 7rem 1rem;
+            padding: 0 1rem;
+        }
+
+        .buy-link {
+            color: #007bff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .buy-link:hover {
+            color: #0056b3;
+        }
+
+        .bilibili {
+            width: 1rem;
+            height: 1rem;
+            background: url('data:image/png;base64,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') no-repeat center;
+            background-size: contain;
+            display: inline-block;
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* 内容区域 */
+        .content {
+            margin: 7rem 1rem;
+            padding: 0 1rem;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .submit-time {
+            font-size: 0.9rem;
+            color: gray;
+            margin-bottom: 1rem;
+        }
+
+        .report-content > div {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 16px;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .shell {
+            font-size: 0.85rem;
+            color: #777;
+            margin-bottom: 1rem;
+        }
+
+        .it-img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+
+        .toggle-input {
+            display: none;
+        }
+
+        .toggle-label {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #eee;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .toggle-label:hover {
+            background-color: #ddd;
+        }
+
+        .toggle-input:checked + .toggle-label {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+
+        /* 表格样式 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            padding: 0.6rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #ecf0f1;
+            font-weight: bold;
+        }
+
+        .spd {
+            display: none;
+        }
+
+        #tab1:checked ~ table > #spd-0,
+        #tab2:checked ~ table > #spd-1,
+        #tab3:checked ~ table > #spd-2 {
+            display: table-row-group;
+        }
+
+        /* 系统信息与性能测试 */
+        .info-item {
+            display: flex;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .info-key {
+            min-width: 150px;
+            font-weight: bold;
+        }
+
+        .b-item {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .b-score {
+            flex: 1;
+            text-align: center;
+            padding: 0.8rem;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .b-score-title {
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+        }
+
+        /* IP质量 & 回程路由 */
+        .raw-text {
+            background: #323232;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-line;
+            font-family: Consolas, monospace;
+            color: #f8f8f2;
+            font-weight: lighter;
+            line-height: 1.5;
+        }
+
+        /* 邮件检测 */
+        .mail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem;
+            margin: 0.2rem;
+            border-radius: 0.25rem;
+        }
+
+        .mail-list {
+            display: grid;
+            grid-template-columns: auto auto auto auto;
+        }
+
+        .mail-item-supported {
+            color: green;
+            background-color: rgba(0, 150, 0, 0.3);
+        }
+
+        .mail-item-unsupported {
+            color: red;
+            background-color: rgba(150, 0, 0, 0.3);
+        }
+
+        /* 回程路由类型 */
+        .e-trace-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .e-trace-good {
+            color: green;
+        }
+
+        .e-trace-normal {
+            color: orange;
+        }
+
+        /* 流媒体解锁 */
+        .media-subtitle {
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        .media-item {
+            margin-bottom: 1rem;
+        }
+
+        .media-region {
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+        }
+
+        .media-service {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .media-service-supported {
+            color: green;
+        }
+
+        .media-service-unsupported {
+            color: red;
+        }
+
+        /* 响应式支持 */
+        @media (max-width: 768px) {
+            .nav-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .nav-links {
+                margin-top: 0.5rem;
+            }
+
+            .nav-links a {
+                margin: 0.2rem 0.5rem 0 0;
+            }
+
+            .b-item {
+                flex-direction: column;
+            }
+
+            .mail-item,
+            .e-trace-item,
+            .media-service {
+                flex-direction: column;
+            }
+
+            .mail-value > div,
+            .e-trace-value,
+            .media-status {
+                margin-top: 0.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="nav-bar">
+    <div class="nav-title">潼雨VPS云服务器测评</div>
+    <div class="nav-links">
+        <a href="/">首页</a>
+        <a href="/search">搜索</a>
+        <a href="/legacy">旧版</a>
+        <a href="https://space.bilibili.com/21650658" class="bilibili"></a>
+    </div>
+</div>
+<div class="content">
+    <h2>{{.Title}}</h2>
+    <div class="submit-time">时间: {{.Time}}</div>
+    <a href="{{.Link}}" class="buy-link">购买地址: {{.Link}}</a>
+    <div class="report-content">
+        <div id="itdog">
+            <h3>全国Ping</h3>
+            <div class="shell">来自: ITDOG</div>
+            <img class="it-img" src="{{.Itdog.Ping}}" alt="ping结果"/>
+            <h3>去程路由</h3>
+            {{range .Itdog.Route}}
+                <img class="it-img" src="{{.}}" alt="去程路由"/>
+            {{end}}
+        </div>
+        <div id="spd">
+            <h3>网速测速</h3>
+            <div class="shell">脚本: https://github.com/i-abc/speedtest</div>
+            <!-- 复选框（隐藏）模拟按钮实现Tab切换 -->
+            <input type="radio" name="tab" id="tab1" class="toggle-input" checked>
+            <label for="tab1" class="toggle-label">大陆三网 IPv4 多线程</label>
+            <input type="radio" name="tab" id="tab2" class="toggle-input">
+            <label for="tab2" class="toggle-label">大陆三网 IPv4 单线程</label>
+            <input type="radio" name="tab" id="tab3" class="toggle-input">
+            <label for="tab3" class="toggle-label">各大洲 IPv4 八线程测速</label>
+            <table>
+                <thead>
+                <tr>
+                    <th>测速点</th>
+                    <th>下载 Mbps</th>
+                    <th>上传 Mbps</th>
+                    <th>延迟 ms</th>
+                    <th>抖动 ms</th>
+                </tr>
+                </thead>
+                {{range $i, $_ := .SpdTest}}
+                    <tbody class="spd" id="spd-{{$i}}">
+                    {{range .Results}}
+                        <tr>
+                            <td>{{.Spot}}</td>
+                            <td>{{.Download}}</td>
+                            <td>{{.Upload}}</td>
+                            <td>{{.Latency}}</td>
+                            <td>{{.Jitter}}</td>
+                        </tr>
+                    {{end}}
+                    </tbody>
+                {{end}}
+            </table>
+        </div>
+        <div id="info">
+            <h3>系统信息</h3>
+            <div class="shell">脚本: https://github.com/spiritLHLS/ecs</div>
+            {{range $k, $v := .ECS.Info}}
+                <div class="info-item">
+                    <span class="info-key">{{$k}}</span>
+                    <span class="info-value">{{$v}}</span>
+                </div>
+            {{end}}
+        </div>
+        <div id="benchmark">
+            <h3>性能测试</h3>
+            <div class="shell">脚本: https://github.com/spiritLHLS/ecs</div>
+            <div class="b-item">
+                <div class="b-score">CPU</div>
+                <div class="b-score">
+                    <div class="b-score-title">单核</div>
+                    <div class="b-score-val">{{.ECS.Cpu.Single}}</div>
+                </div>
+                <div class="b-score">
+                    <div class="b-score-title">多核</div>
+                    <div class="b-score-val">{{.ECS.Cpu.Multi}}</div>
+                </div>
+            </div>
+            <div class="b-item">
+                <div class="b-score">Memory</div>
+                <div class="b-score">
+                    <div class="b-score-title">读取</div>
+                    <div class="b-score-val">{{.ECS.Mem.Read}} MB/s</div>
+                </div>
+                <div class="b-score">
+                    <div class="b-score-title">写入</div>
+                    <div class="b-score-val">{{.ECS.Mem.Write}} MB/s</div>
+                </div>
+            </div>
+            <div class="b-item">
+                <div class="b-score">Disk (dd)</div>
+                <div class="b-score">
+                    <div class="b-score-title">顺序读</div>
+                    <div class="b-score-val">{{.ECS.Disk.SeqRead}}</div>
+                </div>
+                <div class="b-score">
+                    <div class="b-score-title">顺序写</div>
+                    <div class="b-score-val">{{.ECS.Disk.SeqWrite}}</div>
+                </div>
+            </div>
+        </div>
+        <div id="ip-quality">
+            <h3>IP质量</h3>
+            <div class="shell">脚本: https://github.com/spiritLHLS/ecs</div>
+            <pre class="raw-text">
+        {{.ECS.IPQuality}}
+      </pre>
+        </div>
+        <div id="mail">
+            <h3>邮件端口检测</h3>
+            <div class="shell">脚本: https://github.com/spiritLHLS/ecs</div>
+            <div class="mail-list">
+                {{range $k, $v := .ECS.Mail}}
+                    {{$mc := "mail-item-unsupported"}}
+                    {{if (or (index $v 0) (or (index $v 1) (or (index $v 2) (or (index $v 3) (or (index $v 4) (index $v 5))))))}}
+                        {{$mc = "mail-item-supported"}}
+                    {{end}}
+                    <div class="mail-item {{$mc}}">
+                        <div class="mail-key">{{$k}}</div>
+                        <div class="mail-value">
+                            <div> SMTP: {{if index $v 0}}✔{{else}}❌{{end}}</div>
+                            <div> POP3: {{if index $v 1}}✔{{else}}❌{{end}}</div>
+                            <div> IMAP: {{if index $v 2}}✔{{else}}❌{{end}}</div>
+                            <div> SMTP-SSL: {{if index $v 3}}✔{{else}}❌{{end}}</div>
+                            <div> POP3-SSL: {{if index $v 4}}✔{{else}}❌{{end}}</div>
+                            <div> IMAP-SSL: {{if index $v 5}}✔{{else}}❌{{end}}</div>
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        </div>
+        <div id="ecs-trace">
+            <h3>回程路由类型</h3>
+            <div class="shell">脚本: https://github.com/spiritLHLS/ecs</div>
+            {{range $k, $v := .ECS.Trace.Types}}
+                {{$etc := "e-trace-normal"}}
+                {{if or (contains $v "精品线路") (contains $v "9929")}}
+                    {{$etc = "e-trace-good"}}
+                {{end}}
+                <div class="e-trace-item {{$etc}}">
+                    <span class="e-trace-key">{{$k}}</span>
+                    <span class="e-trace-value">{{$v}}</span>
+                </div>
+            {{end}}
+            <h3>回程路由追踪</h3>
+            <pre class="raw-text">{{.ECS.Trace.BackRoute}}</pre>
+        </div>
+        <div id="media-unlock">
+            <h3>流媒体解锁</h3>
+            <div class="shell">脚本: https://github.com/lmc999/RegionRestrictionCheck</div>
+            <div class="media-subtitle">IPV4流媒体解锁</div>
+            {{range .Media.IPv4}}
+                <div class="media-item">
+                    <div class="media-region">{{.Region}}</div>
+                    {{range .Results}}
+                        {{$mdc := "media-service-supported"}}
+                        {{if or (contains .Unlock "Banned") (or (contains .Unlock "Risky") (or (contains .Unlock "Only") (or (contains .Unlock "No") (contains .Unlock "Failed"))))}}
+                            {{$mdc = "media-service-unsupported"}}
+                        {{end}}
+                        <div class="media-service">
+                            <span class="media-name">{{.Media}}</span>
+                            <span class="media-status {{$mdc}}">{{.Unlock}}</span>
+                        </div>
+                    {{end}}
+                </div>
+            {{end}}
+            <div class="media-subtitle">IPV6流媒体解锁</div>
+            {{range .Media.IPv6}}
+                <div class="media-item">
+                    <div class="media-region">{{.Region}}</div>
+                    {{range .Results}}
+                        {{$mdc := "media-service-unsupported"}}
+                        {{if contains .Unlock "Yes"}}
+                            {{$mdc = "media-service-supported"}}
+                        {{end}}
+                        <div class="media-service">
+                            <span class="media-name">{{.Media}}</span>
+                            <span class="media-status {{$mdc}}">{{.Unlock}}</span>
+                        </div>
+                    {{end}}
+                </div>
+            {{end}}
+        </div>
+        <div id="best-trace">
+            <h3>详细回程路由追踪</h3>
+            <div class="shell">脚本: https://github.com/zq/shell/blob/master/autoBestTrace.sh</div>
+            {{range .BestTrace}}
+                <div class="best-region">{{.Region}}</div>
+                <pre class="raw-text">
+        {{.Route}}
+      </pre>
+            {{end}}
+        </div>
+    </div>
+</div>
+</body>
+</html>
