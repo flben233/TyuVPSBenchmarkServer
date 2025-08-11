@@ -50,6 +50,7 @@ type BenchmarkResult struct {
 	Media     MediaResults
 	BestTrace []BestTraceResult
 	Itdog     ItdogResult
+	Disk      TyuDiskResult
 	Title     string
 	Time      string
 	Link      string
@@ -81,4 +82,9 @@ type MediaBlock struct {
 type MediaResults struct {
 	IPv4 []MediaBlock
 	IPv6 []MediaBlock
+}
+
+type TyuDiskResult struct {
+	Data [][]string
+	Time string
 }

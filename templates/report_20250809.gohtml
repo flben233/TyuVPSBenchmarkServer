@@ -200,6 +200,12 @@
             font-weight: bold;
         }
 
+        .b-head {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+        }
+
         .b-item {
             display: flex;
             gap: 1rem;
@@ -363,6 +369,7 @@
         <div id="spd">
             <h3>网速测速</h3>
             <div class="shell">脚本: https://github.com/flben233/cdn-speed</div>
+            <div class="shell">测试时间: {{(index .SpdTest 0).Time}}</div>
             <!-- 复选框（隐藏）模拟按钮实现Tab切换 -->
             <input type="radio" name="tab" id="tab1" class="toggle-input" checked>
             <label for="tab1" class="toggle-label">大陆三网 IPv4 多线程</label>
@@ -441,6 +448,28 @@
                     <div class="b-score-val">{{.ECS.Disk.SeqWrite}}</div>
                 </div>
             </div>
+        </div>
+        <div id="disk-mark">
+            <h3>磁盘测试</h3>
+            <div class="shell">脚本: https://github.com/flben233/tyu-disk</div>
+            <div class="b-item">
+                <div class="b-head">Test</div>
+                <div class="b-head">Read (MB/s)</div>
+                <div class="b-head">Write (MB/s)</div>
+            </div>
+            {{range .Disk.Data}}
+            <div class="b-item">
+                <div class="b-score">
+                    <div class="b-score-title">{{index . 0}}</div>
+                </div>
+                <div class="b-score">
+                    <div class="b-score-val">{{index . 1}}</div>
+                </div>
+                <div class="b-score">
+                    <div class="b-score-val">{{index . 2}}</div>
+                </div>
+            </div>
+            {{end}}
         </div>
         <div id="ip-quality">
             <h3>IP质量</h3>
@@ -542,6 +571,16 @@
     const defaultContent = document.getElementsByClassName("content")[0].innerHTML;
     let mode = 0; // 0: 默认模式, 1: 幻灯片模式
     let listener = null;
+    function makeFirst() {
+        let div = document.createElement("p");
+        div.append(
+            document.getElementsByTagName("h2")[0],
+            document.getElementsByClassName("submit-time")[0],
+            document.getElementsByClassName("buy-link")[0],
+            "演示模式，请按←→方向键换页"
+        )
+        slides.push(div);
+    }
     function makeItdog() {
         let children = document.querySelector("#itdog").querySelectorAll("*");
         let lastH3 = null;
@@ -552,8 +591,7 @@
                     break;
                 case "IMG":
                     let div = document.createElement("div");
-                    div.appendChild(lastH3.cloneNode(true))
-                    div.appendChild(child.cloneNode(true));
+                    div.append(lastH3.cloneNode(true), child)
                     slides.push(div);
                     break;
             }
@@ -564,14 +602,13 @@
         let trace = document.querySelector("#ecs-trace");
         let div = document.createElement("div");
         let h3 = trace.querySelectorAll("h3");
-        div.appendChild(h3[0]);
+        div.append(h3[0]);
         for (let t of lines) {
-            div.appendChild(t);
+            div.append(t);
         }
         slides.push(div);
         div = document.createElement("div");
-        div.appendChild(h3[1]);
-        div.appendChild(trace.querySelector("pre"));
+        div.append(h3[1], trace.querySelector("pre"));
         slides.push(div);
     }
     function makeSpd() {
@@ -579,7 +616,9 @@
     }
     function makeHardware() {
         slides.push(document.getElementById("info"));
-        slides.push(document.getElementById("benchmark"));
+        let div = document.createElement("div");
+        div.append(document.getElementById("benchmark"), document.getElementById("disk-mark"));
+        slides.push(div)
     }
     function makeMedia() {
         slides.push(document.getElementById("media-unlock"));
@@ -587,6 +626,7 @@
     function switchMode() {
         let content = document.getElementsByClassName("content")[0];
         if (slides.length === 0) {
+            makeFirst();
             makeItdog();
             makeRoute();
             makeSpd();
@@ -598,19 +638,19 @@
             content.innerHTML = "";
             let report = document.createElement("div");
             report.className = "report-content";
-            content.appendChild(report);
-            content = content.getElementsByClassName("report-content")[0];
-            let page = -1, lastSlide = null;
+            content = content.appendChild(report);
+            content.append(slides[0]);
+            let page = 0, lastSlide = slides[page];
             listener = (e) => {
                 if (e.key === "ArrowLeft" && page > 0) page--;
-                else if (e.key === "ArrowRight" && page < slides.length) page++;
+                else if (e.key === "ArrowRight" && page + 1 < slides.length) page++;
                 else return;
                 if (lastSlide) {
                     lastSlide.remove(); // 移除上一个幻灯片
                 }
                 let slide = slides[page];
                 slide.style.margin = "0 0 1rem 0"
-                content.appendChild(slide);
+                content.append(slide);
                 lastSlide = slide;
             }
             addEventListener("keydown", listener);

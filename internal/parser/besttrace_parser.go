@@ -18,7 +18,7 @@ func BestTraceParser(textLines []string) []model.BestTraceResult {
 			j++
 			continue
 		}
-		if strings.Contains(textLines[j], "-----------------------------------------------------------------") {
+		if textLines[j] == "----------------------------------------------------------------------" {
 			results = append(results, model.BestTraceResult{Region: textLines[i], Route: strings.Join(textLines[i+1:j], "\n")})
 			i = j + 1
 		}
