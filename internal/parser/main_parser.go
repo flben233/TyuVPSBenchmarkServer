@@ -23,5 +23,5 @@ func MainParser(html string) model.BenchmarkResult {
 			link = content
 		}
 	}
-	return model.BenchmarkResult{SpeedtestParser(textLines), ECSParser(textLines), MediaParser(textLines), BestTraceParser(textLines), ItdogParser(doc), title, time, link}
+	return model.BenchmarkResult{SpeedtestParser(textLines), ECSParser(textLines), MediaParser(textLines), BestTraceParser(textLines), ItdogParser(doc), TyuDiskParser(textLines), title, time, link}
 }

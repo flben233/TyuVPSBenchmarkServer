@@ -64,7 +64,7 @@ func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 		if head >= len(textLines) {
 			time = ""
 		} else {
-			time = strings.Replace(textLines[head-1], "北京时间：", "", 1)
+			time = strings.Replace(textLines[head-1], "北京时间: ", "", 1)
 		}
 		finalResults = append(finalResults, model.SpeedtestResults{results, time})
 	}
