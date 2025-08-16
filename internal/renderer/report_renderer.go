@@ -42,6 +42,7 @@ func RenderReports(filename string, result model.BenchmarkResult) {
 }
 
 func RegularlyRenderReports(interval int) chan bool {
+	// TODO: 删除文件后这个列表不能及时更新
 	path := config.Get().InputDir
 	fileSet := make(map[string]struct{})
 	return utils.SetInterval(func() {

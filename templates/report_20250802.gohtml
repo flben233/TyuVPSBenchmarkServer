@@ -510,8 +510,8 @@
                     <div class="media-region">{{.Region}}</div>
                     {{range .Results}}
                         {{$mdc := "media-service-unsupported"}}
-                        {{if contains .Unlock "Yes"}}
-                            {{$mdc = "media-service-supported"}}
+                        {{if or (contains .Unlock "Banned") (or (contains .Unlock "Risky") (or (contains .Unlock "Only") (or (contains .Unlock "No") (contains .Unlock "Failed"))))}}
+                            {{$mdc = "media-service-unsupported"}}
                         {{end}}
                         <div class="media-service">
                             <span class="media-name">{{.Media}}</span>
