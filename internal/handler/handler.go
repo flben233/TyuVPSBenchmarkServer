@@ -18,6 +18,11 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join(config.Get().StaticsDir, "search.html"))
 }
 
+func SitemapHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	http.ServeFile(w, r, filepath.Join(config.Get().StaticsDir, "sitemap.xml"))
+}
+
 func SearchAPIHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

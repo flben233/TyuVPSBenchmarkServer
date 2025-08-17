@@ -26,12 +26,10 @@ func main() {
 
 	// Set up HTTP server
 	http.HandleFunc("/", handler.IndexHandler)
-
 	http.HandleFunc("/search", handler.SearchHandler)
-
 	http.HandleFunc("/api/search", handler.SearchAPIHandler)
-
 	http.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir(config.Get().OutputDir))))
+	http.HandleFunc("/sitemap.xml", handler.SitemapHandler)
 
 	port := ":" + fmt.Sprintf("%d", config.Get().Port)
 	log.Printf("Starting server on port %s\n", port)
