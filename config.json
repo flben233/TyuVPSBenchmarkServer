@@ -2,5 +2,6 @@
   "outputDir": ".\\statics\\reports",
   "inputDir": ".\\statics\\test_results",
   "staticsDir": ".\\statics",
-  "port": 12345
+  "port": 12345,
+  "url": "https://vps.lolicon.llc"
 }

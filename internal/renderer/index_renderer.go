@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	texttemplate "text/template"
 	"time"
 )
 
@@ -39,6 +40,30 @@ func RenderIndex(reportsCache map[string]model.ReportInfo) {
 		return
 	}
 	log.Println("Index page rendered successfully with", len(reports), "reports")
+}
+
+func RenderSitemap(reportsCache map[string]model.ReportInfo) {
+	tmpl, err := texttemplate.ParseFiles("templates/sitemap.gohtml")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	outputDir := config.Get().StaticsDir
+	file, _ := os.OpenFile(filepath.Join(outputDir, "sitemap.xml"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	defer file.Close()
+	sitemap := make([]model.SitemapItem, 0, len(reportsCache))
+	for _, v := range reportsCache {
+		item := model.SitemapItem{
+			Loc:  config.Get().Url + v.Path,
+			Last: strings.Split(v.Date, " ")[0]}
+		sitemap = append(sitemap, item)
+	}
+	err = tmpl.Execute(file, sitemap)
+	if err != nil {
+		log.Printf("Failed to render sitemap template: %+v", err)
+		return
+	}
+	log.Println("Sitemap rendered successfully with", len(sitemap), "reports")
 }
 
 func RegularlyRenderIndex(interval int) chan bool {
@@ -98,6 +123,7 @@ func RegularlyRenderIndex(interval int) chan bool {
 		if modified || !utils.FileExists(filepath.Join(config.Get().StaticsDir, "index.html")) {
 			log.Println("Rendering index page with updated reports")
 			RenderIndex(resultsCache)
+			RenderSitemap(resultsCache)
 		}
 	}, interval)
 }

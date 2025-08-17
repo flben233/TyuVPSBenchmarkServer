@@ -5,3 +5,8 @@ type ReportInfo struct {
 	Path string `json:"path"`
 	Date string `json:"date"`
 }
+
+type SitemapItem struct {
+	Loc  string
+	Last string
+}
