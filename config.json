@@ -3,5 +3,6 @@
   "inputDir": ".\\statics\\test_results",
   "staticsDir": ".\\statics",
   "port": 12345,
+  "baseUrl": "",
   "url": "https://vps.lolicon.llc"
 }

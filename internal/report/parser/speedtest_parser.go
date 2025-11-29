@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"VPSBenchmarkBackend/internal/model"
+	"VPSBenchmarkBackend/internal/report/model"
 	"strconv"
 	"strings"
 )
@@ -44,7 +44,13 @@ func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 					continue
 				}
 				down, err := strconv.ParseFloat(data[spdIdx], 32)
+				if err != nil {
+					continue
+				}
 				up, err := strconv.ParseFloat(data[spdIdx+2], 32)
+				if err != nil {
+					continue
+				}
 				lat, jit := 0.0, 0.0
 				if len(data) == spdIdx+6 {
 					lat, _ = strconv.ParseFloat(data[spdIdx+4], 32)
@@ -53,9 +59,7 @@ func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 					lat, _ = strconv.ParseFloat(data[spdIdx+4], 32)
 					jit, _ = strconv.ParseFloat(data[spdIdx+6], 32)
 				}
-				if err == nil {
-					results = append(results, model.SpeedtestResult{spot, float32(down), float32(up), float32(lat), float32(jit)})
-				}
+				results = append(results, model.SpeedtestResult{Spot: spot, Download: float32(down), Upload: float32(up), Latency: float32(lat), Jitter: float32(jit)})
 			} else {
 				head++
 			}
@@ -66,7 +70,7 @@ func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 		} else {
 			time = strings.Replace(textLines[head-1], "北京时间: ", "", 1)
 		}
-		finalResults = append(finalResults, model.SpeedtestResults{results, time})
+		finalResults = append(finalResults, model.SpeedtestResults{Results: results, Time: time})
 	}
 	return finalResults
 }

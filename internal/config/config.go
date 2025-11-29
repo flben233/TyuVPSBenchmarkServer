@@ -6,11 +6,8 @@ import (
 )
 
 type Config struct {
-	OutputDir  string `json:"outputDir"`
-	InputDir   string `json:"inputDir"`
-	StaticsDir string `json:"staticsDir"`
-	Port       int    `json:"port"`
-	Url        string `json:"url"`
+	Port    int    `json:"port"`
+	BaseURL string `json:"baseUrl"`
 }
 
 var cfg *Config

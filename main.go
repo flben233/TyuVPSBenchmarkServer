@@ -2,14 +2,19 @@ package main
 
 import (
 	"VPSBenchmarkBackend/internal/config"
-	"VPSBenchmarkBackend/internal/handler"
-	"VPSBenchmarkBackend/internal/renderer"
-	"VPSBenchmarkBackend/internal/repo"
+	"VPSBenchmarkBackend/internal/report"
+	"VPSBenchmarkBackend/internal/report/store"
 	"fmt"
 	"log"
-	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
+// TODO: 统一的返回体结构
+// TODO: 鉴权
+// TODO: Traceroute、小鸡Ping监控、WHOIS、IP查询、ping测试工具集成
+// TODO: 支持IPQuality
+// TODO: 短链接
 func main() {
 	err := config.Load("config.json")
 	if err != nil {
@@ -17,23 +22,14 @@ func main() {
 		return
 	}
 
-	// Initialize the database
-	repo.InitDatabase()
-
-	// Start the scheduler
-	renderer.RegularlyRenderIndex(60000)
-	renderer.RegularlyRenderReports(60000)
-
-	// Set up HTTP server
-	http.HandleFunc("/", handler.IndexHandler)
-	http.HandleFunc("/search", handler.SearchHandler)
-	http.HandleFunc("/api/search", handler.SearchAPIHandler)
-	http.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir(config.Get().OutputDir))))
-	http.HandleFunc("/sitemap.xml", handler.SitemapHandler)
-
-	port := ":" + fmt.Sprintf("%d", config.Get().Port)
-	log.Printf("Starting server on port %s\n", port)
-	if err := http.ListenAndServe(port, nil); err != nil {
-		log.Printf("Server failed to start: %v\n", err)
+	// Initialize database
+	dbPath := "./data/benchmark.db"
+	if err := store.InitDB(dbPath); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
+	log.Println("Database initialized successfully at", dbPath)
+
+	r := gin.Default()
+	report.RegisterRouter(config.Get().BaseURL, r)
+	r.Run(fmt.Sprintf(":%d", config.Get().Port))
 }

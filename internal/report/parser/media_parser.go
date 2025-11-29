@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"VPSBenchmarkBackend/internal/model"
+	"VPSBenchmarkBackend/internal/report/model"
 	"regexp"
 	"strings"
 )
@@ -41,8 +41,8 @@ func MediaParser(textLines []string) model.MediaResults {
 func processMBlk(textLines []string, results []model.MediaBlock) (int, []model.MediaBlock) {
 	region, i := "", 0
 	result := make([]model.MediaPair, 0)
-	leftRe, _ := regexp.Compile("=+\\[ ")
-	rightRe, _ := regexp.Compile(" ]=+")
+	leftRe, _ := regexp.Compile(`=+\[ `)
+	rightRe, _ := regexp.Compile(` ]=+`)
 	for ; i < len(textLines); i++ {
 		if i == 0 {
 			region = leftRe.ReplaceAllString(rightRe.ReplaceAllString(textLines[i], ""), "")

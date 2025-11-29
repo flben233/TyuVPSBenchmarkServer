@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"VPSBenchmarkBackend/internal/model"
+	"VPSBenchmarkBackend/internal/report/model"
 	"strings"
 )
 
