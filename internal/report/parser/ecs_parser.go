@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"VPSBenchmarkBackend/internal/model"
+	"VPSBenchmarkBackend/internal/report/model"
 	"regexp"
 	"strconv"
 	"strings"
@@ -98,7 +98,7 @@ func memParser(textLines []string) model.MemResult {
 
 func diskParser(textLines []string) model.DiskResult {
 	result := model.DiskResult{}
-	re, _ := regexp.Compile("\\t+")
+	re, _ := regexp.Compile(`\t+`)
 	for _, line := range textLines {
 		if strings.Contains(line, "1GB-1M Block") {
 			parts := re.Split(line, 3)
@@ -110,7 +110,7 @@ func diskParser(textLines []string) model.DiskResult {
 }
 
 func tiktokParser(textLines []string) string {
-	re, _ := regexp.Compile("\\t+")
+	re, _ := regexp.Compile(`\t+`)
 	return re.Split(textLines[0], 2)[1]
 }
 

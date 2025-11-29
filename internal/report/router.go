@@ -1,0 +1,23 @@
+package report
+
+import (
+	"VPSBenchmarkBackend/internal/report/handler"
+
+	"github.com/gin-gonic/gin"
+)
+
+func RegisterRouter(base string, r *gin.Engine) {
+	base += "/report"
+	{
+		reportAPI := r.Group(base + "/data")
+		reportAPI.GET("/list", handler.ListReports)
+		reportAPI.GET("/details", handler.GetReportDetails)
+		reportAPI.GET("/search", handler.SearchReports)
+		reportAPI.POST("/search", handler.SearchReports)
+	}
+	{
+		adminAPI := r.Group(base + "/admin")
+		adminAPI.POST("/add", handler.AddReport)
+		adminAPI.POST("/delete", handler.DeleteReport)
+	}
+}
