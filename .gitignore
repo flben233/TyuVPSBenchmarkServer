@@ -1,0 +1,10 @@
+/.idea/
+/data/
+/statics/reports/
+/statics/test_results/
+VPSBenchmarkBackend.iml
+statics/index.html
+statics/sitemap.xml
+VPSBenchmarkBackend.exe
+VPSBenchmarkBackend
+.env
