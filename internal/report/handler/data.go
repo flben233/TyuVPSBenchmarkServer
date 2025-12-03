@@ -1,8 +1,8 @@
 package handler
 
 import (
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/report/request"
-	"VPSBenchmarkBackend/internal/report/response"
 	"VPSBenchmarkBackend/internal/report/service"
 	"net/http"
 	"strconv"
@@ -17,28 +17,28 @@ func ListReports(ctx *gin.Context) {
 
 	reports, total, err := service.ListReports(page, pageSize)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.Error(response.InternalErrorCode, err.Error()))
+		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.SuccessPaginated(reports, total, page, pageSize))
+	ctx.JSON(http.StatusOK, common.SuccessPaginated(reports, total, page, pageSize))
 }
 
 // GetReportDetails handles GET /report/data/details?id=xxx
 func GetReportDetails(ctx *gin.Context) {
 	reportID := ctx.Query("id")
 	if reportID == "" {
-		ctx.JSON(http.StatusBadRequest, response.Error(response.BadRequestCode, "report ID is required"))
+		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "report ID is required"))
 		return
 	}
 
 	report, err := service.GetReportDetails(reportID)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, response.Error(404, err.Error()))
+		ctx.JSON(http.StatusNotFound, common.Error(404, err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(report))
+	ctx.JSON(http.StatusOK, common.Success(report))
 }
 
 // SearchReports handles GET /report/data/search
@@ -57,42 +57,42 @@ func SearchReports(ctx *gin.Context) {
 
 	reports, total, err := service.SearchReports(&searchReq, page, pageSize)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.Error(response.InternalErrorCode, err.Error()))
+		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.SuccessPaginated(reports, total, page, pageSize))
+	ctx.JSON(http.StatusOK, common.SuccessPaginated(reports, total, page, pageSize))
 }
 
 // GetAllMediaNames handles GET /report/data/media-names
 func GetAllMediaNames(ctx *gin.Context) {
 	mediaNames, err := service.GetAllMediaNames()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.Error(response.InternalErrorCode, err.Error()))
+		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(mediaNames))
+	ctx.JSON(http.StatusOK, common.Success(mediaNames))
 }
 
 // GetAllVirtualizations handles GET /report/data/virtualizations
 func GetAllVirtualizations(ctx *gin.Context) {
 	virtualizations, err := service.GetAllVirtualizations()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.Error(response.InternalErrorCode, err.Error()))
+		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(virtualizations))
+	ctx.JSON(http.StatusOK, common.Success(virtualizations))
 }
 
 // GetAllBackRouteTypes handles GET /report/data/backroute-types
 func GetAllBackRouteTypes(ctx *gin.Context) {
 	routeTypes, err := service.GetAllBackRouteTypes()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.Error(response.InternalErrorCode, err.Error()))
+		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(routeTypes))
+	ctx.JSON(http.StatusOK, common.Success(routeTypes))
 }

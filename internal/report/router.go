@@ -1,6 +1,7 @@
 package report
 
 import (
+	"VPSBenchmarkBackend/internal/auth"
 	"VPSBenchmarkBackend/internal/report/handler"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,7 @@ func RegisterRouter(base string, r *gin.Engine) {
 	}
 	{
 		adminAPI := r.Group(base + "/admin")
+		adminAPI.Use(auth.GetJWTMiddleware()) // Protect admin routes with JWT authentication
 		adminAPI.POST("/add", handler.AddReport)
 		adminAPI.POST("/delete", handler.DeleteReport)
 	}
