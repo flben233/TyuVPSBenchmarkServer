@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"VPSBenchmarkBackend/internal/report/response"
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/report/service"
 	"io"
 	"net/http"
@@ -28,24 +28,24 @@ func AddReport(ctx *gin.Context) {
 		// If JSON binding fails, try to read raw HTML from body
 		body, readErr := io.ReadAll(ctx.Request.Body)
 		if readErr != nil {
-			ctx.JSON(http.StatusBadRequest, response.Error(response.BadRequestCode, "invalid request format"))
+			ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "invalid request format"))
 			return
 		}
 		req.HTML = string(body)
 	}
 
 	if req.HTML == "" {
-		ctx.JSON(http.StatusBadRequest, response.Error(response.BadRequestCode, "HTML content is required"))
+		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "HTML content is required"))
 		return
 	}
 
 	reportID, err := service.AddReport(req.HTML)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.Error(response.InternalErrorCode, err.Error()))
+		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.SuccessWithMessage("Report added successfully", gin.H{
+	ctx.JSON(http.StatusCreated, common.SuccessWithMessage("Report added successfully", gin.H{
 		"report_id": reportID,
 	}))
 }
@@ -57,15 +57,15 @@ func DeleteReport(ctx *gin.Context) {
 		// Try query parameter
 		req.ID = ctx.Query("id")
 		if req.ID == "" {
-			ctx.JSON(http.StatusBadRequest, response.Error(response.BadRequestCode, "report ID is required"))
+			ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "report ID is required"))
 			return
 		}
 	}
 
 	if err := service.DeleteReport(req.ID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.Error(response.InternalErrorCode, err.Error()))
+		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.SuccessWithMessage("Report deleted successfully", nil))
+	ctx.JSON(http.StatusOK, common.SuccessWithMessage("Report deleted successfully", nil))
 }

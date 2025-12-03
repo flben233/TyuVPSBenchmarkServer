@@ -1,13 +1,11 @@
 package store
 
 import (
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/report/model"
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -20,21 +18,9 @@ var (
 	backtraceIndex   gorm.Interface[model.BacktraceIndex]
 )
 
-// InitDB initializes the database connection and creates tables
-func InitDB(dbPath string) error {
-	// Ensure the data directory exists
-	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create data directory: %w", err)
-	}
-
-	// Open database connection
-	var err error
-	db, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-
+// InitReportStore initializes the tables
+func InitReportStore(dbPath string) error {
+	db = common.GetDB()
 	// Auto migrate the schema
 	if err := db.AutoMigrate(&model.BenchmarkResult{}, &model.MediaIndex{}, &model.SpeedtestIndex{}, &model.InfoIndex{}, &model.BacktraceIndex{}); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
@@ -45,11 +31,6 @@ func InitDB(dbPath string) error {
 	ecsIndex = gorm.G[model.InfoIndex](db)
 	backtraceIndex = gorm.G[model.BacktraceIndex](db)
 	return nil
-}
-
-// GetDB returns the database instance
-func GetDB() *gorm.DB {
-	return db
 }
 
 // SaveReport saves a new benchmark report to database

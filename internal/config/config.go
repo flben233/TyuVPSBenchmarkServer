@@ -6,8 +6,12 @@ import (
 )
 
 type Config struct {
-	Port    int    `json:"port"`
-	BaseURL string `json:"baseUrl"`
+	Port         int    `json:"port"`
+	BaseURL      string `json:"baseUrl"`
+	ClientID     string `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
+	JwtSecret    string `json:"jwtSecret"`
+	JwtExpiry    int    `json:"jwtExpiry"` // in seconds
 }
 
 var cfg *Config
