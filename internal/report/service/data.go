@@ -5,79 +5,119 @@ import (
 	"VPSBenchmarkBackend/internal/report/request"
 	"VPSBenchmarkBackend/internal/report/response"
 	"VPSBenchmarkBackend/internal/report/store"
-	"errors"
+	"fmt"
 )
 
 // ListReports returns a list of all reports with pagination
 func ListReports(page, pageSize int) ([]response.ReportInfoResponse, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
-	}
-
-	offset := (page - 1) * pageSize
-	reports, total, err := store.ListReports(pageSize, offset)
+	results, total, err := store.ListReports(page, pageSize)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to list reports: %w", err)
 	}
 
 	// Convert to response format
-	var result []response.ReportInfoResponse
-	for _, report := range reports {
-		result = append(result, response.ReportInfoResponse{
-			Name: report.Title,
-			Id:   report.ReportID,
-			Date: report.Time,
-		})
+	responses := make([]response.ReportInfoResponse, len(results))
+	for i, r := range results {
+		responses[i] = response.ReportInfoResponse{
+			Name: r.Title,
+			Id:   r.ReportID,
+			Date: r.Time,
+		}
 	}
 
-	return result, total, nil
+	return responses, total, nil
 }
 
 // GetReportDetails returns the full details of a specific report
 func GetReportDetails(reportID string) (*model.BenchmarkResult, error) {
 	if reportID == "" {
-		return nil, errors.New("report ID is required")
+		return nil, fmt.Errorf("report ID is required")
 	}
 
-	report, err := store.GetReportByID(reportID)
+	result, err := store.GetReportByID(reportID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get report details: %w", err)
 	}
 
-	return report, nil
+	return result, nil
 }
 
 // SearchReports performs a search based on the given criteria
 func SearchReports(searchReq *request.SearchRequest, page, pageSize int) ([]response.ReportInfoResponse, int64, error) {
 	if searchReq == nil {
-		return nil, 0, errors.New("search request is required")
+		return ListReports(page, pageSize)
 	}
 
-	if page < 1 {
-		page = 1
+	// Convert request ISP params to store ISP params
+	var ctISP, cuISP, cmISP *store.ISPSearchParams
+	if searchReq.CTParams != nil {
+		ctISP = &store.ISPSearchParams{
+			BackRoute:   searchReq.CTParams.BackRoute,
+			MinDownload: searchReq.CTParams.MinDownload,
+			MaxDownload: searchReq.CTParams.MaxDownload,
+			MinUpload:   searchReq.CTParams.MinUpload,
+			MaxUpload:   searchReq.CTParams.MaxUpload,
+			Latency:     searchReq.CTParams.Latency,
+		}
 	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
+	if searchReq.CUParams != nil {
+		cuISP = &store.ISPSearchParams{
+			BackRoute:   searchReq.CUParams.BackRoute,
+			MinDownload: searchReq.CUParams.MinDownload,
+			MaxDownload: searchReq.CUParams.MaxDownload,
+			MinUpload:   searchReq.CUParams.MinUpload,
+			MaxUpload:   searchReq.CUParams.MaxUpload,
+			Latency:     searchReq.CUParams.Latency,
+		}
+	}
+	if searchReq.CMParams != nil {
+		cmISP = &store.ISPSearchParams{
+			BackRoute:   searchReq.CMParams.BackRoute,
+			MinDownload: searchReq.CMParams.MinDownload,
+			MaxDownload: searchReq.CMParams.MaxDownload,
+			MinUpload:   searchReq.CMParams.MinUpload,
+			MaxUpload:   searchReq.CMParams.MaxUpload,
+			Latency:     searchReq.CMParams.Latency,
+		}
 	}
 
-	offset := (page - 1) * pageSize
-	reports, total, err := store.SearchReports(searchReq, pageSize, offset)
+	results, total, err := store.SearchReports(
+		searchReq.Keyword,
+		searchReq.MediaUnlocks,
+		searchReq.Virtualization,
+		searchReq.IPv6Support,
+		searchReq.DiskLevel,
+		ctISP, cuISP, cmISP,
+		page, pageSize,
+	)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to search reports: %w", err)
 	}
 
 	// Convert to response format
-	var result []response.ReportInfoResponse
-	for _, report := range reports {
-		result = append(result, response.ReportInfoResponse{
-			Name: report.Title,
-			Id:   report.ReportID,
-			Date: report.Time,
-		})
+	responses := make([]response.ReportInfoResponse, len(results))
+	for i, r := range results {
+		responses[i] = response.ReportInfoResponse{
+			Name: r.Title,
+			Id:   r.ReportID,
+			Date: r.Time,
+		}
 	}
 
-	return result, total, nil
+	return responses, total, nil
+}
+
+// GetAllMediaNames returns all distinct media names
+func GetAllMediaNames() ([]string, error) {
+	return store.GetAllMediaNames()
+}
+
+// GetAllVirtualizations returns all distinct virtualization types
+func GetAllVirtualizations() ([]string, error) {
+	return store.GetAllVirtualizations()
+}
+
+// GetAllBackRouteTypes returns all distinct back route types
+func GetAllBackRouteTypes() ([]string, error) {
+	return store.GetAllBackRouteTypes()
 }

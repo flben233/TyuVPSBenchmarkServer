@@ -36,3 +36,8 @@ go.work
 # Temporary files
 *.tmp
 *.log
+
+/statics/
+VPSBenchmarkBackend
+VPSBenchmarkBackend.iml
+.env

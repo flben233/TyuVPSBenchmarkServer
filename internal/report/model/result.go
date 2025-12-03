@@ -55,13 +55,12 @@ type BenchmarkResult struct {
 	Title     string    `gorm:"size:500" json:"title"`
 	Time      string    `gorm:"size:100" json:"time"`
 	Link      string    `gorm:"size:1000" json:"link"`
-	RawHTML   string    `gorm:"type:text" json:"-"`
-	SpdTest   JSONField `gorm:"type:text" json:"spdtest"`
-	ECS       JSONField `gorm:"type:text" json:"ecs"`
-	Media     JSONField `gorm:"type:text" json:"media"`
-	BestTrace JSONField `gorm:"type:text" json:"besttrace"`
-	Itdog     JSONField `gorm:"type:text" json:"itdog"`
-	Disk      JSONField `gorm:"type:text" json:"disk"`
+	SpdTest   JSONField `json:"spdtest"`
+	ECS       JSONField `json:"ecs"`
+	Media     JSONField `json:"media"`
+	BestTrace JSONField `json:"besttrace"`
+	Itdog     JSONField `json:"itdog"`
+	Disk      JSONField `json:"disk"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -123,6 +122,10 @@ func (j JSONField) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return json.Marshal(j.Data)
+}
+
+func (j JSONField) GormDBDataType() string {
+	return "text"
 }
 
 // MarshalJSON implements json.Marshaler
