@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TODO: 统一的返回体结构
 // TODO: 鉴权
 // TODO: Traceroute、小鸡Ping监控、WHOIS、IP查询、ping测试工具集成
 // TODO: 支持IPQuality

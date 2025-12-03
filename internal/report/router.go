@@ -14,6 +14,9 @@ func RegisterRouter(base string, r *gin.Engine) {
 		reportAPI.GET("/details", handler.GetReportDetails)
 		reportAPI.GET("/search", handler.SearchReports)
 		reportAPI.POST("/search", handler.SearchReports)
+		reportAPI.GET("/media-names", handler.GetAllMediaNames)
+		reportAPI.GET("/virtualizations", handler.GetAllVirtualizations)
+		reportAPI.GET("/backroute-types", handler.GetAllBackRouteTypes)
 	}
 	{
 		adminAPI := r.Group(base + "/admin")
