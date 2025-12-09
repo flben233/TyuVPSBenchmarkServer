@@ -32,3 +32,8 @@ func GetJWTMiddleware() gin.HandlerFunc {
 func GetOptionalJWTMiddleware() gin.HandlerFunc {
 	return middleware.OptionalJWTAuth()
 }
+
+// GetAdminMiddleware returns the admin authentication middleware
+func GetAdminMiddleware() gin.HandlerFunc {
+	return middleware.CheckAdmin()
+}

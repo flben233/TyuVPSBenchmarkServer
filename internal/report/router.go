@@ -21,7 +21,8 @@ func RegisterRouter(base string, r *gin.Engine) {
 	}
 	{
 		adminAPI := r.Group(base + "/admin")
-		adminAPI.Use(auth.GetJWTMiddleware()) // Protect admin routes with JWT authentication
+		adminAPI.Use(auth.GetJWTMiddleware())   // Protect admin routes with JWT authentication
+		adminAPI.Use(auth.GetAdminMiddleware()) // Additional admin check middleware
 		adminAPI.POST("/add", handler.AddReport)
 		adminAPI.POST("/delete", handler.DeleteReport)
 	}

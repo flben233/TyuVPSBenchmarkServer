@@ -12,6 +12,8 @@ type Config struct {
 	ClientSecret string `json:"clientSecret"`
 	JwtSecret    string `json:"jwtSecret"`
 	JwtExpiry    int    `json:"jwtExpiry"` // in seconds
+	AdminID      string `json:"adminId"`
+	IPApiKey     string `json:"ipApiKey"`
 }
 
 var cfg *Config

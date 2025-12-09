@@ -4,6 +4,7 @@ const (
 	SuccessCode       = 0
 	InternalErrorCode = -1
 	BadRequestCode    = -2
+	ForbiddenCode     = -3
 )
 
 // APIResponse is the unified response structure for all API endpoints
