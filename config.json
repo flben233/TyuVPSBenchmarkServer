@@ -1,8 +1,11 @@
 {
-  "outputDir": ".\\statics\\reports",
-  "inputDir": ".\\statics\\test_results",
-  "staticsDir": ".\\statics",
-  "port": 12345,
-  "baseUrl": "",
-  "url": "https://vps.lolicon.llc"
+	"port": 12345,
+	"baseUrl": "/api",
+	"clientId": "github-client-id",
+	"clientSecret": "github-client-secret",
+	"jwtSecret": "super-secret",
+	"jwtExpiry": 3600,
+	"adminId": "admin-id",
+	"ipApiKey": "ip-api-key",
+	"maxHostsPerUser": 5
 }
