@@ -16,6 +16,7 @@ type ParsedResult struct {
 	BestTrace []model.BestTraceResult
 	Itdog     model.ItdogResult
 	Disk      model.TyuDiskResult
+	IPQuality model.IPQualityResult
 	Title     string
 	Time      string
 	Link      string
@@ -44,6 +45,7 @@ func MainParser(html string) ParsedResult {
 		BestTrace: BestTraceParser(textLines),
 		Itdog:     ItdogParser(doc),
 		Disk:      TyuDiskParser(textLines),
+		IPQuality: IPQualityParser(textLines),
 		Title:     title,
 		Time:      time,
 		Link:      link,

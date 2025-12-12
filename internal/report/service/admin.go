@@ -155,6 +155,7 @@ func AddReport(rawHTML string) (string, error) {
 		BestTrace: model.JSONField{Data: parsedResult.BestTrace},
 		Itdog:     model.JSONField{Data: parsedResult.Itdog},
 		Disk:      model.JSONField{Data: parsedResult.Disk},
+		IPQuality: model.JSONField{Data: parsedResult.IPQuality},
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
 	}
