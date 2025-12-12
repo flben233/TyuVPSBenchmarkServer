@@ -26,7 +26,7 @@ func RegisterRouter(base string, r *gin.Engine) {
 		{
 			protectedAPI.GET("/hosts", handler.ListHosts)
 			protectedAPI.POST("/hosts", handler.AddHost)
-			protectedAPI.DELETE("/hosts/:id", handler.RemoveHost)
+			protectedAPI.POST("/hosts/:id", handler.RemoveHost)
 		}
 	}
 }

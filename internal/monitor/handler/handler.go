@@ -19,15 +19,20 @@ func AddHost(ctx *gin.Context) {
 		return
 	}
 
-	// Get username from context (set by auth middleware)
-	username, exists := ctx.Get("user_login")
+	// Get userID from context (set by auth middleware)
+	userID, exists := ctx.Get("user_login")
+	userName, exists := ctx.Get("user_name")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 		return
 	}
-
-	id, err := service.AddHost(username.(string), req.Target, req.Name)
+	isAdmin := config.Get().AdminID == userID.(string)
+	id, err := service.AddHost(userID.(string), userName.(string), req.Target, req.Name, isAdmin)
 	if err != nil {
+		if _, ok := err.(*service.HostLimitError); ok {
+			ctx.JSON(http.StatusForbidden, common.Error(common.ForbiddenCode, "Host limit reached"))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}
@@ -43,8 +48,8 @@ func RemoveHost(ctx *gin.Context) {
 		return
 	}
 
-	// Get username from context
-	username, exists := ctx.Get("user_login")
+	// Get userID from context
+	userID, exists := ctx.Get("user_login")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 		return
@@ -53,11 +58,11 @@ func RemoveHost(ctx *gin.Context) {
 	// Check if user is admin
 	isAdmin := false
 	cfg := config.Get()
-	if username.(string) == cfg.AdminID {
+	if userID.(string) == cfg.AdminID {
 		isAdmin = true
 	}
 
-	err = service.RemoveHost(username.(string), id, isAdmin)
+	err = service.RemoveHost(userID.(string), id, isAdmin)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
@@ -68,8 +73,8 @@ func RemoveHost(ctx *gin.Context) {
 
 // ListHosts handles GET /monitor/hosts - lists monitoring hosts
 func ListHosts(ctx *gin.Context) {
-	// Get username from context
-	username, exists := ctx.Get("user_login")
+	// Get userID from context
+	userID, exists := ctx.Get("user_login")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 		return
@@ -78,11 +83,11 @@ func ListHosts(ctx *gin.Context) {
 	// Check if user is admin
 	isAdmin := false
 	cfg := config.Get()
-	if username.(string) == cfg.AdminID {
+	if userID.(string) == cfg.AdminID {
 		isAdmin = true
 	}
 
-	hosts, err := service.ListHosts(username.(string), isAdmin)
+	hosts, err := service.ListHosts(userID.(string), isAdmin)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
