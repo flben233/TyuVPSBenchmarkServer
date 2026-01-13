@@ -5,13 +5,31 @@ import (
 	"VPSBenchmarkBackend/internal/report/model"
 	"context"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
 
+type benchmarkResult struct {
+	ID        uint   `gorm:"primaryKey"`
+	ReportID  string `gorm:"uniqueIndex;size:255"`
+	Title     string `gorm:"size:500"`
+	Time      string `gorm:"size:100"`
+	Link      string `gorm:"size:1000"`
+	SpdTest   common.JSONField[[]model.SpeedtestResults]
+	ECS       common.JSONField[model.ECSResult]
+	Media     common.JSONField[model.MediaResults]
+	BestTrace common.JSONField[[]model.BestTraceResult]
+	Itdog     common.JSONField[model.ItdogResult]
+	Disk      common.JSONField[model.TyuDiskResult]
+	IPQuality common.JSONField[model.IPQualityResult]
+	CreatedAt common.JSONField[time.Time]
+	UpdatedAt common.JSONField[time.Time]
+}
+
 var db *gorm.DB
 var (
-	benchmarkResults gorm.Interface[model.BenchmarkResult]
+	benchmarkResults gorm.Interface[benchmarkResult]
 	mediaIndex       gorm.Interface[model.MediaIndex]
 	speedtestIndex   gorm.Interface[model.SpeedtestIndex]
 	ecsIndex         gorm.Interface[model.InfoIndex]
@@ -27,10 +45,10 @@ func init() {
 func InitReportStore(dbPath string) error {
 	db = common.GetDB()
 	// Auto migrate the schema
-	if err := db.AutoMigrate(&model.BenchmarkResult{}, &model.MediaIndex{}, &model.SpeedtestIndex{}, &model.InfoIndex{}, &model.BacktraceIndex{}); err != nil {
+	if err := db.AutoMigrate(&benchmarkResult{}, &model.MediaIndex{}, &model.SpeedtestIndex{}, &model.InfoIndex{}, &model.BacktraceIndex{}); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
-	benchmarkResults = gorm.G[model.BenchmarkResult](db)
+	benchmarkResults = gorm.G[benchmarkResult](db)
 	mediaIndex = gorm.G[model.MediaIndex](db)
 	speedtestIndex = gorm.G[model.SpeedtestIndex](db)
 	ecsIndex = gorm.G[model.InfoIndex](db)
@@ -38,10 +56,46 @@ func InitReportStore(dbPath string) error {
 	return nil
 }
 
+func modelToDBModel(report *model.BenchmarkResult) *benchmarkResult {
+	return &benchmarkResult{
+		ReportID:  report.ReportID,
+		Title:     report.Title,
+		Time:      report.Time,
+		Link:      report.Link,
+		SpdTest:   common.JSONField[[]model.SpeedtestResults]{Data: &report.SpdTest},
+		ECS:       common.JSONField[model.ECSResult]{Data: &report.ECS},
+		Media:     common.JSONField[model.MediaResults]{Data: &report.Media},
+		BestTrace: common.JSONField[[]model.BestTraceResult]{Data: &report.BestTrace},
+		Itdog:     common.JSONField[model.ItdogResult]{Data: &report.Itdog},
+		Disk:      common.JSONField[model.TyuDiskResult]{Data: &report.Disk},
+		IPQuality: common.JSONField[model.IPQualityResult]{Data: &report.IPQuality},
+		CreatedAt: common.JSONField[time.Time]{Data: &report.CreatedAt},
+		UpdatedAt: common.JSONField[time.Time]{Data: &report.UpdatedAt},
+	}
+}
+
+func dbModelToModel(dbModel *benchmarkResult) *model.BenchmarkResult {
+	return &model.BenchmarkResult{
+		ReportID:  dbModel.ReportID,
+		Title:     dbModel.Title,
+		Time:      dbModel.Time,
+		Link:      dbModel.Link,
+		SpdTest:   *dbModel.SpdTest.Data,
+		ECS:       *dbModel.ECS.Data,
+		Media:     *dbModel.Media.Data,
+		BestTrace: *dbModel.BestTrace.Data,
+		Itdog:     *dbModel.Itdog.Data,
+		Disk:      *dbModel.Disk.Data,
+		IPQuality: *dbModel.IPQuality.Data,
+		CreatedAt: *dbModel.CreatedAt.Data,
+		UpdatedAt: *dbModel.UpdatedAt.Data,
+	}
+}
+
 // SaveReport saves a new benchmark report to database
 func SaveReport(report *model.BenchmarkResult, mi []model.MediaIndex, si []model.SpeedtestIndex, ei *model.InfoIndex, bi []model.BacktraceIndex) error {
 	ctx := context.Background()
-	err := benchmarkResults.Create(ctx, report)
+	err := benchmarkResults.Create(ctx, modelToDBModel(report))
 	for _, m := range mi {
 		if err == nil {
 			err = mediaIndex.Create(ctx, &m)
@@ -109,11 +163,15 @@ func ListReports(page, pageSize int) ([]model.BenchmarkResult, int64, error) {
 	offset := (page - 1) * pageSize
 
 	// Get paginated results
-	results, err := benchmarkResults.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(ctx)
+	dbResults, err := benchmarkResults.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list reports: %w", err)
 	}
 
+	results := make([]model.BenchmarkResult, len(dbResults))
+	for i, dbResult := range dbResults {
+		results[i] = *dbModelToModel(&dbResult)
+	}
 	return results, total, nil
 }
 
@@ -124,7 +182,7 @@ func GetReportByID(reportID string) (*model.BenchmarkResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get report: %w", err)
 	}
-	return &result, nil
+	return dbModelToModel(&result), nil
 }
 
 // SearchReports searches reports based on various criteria
@@ -132,7 +190,7 @@ func SearchReports(keyword *string, mediaUnlocks []string, virtualization *strin
 	ctISP, cuISP, cmISP *ISPSearchParams, page, pageSize int) ([]model.BenchmarkResult, int64, error) {
 
 	// Start with base query
-	query := db.Model(&model.BenchmarkResult{})
+	query := db.Model(&benchmarkResult{})
 
 	// Keyword search on title
 	if keyword != nil && *keyword != "" {
@@ -284,12 +342,16 @@ func SearchReports(keyword *string, mediaUnlocks []string, virtualization *strin
 
 	// Calculate offset and get paginated results
 	offset := (page - 1) * pageSize
-	var results []model.BenchmarkResult
+	var results []benchmarkResult
 	if err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&results).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to search reports: %w", err)
 	}
+	convertedResults := make([]model.BenchmarkResult, len(results))
+	for i, r := range results {
+		convertedResults[i] = *dbModelToModel(&r)
+	}
 
-	return results, total, nil
+	return convertedResults, total, nil
 }
 
 // ISPSearchParams holds search parameters for ISP-specific queries

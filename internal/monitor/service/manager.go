@@ -2,6 +2,7 @@ package service
 
 import (
 	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/monitor/model"
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/internal/monitor/store"
 )
@@ -36,7 +37,7 @@ func RemoveHost(userID string, id int64, isAdmin bool) error {
 }
 
 func ListHosts(userID string, isAdmin bool) ([]response.HostResponse, error) {
-	var hosts []store.MonitorHost
+	var hosts []model.MonitorHost
 	var err error
 
 	if isAdmin {

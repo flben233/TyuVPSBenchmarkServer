@@ -18,7 +18,7 @@ func RegisterRoute(base string, r *gin.Engine) {
 	authGroup := r.Group(base + "/auth")
 	{
 		// Public routes (no authentication required)
-		authGroup.POST("/github/login", handler.GithubLogin)
+		authGroup.GET("/github/login", handler.GithubLogin)
 
 		// Protected routes (authentication required)
 		protected := authGroup.Group("")

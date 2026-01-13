@@ -1,7 +1,9 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/monitor/response"
+	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -12,12 +14,33 @@ import (
 
 const serverStatusSampleInterval = 250 * time.Millisecond
 
+var (
+	cachedServerStatus response.ServerStatusResponse
+	statusMutex        sync.RWMutex
+)
+
 type netSample struct {
 	uploadMbps   float64
 	downloadMbps float64
 	err          error
 }
 
+// init registers the background job to update server status cache periodically
+func init() {
+	common.RegisterCronJob(serverStatusSampleInterval, updateServerStatusCache)
+}
+
+// updateServerStatusCache collects server status and updates the cache
+func updateServerStatusCache() {
+	status, err := collectServerStatus()
+	if err == nil {
+		statusMutex.Lock()
+		cachedServerStatus = status
+		statusMutex.Unlock()
+	}
+}
+
+// sampleNetMbps samples network upload/download speed in Mbps
 func sampleNetMbps(interval time.Duration) (uploadMbps float64, downloadMbps float64, err error) {
 	if interval <= 0 {
 		interval = serverStatusSampleInterval
@@ -65,7 +88,8 @@ func sampleNetMbps(interval time.Duration) (uploadMbps float64, downloadMbps flo
 	return uploadMbps, downloadMbps, nil
 }
 
-func GetServerStatus() (response.ServerStatusResponse, error) {
+// collectServerStatus collects current server status by sampling
+func collectServerStatus() (response.ServerStatusResponse, error) {
 	uptime, err := host.Uptime()
 	if err != nil {
 		return response.ServerStatusResponse{}, err
@@ -128,4 +152,11 @@ func GetServerStatus() (response.ServerStatusResponse, error) {
 		UploadMbps:         netRes.uploadMbps,
 		DownloadMbps:       netRes.downloadMbps,
 	}, nil
+}
+
+// GetServerStatus returns the cached server status
+func GetServerStatus() (response.ServerStatusResponse, error) {
+	statusMutex.RLock()
+	defer statusMutex.RUnlock()
+	return cachedServerStatus, nil
 }
