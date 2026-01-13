@@ -2,22 +2,24 @@ package monitor
 
 import (
 	"VPSBenchmarkBackend/internal/auth"
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/monitor/handler"
-	"VPSBenchmarkBackend/internal/monitor/store"
 
 	"github.com/gin-gonic/gin"
 )
 
-func InitMonitorStore(dbPath string) error {
-	return store.InitMonitorStore(dbPath)
+func init() {
+	// Register the routes
+	common.RegisterRoutes(RegisterRoute)
 }
 
-func RegisterRouter(base string, r *gin.Engine) {
+func RegisterRoute(base string, r *gin.Engine) {
 	base += "/monitor"
 	{
 		// Public routes - get statistics
 		publicAPI := r.Group(base)
 		publicAPI.GET("/statistics", handler.GetStatistics)
+		publicAPI.GET("/status", handler.GetServerStatus)
 	}
 	{
 		// Protected routes - manage hosts

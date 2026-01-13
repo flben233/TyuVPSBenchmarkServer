@@ -8,25 +8,25 @@ const (
 )
 
 // APIResponse is the unified response structure for all API endpoints
-type APIResponse struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+type APIResponse[T any] struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    T      `json:"data,omitempty"`
 }
 
 // PaginatedResponse is the response structure for paginated data
-type PaginatedResponse struct {
-	Code     int         `json:"code"`
-	Message  string      `json:"message"`
-	Data     interface{} `json:"data,omitempty"`
-	Total    int64       `json:"total"`
-	Page     int         `json:"page"`
-	PageSize int         `json:"page_size"`
+type PaginatedResponse[T any] struct {
+	Code     int    `json:"code"`
+	Message  string `json:"message"`
+	Data     T      `json:"data,omitempty"`
+	Total    int64  `json:"total"`
+	Page     int    `json:"page"`
+	PageSize int    `json:"page_size"`
 }
 
 // Success creates a successful response with data
-func Success(data interface{}) APIResponse {
-	return APIResponse{
+func Success[T any](data T) APIResponse[T] {
+	return APIResponse[T]{
 		Code:    0,
 		Message: "success",
 		Data:    data,
@@ -34,8 +34,8 @@ func Success(data interface{}) APIResponse {
 }
 
 // SuccessWithMessage creates a successful response with a custom message
-func SuccessWithMessage(message string, data interface{}) APIResponse {
-	return APIResponse{
+func SuccessWithMessage[T any](message string, data T) APIResponse[T] {
+	return APIResponse[T]{
 		Code:    0,
 		Message: message,
 		Data:    data,
@@ -43,16 +43,16 @@ func SuccessWithMessage(message string, data interface{}) APIResponse {
 }
 
 // Error creates an error response
-func Error(code int, message string) APIResponse {
-	return APIResponse{
+func Error(code int, message string) APIResponse[any] {
+	return APIResponse[any]{
 		Code:    code,
 		Message: message,
 	}
 }
 
 // SuccessPaginated creates a successful paginated response
-func SuccessPaginated(data interface{}, total int64, page, pageSize int) PaginatedResponse {
-	return PaginatedResponse{
+func SuccessPaginated[T any](data T, total int64, page, pageSize int) PaginatedResponse[T] {
+	return PaginatedResponse[T]{
 		Code:     0,
 		Message:  "success",
 		Data:     data,

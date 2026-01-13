@@ -21,9 +21,9 @@ type GithubLoginRequest struct {
 // @Accept json
 // @Produce json
 // @Param request body GithubLoginRequest true "GitHub OAuth code"
-// @Success 200 {object} common.APIResponse{data=response.LoginResponse}
-// @Failure 400 {object} common.APIResponse
-// @Failure 500 {object} common.APIResponse
+// @Success 200 {object} common.APIResponse[response.LoginResponse]
+// @Failure 400 {object} common.APIResponse[any]
+// @Failure 500 {object} common.APIResponse[any]
 // @Router /auth/github/login [post]
 func GithubLogin(c *gin.Context) {
 	var req GithubLoginRequest
@@ -47,8 +47,8 @@ func GithubLogin(c *gin.Context) {
 // @Tags auth
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} common.APIResponse{data=response.UserInfo}
-// @Failure 401 {object} common.APIResponse
+// @Success 200 {object} common.APIResponse[response.UserInfo]
+// @Failure 401 {object} common.APIResponse[any]
 // @Router /auth/user [get]
 func GetUserInfo(c *gin.Context) {
 	// Get user info from context (set by middleware)

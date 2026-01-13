@@ -18,6 +18,11 @@ var (
 	backtraceIndex   gorm.Interface[model.BacktraceIndex]
 )
 
+func init() {
+	// Register the initializer
+	common.RegisterDBInitializer(InitReportStore)
+}
+
 // InitReportStore initializes the tables
 func InitReportStore(dbPath string) error {
 	db = common.GetDB()

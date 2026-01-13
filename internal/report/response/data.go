@@ -6,3 +6,7 @@ type ReportInfoResponse struct {
 	Id   string `json:"id"`
 	Date string `json:"date"`
 }
+
+type ReportIDResponse struct {
+	Id string `json:"id"`
+}

@@ -11,7 +11,7 @@ import (
 )
 
 // 本文件可以查看过去一段时间内的监控数据，
-
+// TODO: 把这个改成定时运行的，而不是仅在访问的时候运行一次
 func queryHosts(targets []string) map[string]float32 {
 	resultCh := make(chan *probing.Statistics, len(targets))
 	for _, target := range targets {

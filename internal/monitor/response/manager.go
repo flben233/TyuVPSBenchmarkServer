@@ -5,3 +5,7 @@ type HostResponse struct {
 	Name   string `json:"name"`
 	Id     int64  `json:"id"`
 }
+
+type HostIDResponse struct {
+	Id int64 `json:"id"`
+}

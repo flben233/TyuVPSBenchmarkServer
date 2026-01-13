@@ -4,12 +4,18 @@ import (
 	"path/filepath"
 
 	"fmt"
+	"os"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"os"
 )
 
 var db *gorm.DB
+var dbInitializers = make([]func(string) error, 0)
+
+func RegisterDBInitializer(initFunc func(string) error) {
+	dbInitializers = append(dbInitializers, initFunc)
+}
 
 // InitDB initializes the database connection and creates tables
 func InitDB(dbPath string) error {
@@ -24,6 +30,12 @@ func InitDB(dbPath string) error {
 	db, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	// Run initializers
+	for _, initFunc := range dbInitializers {
+		if err := initFunc(dbPath); err != nil {
+			return err
+		}
 	}
 	return nil
 }

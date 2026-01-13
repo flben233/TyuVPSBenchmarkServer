@@ -1,19 +1,19 @@
 package main
 
 import (
-	"VPSBenchmarkBackend/internal/auth"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
-	"VPSBenchmarkBackend/internal/monitor"
-	"VPSBenchmarkBackend/internal/report"
-	"VPSBenchmarkBackend/internal/report/store"
-	"VPSBenchmarkBackend/internal/tool"
 	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// TODO: 对所有用户上传内容强制人工审核，审核通过才可公开（目前计划中的只有monitor和looking glass，数据库增加一个字段区分未审核/通过/拒绝即可）
+// @title Lolicon VPS API
+// @BasePath /api
 func main() {
 	err := config.Load("config.json")
 	if err != nil {
@@ -26,18 +26,10 @@ func main() {
 	if err := common.InitDB(dbPath); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	if err := store.InitReportStore(dbPath); err != nil {
-		log.Fatalf("Failed to initialize report store: %v", err)
-	}
-	if err := monitor.InitMonitorStore(dbPath); err != nil {
-		log.Fatalf("Failed to initialize monitor store: %v", err)
-	}
 	log.Println("Database initialized successfully at", dbPath)
 
 	r := gin.Default()
-	auth.RegisterRouter(config.Get().BaseURL, r)
-	report.RegisterRouter(config.Get().BaseURL, r)
-	monitor.RegisterRouter(config.Get().BaseURL, r)
-	tool.RegisterRouter(config.Get().BaseURL, r)
+	r.GET("swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	r.Run(fmt.Sprintf(":%d", config.Get().Port))
 }

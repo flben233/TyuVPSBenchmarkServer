@@ -50,20 +50,20 @@ type ItdogResult struct {
 
 // BenchmarkResult is the main model stored in database
 type BenchmarkResult struct {
-	ID        uint      `gorm:"primaryKey" json:"-"`
-	ReportID  string    `gorm:"uniqueIndex;size:255" json:"id"`
-	Title     string    `gorm:"size:500" json:"title"`
-	Time      string    `gorm:"size:100" json:"time"`
-	Link      string    `gorm:"size:1000" json:"link"`
-	SpdTest   JSONField `json:"spdtest"`
-	ECS       JSONField `json:"ecs"`
-	Media     JSONField `json:"media"`
-	BestTrace JSONField `json:"besttrace"`
-	Itdog     JSONField `json:"itdog"`
-	Disk      JSONField `json:"disk"`
-	IPQuality JSONField `json:"ipquality"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uint                          `gorm:"primaryKey" json:"-"`
+	ReportID  string                        `gorm:"uniqueIndex;size:255" json:"id"`
+	Title     string                        `gorm:"size:500" json:"title"`
+	Time      string                        `gorm:"size:100" json:"time"`
+	Link      string                        `gorm:"size:1000" json:"link"`
+	SpdTest   JSONField[[]SpeedtestResults] `json:"spdtest"`
+	ECS       JSONField[ECSResult]          `json:"ecs"`
+	Media     JSONField[MediaResults]       `json:"media"`
+	BestTrace JSONField[[]BestTraceResult]  `json:"besttrace"`
+	Itdog     JSONField[ItdogResult]        `json:"itdog"`
+	Disk      JSONField[TyuDiskResult]      `json:"disk"`
+	IPQuality JSONField[IPQualityResult]    `json:"ipquality"`
+	CreatedAt time.Time                     `json:"created_at"`
+	UpdatedAt time.Time                     `json:"updated_at"`
 }
 
 type SpeedtestResult struct {
@@ -199,12 +199,12 @@ type IPQualityResult struct {
 }
 
 // JSONField is a custom type for storing JSON data in SQLite
-type JSONField struct {
-	Data interface{}
+type JSONField[T any] struct {
+	Data *T
 }
 
 // Scan implements the sql.Scanner interface
-func (j *JSONField) Scan(value interface{}) error {
+func (j *JSONField[T]) Scan(value interface{}) error {
 	if value == nil {
 		j.Data = nil
 		return nil
@@ -217,23 +217,23 @@ func (j *JSONField) Scan(value interface{}) error {
 }
 
 // Value implements the driver.Valuer interface
-func (j JSONField) Value() (driver.Value, error) {
+func (j JSONField[T]) Value() (driver.Value, error) {
 	if j.Data == nil {
 		return nil, nil
 	}
 	return json.Marshal(j.Data)
 }
 
-func (j JSONField) GormDBDataType() string {
+func (j JSONField[T]) GormDBDataType() string {
 	return "text"
 }
 
 // MarshalJSON implements json.Marshaler
-func (j JSONField) MarshalJSON() ([]byte, error) {
+func (j JSONField[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.Data)
 }
 
 // UnmarshalJSON implements json.Unmarshaler
-func (j *JSONField) UnmarshalJSON(data []byte) error {
+func (j *JSONField[T]) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &j.Data)
 }

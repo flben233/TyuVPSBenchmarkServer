@@ -28,6 +28,11 @@ func (MonitorHost) TableName() string {
 var db *gorm.DB
 var monitorHosts gorm.Interface[MonitorHost]
 
+func init() {
+	// Register the initializer
+	common.RegisterDBInitializer(InitMonitorStore)
+}
+
 // InitMonitorStore initializes the monitor store and creates tables
 func InitMonitorStore(dbPath string) error {
 	db = common.GetDB()
