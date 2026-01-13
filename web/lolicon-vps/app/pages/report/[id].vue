@@ -91,22 +91,22 @@ const goBack = () => {
           </div>
 
           <!-- ECS Benchmark Results -->
-          <el-card shadow="never" class="section-card" v-if="report.ecs?.data">
+          <el-card shadow="never" class="section-card" v-if="report.ecs">
             <template #header>
               <div class="card-header">
                 <span class="section-title">ECS 性能测试</span>
-                <el-tag v-if="report.ecs.data.time" size="small">{{
-                  report.ecs.data.time
+                <el-tag v-if="report.ecs.time" size="small">{{
+                  report.ecs.time
                 }}</el-tag>
               </div>
             </template>
 
             <!-- System Info -->
-            <div v-if="report.ecs.data.info" class="subsection">
+            <div v-if="report.ecs.info" class="subsection">
               <h3>系统信息</h3>
               <el-descriptions :column="2" border>
                 <el-descriptions-item
-                  v-for="(value, key) in report.ecs.data.info"
+                  v-for="(value, key) in report.ecs.info"
                   :key="key"
                   :label="key"
                 >
@@ -122,33 +122,33 @@ const goBack = () => {
                 <el-col :span="12">
                   <el-statistic
                     title="单核得分"
-                    :value="report.ecs.data.cpu.single || 0"
+                    :value="report.ecs.cpu.single || 0"
                   />
                 </el-col>
                 <el-col :span="12">
                   <el-statistic
                     title="多核得分"
-                    :value="report.ecs.data.cpu.multi || 0"
+                    :value="report.ecs.cpu.multi || 0"
                   />
                 </el-col>
               </el-row>
             </div>
 
             <!-- Memory Performance -->
-            <div v-if="report.ecs.data.mem" class="subsection">
+            <div v-if="report.ecs.mem" class="subsection">
               <h3>内存性能</h3>
               <el-row :gutter="16">
                 <el-col :span="12">
                   <el-statistic
                     title="读取速度 (MB/s)"
-                    :value="report.ecs.data.mem.read || 0"
+                    :value="report.ecs.mem.read || 0"
                     :precision="2"
                   />
                 </el-col>
                 <el-col :span="12">
                   <el-statistic
                     title="写入速度 (MB/s)"
-                    :value="report.ecs.data.mem.write || 0"
+                    :value="report.ecs.mem.write || 0"
                     :precision="2"
                   />
                 </el-col>
@@ -156,24 +156,24 @@ const goBack = () => {
             </div>
 
             <!-- Disk Performance -->
-            <div v-if="report.ecs.data.disk" class="subsection">
+            <div v-if="report.ecs.disk" class="subsection">
               <h3>磁盘性能</h3>
               <el-descriptions :column="2" border>
                 <el-descriptions-item label="顺序读取">{{
-                  report.ecs.data.disk.seq_read
+                  report.ecs.disk.seq_read
                 }}</el-descriptions-item>
                 <el-descriptions-item label="顺序写入">{{
-                  report.ecs.data.disk.seq_write
+                  report.ecs.disk.seq_write
                 }}</el-descriptions-item>
               </el-descriptions>
             </div>
 
             <!-- Mail Ports -->
-            <div v-if="report.ecs.data.mail" class="subsection">
+            <div v-if="report.ecs.mail" class="subsection">
               <h3>邮件端口测试</h3>
               <div class="tag-group">
                 <el-tag
-                  v-for="(values, port) in report.ecs.data.mail"
+                  v-for="(values, port) in report.ecs.mail"
                   :key="port"
                   :type="values.some((v) => v) ? 'success' : 'danger'"
                   style="margin: 4px"
@@ -187,24 +187,24 @@ const goBack = () => {
             </div>
 
             <!-- Network Trace -->
-            <div v-if="report.ecs.data.trace" class="subsection">
+            <div v-if="report.ecs.trace" class="subsection">
               <h3>网络路由</h3>
               <el-descriptions :column="1" border>
                 <el-descriptions-item
-                  v-if="report.ecs.data.trace.back_route"
+                  v-if="report.ecs.trace.back_route"
                   label="回程路由"
                 >
                   <pre class="code-block">{{
-                    report.ecs.data.trace.back_route
+                    report.ecs.trace.back_route
                   }}</pre>
                 </el-descriptions-item>
                 <el-descriptions-item
-                  v-if="report.ecs.data.trace.types"
+                  v-if="report.ecs.trace.types"
                   label="路由类型"
                 >
                   <div class="tag-group">
                     <el-tag
-                      v-for="(value, key) in report.ecs.data.trace.types"
+                      v-for="(value, key) in report.ecs.trace.types"
                       :key="key"
                       style="margin: 4px"
                     >
@@ -218,18 +218,18 @@ const goBack = () => {
             <!-- TikTok & IP Quality -->
             <div class="subsection">
               <el-row :gutter="16">
-                <el-col :span="12" v-if="report.ecs.data.tiktok">
+                <el-col :span="12" v-if="report.ecs.tiktok">
                   <h3>TikTok 解锁状态</h3>
                   <el-tag
-                    :type="getStatusColor(report.ecs.data.tiktok)"
+                    :type="getStatusColor(report.ecs.tiktok)"
                     size="large"
                   >
-                    {{ report.ecs.data.tiktok }}
+                    {{ report.ecs.tiktok }}
                   </el-tag>
                 </el-col>
-                <el-col :span="12" v-if="report.ecs.data.ip_quality">
+                <el-col :span="12" v-if="report.ecs.ip_quality">
                   <h3>IP 质量</h3>
-                  <pre class="code-block">{{ report.ecs.data.ip_quality }}</pre>
+                  <pre class="code-block">{{ report.ecs.ip_quality }}</pre>
                 </el-col>
               </el-row>
             </div>
@@ -239,14 +239,14 @@ const goBack = () => {
           <el-card
             shadow="never"
             class="section-card"
-            v-if="report.spdtest?.data?.length"
+            v-if="report.spdtest?.length"
           >
             <template #header>
               <span class="section-title">速度测试</span>
             </template>
 
             <div
-              v-for="(test, index) in report.spdtest.data"
+              v-for="(test, index) in report.spdtest"
               :key="index"
               class="subsection"
             >
@@ -297,16 +297,16 @@ const goBack = () => {
           <el-card
             shadow="never"
             class="section-card"
-            v-if="report.media?.data"
+            v-if="report.media"
           >
             <template #header>
               <span class="section-title">流媒体解锁测试</span>
             </template>
 
-            <div v-if="report.media.data.ipv4?.length" class="subsection">
+            <div v-if="report.media.ipv4?.length" class="subsection">
               <h3>IPv4 解锁情况</h3>
               <div
-                v-for="(block, index) in report.media.data.ipv4"
+                v-for="(block, index) in report.media.ipv4"
                 :key="'ipv4-' + index"
               >
                 <h4>{{ block.region }}</h4>
@@ -323,10 +323,10 @@ const goBack = () => {
               </div>
             </div>
 
-            <div v-if="report.media.data.ipv6?.length" class="subsection">
+            <div v-if="report.media.ipv6?.length" class="subsection">
               <h3>IPv6 解锁情况</h3>
               <div
-                v-for="(block, index) in report.media.data.ipv6"
+                v-for="(block, index) in report.media.ipv6"
                 :key="'ipv6-' + index"
               >
                 <h4>{{ block.region }}</h4>
@@ -348,73 +348,73 @@ const goBack = () => {
           <el-card
             shadow="never"
             class="section-card"
-            v-if="report.ipquality?.data"
+            v-if="report.ipquality"
           >
             <template #header>
               <span class="section-title">IP 质量检测</span>
             </template>
 
             <!-- Head Info -->
-            <div v-if="report.ipquality.data.Head?.[0]" class="subsection">
+            <div v-if="report.ipquality.Head?.[0]" class="subsection">
               <h3>检测信息</h3>
               <el-descriptions :column="2" border>
                 <el-descriptions-item label="IP">{{
-                  report.ipquality.data.Head[0].IP
+                  report.ipquality.Head[0].IP
                 }}</el-descriptions-item>
                 <el-descriptions-item label="检测时间">{{
-                  report.ipquality.data.Head[0].Time
+                  report.ipquality.Head[0].Time
                 }}</el-descriptions-item>
                 <el-descriptions-item label="版本">{{
-                  report.ipquality.data.Head[0].Version
+                  report.ipquality.Head[0].Version
                 }}</el-descriptions-item>
                 <el-descriptions-item label="GitHub">
                   <el-link
-                    :href="report.ipquality.data.Head[0].GitHub"
+                    :href="report.ipquality.Head[0].GitHub"
                     target="_blank"
                   >
-                    {{ report.ipquality.data.Head[0].GitHub }}
+                    {{ report.ipquality.Head[0].GitHub }}
                   </el-link>
                 </el-descriptions-item>
               </el-descriptions>
             </div>
 
             <!-- Geographic Info -->
-            <div v-if="report.ipquality.data.Info?.[0]" class="subsection">
+            <div v-if="report.ipquality.Info?.[0]" class="subsection">
               <h3>地理位置信息</h3>
               <el-descriptions :column="2" border>
                 <el-descriptions-item label="ASN">{{
-                  report.ipquality.data.Info[0].ASN
+                  report.ipquality.Info[0].ASN
                 }}</el-descriptions-item>
                 <el-descriptions-item label="组织">{{
-                  report.ipquality.data.Info[0].Organization
+                  report.ipquality.Info[0].Organization
                 }}</el-descriptions-item>
                 <el-descriptions-item label="大洲">
-                  {{ report.ipquality.data.Info[0].Continent?.Name }} ({{
-                    report.ipquality.data.Info[0].Continent?.Code
+                  {{ report.ipquality.Info[0].Continent?.Name }} ({{
+                    report.ipquality.Info[0].Continent?.Code
                   }})
                 </el-descriptions-item>
                 <el-descriptions-item label="国家/地区">
-                  {{ report.ipquality.data.Info[0].Region?.Name }} ({{
-                    report.ipquality.data.Info[0].Region?.Code
+                  {{ report.ipquality.Info[0].Region?.Name }} ({{
+                    report.ipquality.Info[0].Region?.Code
                   }})
                 </el-descriptions-item>
                 <el-descriptions-item label="城市">
-                  {{ report.ipquality.data.Info[0].City?.Name }}
+                  {{ report.ipquality.Info[0].City?.Name }}
                 </el-descriptions-item>
                 <el-descriptions-item label="时区">{{
-                  report.ipquality.data.Info[0].TimeZone
+                  report.ipquality.Info[0].TimeZone
                 }}</el-descriptions-item>
                 <el-descriptions-item label="经纬度" :span="2">
-                  {{ report.ipquality.data.Info[0].Latitude }},
-                  {{ report.ipquality.data.Info[0].Longitude }}
+                  {{ report.ipquality.Info[0].Latitude }},
+                  {{ report.ipquality.Info[0].Longitude }}
                 </el-descriptions-item>
                 <el-descriptions-item
                   label="地图链接"
                   :span="2"
-                  v-if="report.ipquality.data.Info[0].Map"
+                  v-if="report.ipquality.Info[0].Map"
                 >
                   <el-link
-                    :href="report.ipquality.data.Info[0].Map"
+                    :href="report.ipquality.Info[0].Map"
                     target="_blank"
                     >查看地图</el-link
                   >
@@ -423,11 +423,11 @@ const goBack = () => {
             </div>
 
             <!-- Risk Scores -->
-            <div v-if="report.ipquality.data.Score?.[0]" class="subsection">
+            <div v-if="report.ipquality.Score?.[0]" class="subsection">
               <h3>风险评分</h3>
               <el-descriptions :column="3" border>
                 <el-descriptions-item
-                  v-for="(value, key) in report.ipquality.data.Score[0]"
+                  v-for="(value, key) in report.ipquality.Score[0]"
                   :key="key"
                   :label="key"
                 >
@@ -437,58 +437,58 @@ const goBack = () => {
             </div>
 
             <!-- Risk Factors -->
-            <div v-if="report.ipquality.data.Factor?.[0]" class="subsection">
+            <div v-if="report.ipquality.Factor?.[0]" class="subsection">
               <h3>风险因素</h3>
               <div class="tag-group">
                 <el-tag
                   style="margin: 4px"
-                  v-if="report.ipquality.data.Factor[0].VPN !== undefined"
+                  v-if="report.ipquality.Factor[0].VPN !== undefined"
                 >
-                  VPN: {{ report.ipquality.data.Factor[0].VPN ? "是" : "否" }}
+                  VPN: {{ report.ipquality.Factor[0].VPN ? "是" : "否" }}
                 </el-tag>
                 <el-tag
                   style="margin: 4px"
-                  v-if="report.ipquality.data.Factor[0].Proxy !== undefined"
+                  v-if="report.ipquality.Factor[0].Proxy !== undefined"
                 >
                   代理:
-                  {{ report.ipquality.data.Factor[0].Proxy ? "是" : "否" }}
+                  {{ report.ipquality.Factor[0].Proxy ? "是" : "否" }}
                 </el-tag>
                 <el-tag
                   style="margin: 4px"
-                  v-if="report.ipquality.data.Factor[0].Tor !== undefined"
+                  v-if="report.ipquality.Factor[0].Tor !== undefined"
                 >
-                  Tor: {{ report.ipquality.data.Factor[0].Tor ? "是" : "否" }}
+                  Tor: {{ report.ipquality.Factor[0].Tor ? "是" : "否" }}
                 </el-tag>
                 <el-tag
                   style="margin: 4px"
-                  v-if="report.ipquality.data.Factor[0].Server !== undefined"
+                  v-if="report.ipquality.Factor[0].Server !== undefined"
                 >
                   服务器:
-                  {{ report.ipquality.data.Factor[0].Server ? "是" : "否" }}
+                  {{ report.ipquality.Factor[0].Server ? "是" : "否" }}
                 </el-tag>
                 <el-tag
                   style="margin: 4px"
-                  v-if="report.ipquality.data.Factor[0].Abuser !== undefined"
+                  v-if="report.ipquality.Factor[0].Abuser !== undefined"
                 >
                   滥用者:
-                  {{ report.ipquality.data.Factor[0].Abuser ? "是" : "否" }}
+                  {{ report.ipquality.Factor[0].Abuser ? "是" : "否" }}
                 </el-tag>
                 <el-tag
                   style="margin: 4px"
-                  v-if="report.ipquality.data.Factor[0].Robot !== undefined"
+                  v-if="report.ipquality.Factor[0].Robot !== undefined"
                 >
                   机器人:
-                  {{ report.ipquality.data.Factor[0].Robot ? "是" : "否" }}
+                  {{ report.ipquality.Factor[0].Robot ? "是" : "否" }}
                 </el-tag>
               </div>
             </div>
 
             <!-- Mail Test Results -->
-            <div v-if="report.ipquality.data.Mail?.[0]" class="subsection">
+            <div v-if="report.ipquality.Mail?.[0]" class="subsection">
               <h3>邮件服务测试</h3>
               <div class="tag-group">
                 <el-tag
-                  v-for="(value, key) in report.ipquality.data.Mail[0]"
+                  v-for="(value, key) in report.ipquality.Mail[0]"
                   :key="key"
                   :type="
                     key === 'DNSBlacklist'
@@ -510,12 +510,12 @@ const goBack = () => {
             </div>
 
             <!-- Media Unlock -->
-            <div v-if="report.ipquality.data.Media?.[0]" class="subsection">
+            <div v-if="report.ipquality.Media?.[0]" class="subsection">
               <h3>流媒体服务</h3>
               <el-row :gutter="16">
                 <el-col
                   :span="8"
-                  v-for="(value, key) in report.ipquality.data.Media[0]"
+                  v-for="(value, key) in report.ipquality.Media[0]"
                   :key="key"
                 >
                   <el-card shadow="hover" class="media-card">
@@ -539,14 +539,14 @@ const goBack = () => {
             </div>
 
             <!-- Type Info -->
-            <div v-if="report.ipquality.data.Type?.[0]" class="subsection">
+            <div v-if="report.ipquality.Type?.[0]" class="subsection">
               <h3>IP 类型</h3>
               <el-row :gutter="16">
-                <el-col :span="12" v-if="report.ipquality.data.Type[0].Company">
+                <el-col :span="12" v-if="report.ipquality.Type[0].Company">
                   <h4>公司类型</h4>
                   <el-descriptions :column="1" border size="small">
                     <el-descriptions-item
-                      v-for="(value, key) in report.ipquality.data.Type[0]
+                      v-for="(value, key) in report.ipquality.Type[0]
                         .Company"
                       :key="key"
                       :label="key"
@@ -555,11 +555,11 @@ const goBack = () => {
                     </el-descriptions-item>
                   </el-descriptions>
                 </el-col>
-                <el-col :span="12" v-if="report.ipquality.data.Type[0].Usage">
+                <el-col :span="12" v-if="report.ipquality.Type[0].Usage">
                   <h4>使用类型</h4>
                   <el-descriptions :column="1" border size="small">
                     <el-descriptions-item
-                      v-for="(value, key) in report.ipquality.data.Type[0]
+                      v-for="(value, key) in report.ipquality.Type[0]
                         .Usage"
                       :key="key"
                       :label="key"
@@ -576,14 +576,14 @@ const goBack = () => {
           <el-card
             shadow="never"
             class="section-card"
-            v-if="report.besttrace?.data?.length"
+            v-if="report.besttrace?.length"
           >
             <template #header>
               <span class="section-title">BestTrace 路由追踪</span>
             </template>
 
             <div
-              v-for="(trace, index) in report.besttrace.data"
+              v-for="(trace, index) in report.besttrace"
               :key="index"
               class="subsection"
             >
@@ -596,25 +596,25 @@ const goBack = () => {
           <el-card
             shadow="never"
             class="section-card"
-            v-if="report.itdog?.data"
+            v-if="report.itdog?.length"
           >
             <template #header>
               <span class="section-title">ITDog 测试结果</span>
             </template>
 
-            <div v-if="report.itdog.data.ping" class="subsection">
+            <div v-if="report.itdog.ping" class="subsection">
               <h3>Ping 测试结果</h3>
               <img
-                :src="'data:image/png;base64,' + report.itdog.data.ping"
+                :src="'data:image/png;base64,' + report.itdog.ping"
                 alt="Ping Result"
                 style="max-width: 100%"
               />
             </div>
 
-            <div v-if="report.itdog.data.route?.length" class="subsection">
+            <div v-if="report.itdog.route?.length" class="subsection">
               <h3>路由追踪结果</h3>
               <div
-                v-for="(routeImg, index) in report.itdog.data.route"
+                v-for="(routeImg, index) in report.itdog.route"
                 :key="index"
                 style="margin-bottom: 16px"
               >
@@ -629,19 +629,19 @@ const goBack = () => {
           </el-card>
 
           <!-- Disk Test Results -->
-          <el-card shadow="never" class="section-card" v-if="report.disk?.data">
+          <el-card shadow="never" class="section-card" v-if="report.disk">
             <template #header>
               <div class="card-header">
                 <span class="section-title">磁盘测试</span>
-                <el-tag v-if="report.disk.data.time" size="small">{{
-                  report.disk.data.time
+                <el-tag v-if="report.disk.time" size="small">{{
+                  report.disk.time
                 }}</el-tag>
               </div>
             </template>
 
-            <el-table :data="report.disk.data.data" border stripe>
+            <el-table :data="report.disk.data" border stripe>
               <el-table-column
-                v-for="(col, index) in report.disk.data.data[0] || []"
+                v-for="(col, index) in report.disk.data[0] || []"
                 :key="index"
                 :label="'列 ' + (index + 1)"
                 min-width="100"
