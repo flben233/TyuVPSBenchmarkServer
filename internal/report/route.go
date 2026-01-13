@@ -2,18 +2,23 @@ package report
 
 import (
 	"VPSBenchmarkBackend/internal/auth"
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/report/handler"
 
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRouter(base string, r *gin.Engine) {
+func init() {
+	// Register the routes
+	common.RegisterRoutes(RegisterRoute)
+}
+
+func RegisterRoute(base string, r *gin.Engine) {
 	base += "/report"
 	{
 		reportAPI := r.Group(base + "/data")
 		reportAPI.GET("/list", handler.ListReports)
 		reportAPI.GET("/details", handler.GetReportDetails)
-		reportAPI.GET("/search", handler.SearchReports)
 		reportAPI.POST("/search", handler.SearchReports)
 		reportAPI.GET("/media-names", handler.GetAllMediaNames)
 		reportAPI.GET("/virtualizations", handler.GetAllVirtualizations)

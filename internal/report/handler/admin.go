@@ -2,6 +2,8 @@ package handler
 
 import (
 	"VPSBenchmarkBackend/internal/common"
+	"VPSBenchmarkBackend/internal/report/request"
+	"VPSBenchmarkBackend/internal/report/response"
 	"VPSBenchmarkBackend/internal/report/service"
 	"io"
 	"net/http"
@@ -9,19 +11,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AddReportRequest represents the request body for adding a report
-type AddReportRequest struct {
-	HTML string `json:"html" binding:"required"`
-}
-
-// DeleteReportRequest represents the request body for deleting a report
-type DeleteReportRequest struct {
-	ID string `json:"id" binding:"required"`
-}
-
 // AddReport handles POST /report/admin/add
+// @Summary Add Report (Admin)
+// @Description Add a new report. Request can be JSON with `html` field or raw HTML body. Requires admin authentication.
+// @Tags report
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body request.AddReportRequest false "Report HTML or raw body"
+// @Success 201 {object} common.APIResponse[response.ReportIDResponse]
+// @Failure 400 {object} common.APIResponse[any]
+// @Failure 401 {object} common.APIResponse[any]
+// @Failure 500 {object} common.APIResponse[any]
+// @Router /report/admin/add [post]
 func AddReport(ctx *gin.Context) {
-	var req AddReportRequest
+	var req request.AddReportRequest
 
 	// Try to bind JSON first
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -45,14 +49,24 @@ func AddReport(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, common.SuccessWithMessage("Report added successfully", gin.H{
-		"report_id": reportID,
-	}))
+	ctx.JSON(http.StatusCreated, common.SuccessWithMessage("Report added successfully", response.ReportIDResponse{Id: reportID}))
 }
 
 // DeleteReport handles POST /report/admin/delete
+// @Summary Delete Report (Admin)
+// @Description Delete an existing report by ID. Requires admin authentication.
+// @Tags report
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body request.DeleteReportRequest false "Report ID"
+// @Success 200 {object} common.APIResponse[any]
+// @Failure 400 {object} common.APIResponse[any]
+// @Failure 401 {object} common.APIResponse[any]
+// @Failure 500 {object} common.APIResponse[any]
+// @Router /report/admin/delete [post]
 func DeleteReport(ctx *gin.Context) {
-	var req DeleteReportRequest
+	var req request.DeleteReportRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		// Try query parameter
 		req.ID = ctx.Query("id")
@@ -67,5 +81,5 @@ func DeleteReport(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, common.SuccessWithMessage("Report deleted successfully", nil))
+	ctx.JSON(http.StatusOK, common.SuccessWithMessage[any]("Report deleted successfully", nil))
 }

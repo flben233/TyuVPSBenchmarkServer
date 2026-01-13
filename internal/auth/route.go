@@ -3,12 +3,18 @@ package auth
 import (
 	"VPSBenchmarkBackend/internal/auth/handler"
 	"VPSBenchmarkBackend/internal/auth/middleware"
+	"VPSBenchmarkBackend/internal/common"
 
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterRouter registers auth routes
-func RegisterRouter(base string, r *gin.Engine) {
+func init() {
+	// Register the routes
+	common.RegisterRoutes(RegisterRoute)
+}
+
+// RegisterRoute registers auth routes
+func RegisterRoute(base string, r *gin.Engine) {
 	authGroup := r.Group(base + "/auth")
 	{
 		// Public routes (no authentication required)
