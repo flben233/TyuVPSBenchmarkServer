@@ -6,15 +6,16 @@ import (
 )
 
 type Config struct {
-	Port            int    `json:"port"`
-	BaseURL         string `json:"baseUrl"`
-	ClientID        string `json:"clientId"`
-	ClientSecret    string `json:"clientSecret"`
-	JwtSecret       string `json:"jwtSecret"`
-	JwtExpiry       int    `json:"jwtExpiry"` // in seconds
-	AdminID         string `json:"adminId"`
-	IPApiKey        string `json:"ipApiKey"`
-	MaxHostsPerUser int    `json:"maxHostsPerUser"`
+	Port                 int    `json:"port"`
+	BaseURL              string `json:"baseUrl"`
+	ClientID             string `json:"clientId"`
+	ClientSecret         string `json:"clientSecret"`
+	JwtSecret            string `json:"jwtSecret"`
+	JwtExpiry            int    `json:"jwtExpiry"` // in seconds
+	AdminID              string `json:"adminId"`
+	IPApiKey             string `json:"ipApiKey"`
+	MaxHostsPerUser      int    `json:"maxHostsPerUser"`
+	MonitorQueryInterval int    `json:"monitorQueryInterval"` // in seconds
 }
 
 var cfg *Config

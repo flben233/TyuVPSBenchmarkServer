@@ -1,18 +1,37 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/common"
+	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/monitor/model"
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/internal/monitor/store"
-	"encoding/json"
 	"log"
 	"time"
 
 	probing "github.com/prometheus-community/pro-bing"
 )
 
-// 本文件可以查看过去一段时间内的监控数据，
-// TODO: 把这个改成定时运行的，而不是仅在访问的时候运行一次
-func queryHosts(targets []string) map[string]float32 {
+func init() {
+	interval := time.Duration(config.Get().MonitorQueryInterval) * time.Second
+	common.RegisterCronJob(interval, queryHosts)
+}
+
+// TODO: 也记录路由追踪历史
+func queryHosts() {
+	// Get all monitoring hosts
+	hosts, err := store.ListAllHosts()
+	if err != nil || len(hosts) == 0 {
+		return
+	}
+	// Extract targets
+	targets := make([]string, len(hosts))
+	hostMap := make(map[string]*model.MonitorHost)
+	for i, host := range hosts {
+		targets[i] = host.Target
+		hostMap[host.Target] = &hosts[i]
+	}
+	// Query hosts
 	resultCh := make(chan *probing.Statistics, len(targets))
 	for _, target := range targets {
 		go func(t string) {
@@ -34,14 +53,21 @@ func queryHosts(targets []string) map[string]float32 {
 			resultCh <- pinger.Statistics()
 		}(target)
 	}
-	results := make(map[string]float32)
 	for i := 0; i < len(targets); i++ {
 		stats := <-resultCh
 		if stats != nil {
-			results[stats.Addr] = float32(stats.AvgRtt.Milliseconds()) / 1000.0
+			host := hostMap[stats.Addr]
+			history := append(host.History, float32(stats.AvgRtt.Milliseconds())/1000.0)
+			// Keep only last 100 values
+			if len(history) > 100 {
+				history = history[len(history)-100:]
+			}
+			err := store.UpdateHostHistory(host.Id, history)
+			if err != nil {
+				log.Printf("Failed to update history for %s: %v", stats.Addr, err)
+			}
 		}
 	}
-	return results
 }
 
 func GetStatistics() ([]response.StatisticsResponse, error) {
@@ -51,54 +77,14 @@ func GetStatistics() ([]response.StatisticsResponse, error) {
 		return nil, err
 	}
 
-	if len(hosts) == 0 {
-		return []response.StatisticsResponse{}, nil
-	}
-
-	// Extract targets
-	targets := make([]string, len(hosts))
-	hostMap := make(map[string]store.MonitorHost)
-	for i, host := range hosts {
-		targets[i] = host.Target
-		hostMap[host.Target] = host
-	}
-
-	// Query hosts
-	results := queryHosts(targets)
-
 	// Convert to response
 	statistics := make([]response.StatisticsResponse, 0, len(hosts))
-	for target, avgRtt := range results {
-		if host, ok := hostMap[target]; ok {
-			var history []float32
-			if host.History != "" && host.History != "[]" {
-				err := json.Unmarshal([]byte(host.History), &history)
-				if err != nil {
-					log.Printf("Failed to unmarshal history for %s: %v", target, err)
-					history = []float32{}
-				}
-			}
-
-			// Add new value to history
-			history = append(history, avgRtt)
-
-			// Keep only last 100 values
-			if len(history) > 100 {
-				history = history[len(history)-100:]
-			}
-
-			// Update history in database
-			historyJson, err := json.Marshal(history)
-			if err == nil {
-				store.UpdateHostHistory(host.Id, string(historyJson))
-			}
-
-			statistics = append(statistics, response.StatisticsResponse{
-				Name:     host.Name,
-				Uploader: host.Uploader,
-				History:  history,
-			})
-		}
+	for _, host := range hosts {
+		statistics = append(statistics, response.StatisticsResponse{
+			Name:     host.Name,
+			Uploader: host.Uploader,
+			History:  host.History,
+		})
 	}
 
 	return statistics, nil

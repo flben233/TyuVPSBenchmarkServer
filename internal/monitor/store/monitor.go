@@ -12,21 +12,21 @@ import (
 const MonitorTableName = "monitor_hosts"
 
 // MonitorHost represents a monitor host record in the database
-type MonitorHost struct {
+type monitorHost struct {
 	Id           int64  `gorm:"primaryKey"`
 	Target       string `gorm:"index"`
 	Name         string
 	Uploader     string
 	UploaderName string
-	History      string // JSON string of ping history
+	History      common.JSONField[[]float32]
 }
 
-func (MonitorHost) TableName() string {
+func (monitorHost) TableName() string {
 	return MonitorTableName
 }
 
 var db *gorm.DB
-var monitorHosts gorm.Interface[MonitorHost]
+var monitorHosts gorm.Interface[monitorHost]
 
 func init() {
 	// Register the initializer
@@ -36,8 +36,8 @@ func init() {
 // InitMonitorStore initializes the monitor store and creates tables
 func InitMonitorStore(dbPath string) error {
 	db = common.GetDB()
-	monitorHosts = gorm.G[MonitorHost](db)
-	if err := db.AutoMigrate(&MonitorHost{}); err != nil {
+	monitorHosts = gorm.G[monitorHost](db)
+	if err := db.AutoMigrate(&monitorHost{}); err != nil {
 		return err
 	}
 	return nil
@@ -51,14 +51,25 @@ func CountUserHosts(userID string) (int64, error) {
 	return cnt, nil
 }
 
+func toMonitorHost(host monitorHost) model.MonitorHost {
+	return model.MonitorHost{
+		Id:           host.Id,
+		Target:       host.Target,
+		Name:         host.Name,
+		Uploader:     host.Uploader,
+		UploaderName: host.UploaderName,
+		History:      *host.History.Data,
+	}
+}
+
 // AddHost adds a new monitor host
 func AddHost(target, name, username, userID string) (int64, error) {
-	host := MonitorHost{
+	host := monitorHost{
 		Target:       target,
 		Name:         name,
 		Uploader:     userID,
 		UploaderName: username,
-		History:      "[]",
+		History:      common.JSONField[[]float32]{Data: &[]float32{}},
 	}
 	err := monitorHosts.Create(context.Background(), &host)
 	if err != nil {
@@ -92,19 +103,27 @@ func RemoveHostAsAdmin(id int64) error {
 }
 
 // ListHostsByUploader lists all hosts uploaded by a specific user
-func ListHostsByUploader(uploader string) ([]MonitorHost, error) {
+func ListHostsByUploader(uploader string) ([]model.MonitorHost, error) {
 	hosts, err := monitorHosts.Where("uploader = ?", uploader).Find(context.Background())
-	return hosts, err
+	hostModels := make([]model.MonitorHost, len(hosts))
+	for i, host := range hosts {
+		hostModels[i] = toMonitorHost(host)
+	}
+	return hostModels, err
 }
 
 // ListAllHosts lists all monitor hosts
-func ListAllHosts() ([]MonitorHost, error) {
+func ListAllHosts() ([]model.MonitorHost, error) {
 	hosts, err := monitorHosts.Find(context.Background())
-	return hosts, err
+	hostModels := make([]model.MonitorHost, len(hosts))
+	for i, host := range hosts {
+		hostModels[i] = toMonitorHost(host)
+	}
+	return hostModels, err
 }
 
 // GetHost retrieves a single host by ID
-func GetHost(id int64) (*MonitorHost, error) {
+func GetHost(id int64) (*model.MonitorHost, error) {
 	hosts, err := monitorHosts.Where("id = ?", id).Find(context.Background())
 	if err != nil {
 		return nil, err
@@ -112,12 +131,13 @@ func GetHost(id int64) (*MonitorHost, error) {
 	if len(hosts) == 0 {
 		return nil, nil
 	}
-	return &hosts[0], nil
+	hostModel := toMonitorHost(hosts[0])
+	return &hostModel, nil
 }
 
 // UpdateHostHistory updates the history field for a host
-func UpdateHostHistory(id int64, history string) error {
-	affected, err := monitorHosts.Where("id = ?", id).Update(context.Background(), "history", history)
+func UpdateHostHistory(id int64, history []float32) error {
+	affected, err := monitorHosts.Where("id = ?", id).Update(context.Background(), "history", common.JSONField[[]float32]{Data: &history})
 	if err != nil {
 		return err
 	}
@@ -130,16 +150,6 @@ func UpdateHostHistory(id int64, history string) error {
 // GetAllTargets returns all target addresses for monitoring
 func GetAllTargets() ([]string, error) {
 	var targets []string
-	err := db.Model(&MonitorHost{}).Pluck("target", &targets).Error
+	err := db.Model(&monitorHost{}).Pluck("target", &targets).Error
 	return targets, err
-}
-
-// HostToModel converts a MonitorHost database record to a model
-func HostToModel(host MonitorHost) model.Host {
-	return model.Host{
-		Id:       host.Id,
-		Target:   host.Target,
-		Name:     host.Name,
-		Uploader: host.Uploader,
-	}
 }

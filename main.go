@@ -28,6 +28,10 @@ func main() {
 	}
 	log.Println("Database initialized successfully at", dbPath)
 
+	// Start background cron jobs
+	common.RunCronJobs()
+	log.Println("Background cron jobs started")
+
 	r := gin.Default()
 	r.GET("swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

@@ -1,8 +1,6 @@
 package model
 
 import (
-	"database/sql/driver"
-	"encoding/json"
 	"time"
 )
 
@@ -50,20 +48,20 @@ type ItdogResult struct {
 
 // BenchmarkResult is the main model stored in database
 type BenchmarkResult struct {
-	ID        uint                          `gorm:"primaryKey" json:"-"`
-	ReportID  string                        `gorm:"uniqueIndex;size:255" json:"id"`
-	Title     string                        `gorm:"size:500" json:"title"`
-	Time      string                        `gorm:"size:100" json:"time"`
-	Link      string                        `gorm:"size:1000" json:"link"`
-	SpdTest   JSONField[[]SpeedtestResults] `json:"spdtest"`
-	ECS       JSONField[ECSResult]          `json:"ecs"`
-	Media     JSONField[MediaResults]       `json:"media"`
-	BestTrace JSONField[[]BestTraceResult]  `json:"besttrace"`
-	Itdog     JSONField[ItdogResult]        `json:"itdog"`
-	Disk      JSONField[TyuDiskResult]      `json:"disk"`
-	IPQuality JSONField[IPQualityResult]    `json:"ipquality"`
-	CreatedAt time.Time                     `json:"created_at"`
-	UpdatedAt time.Time                     `json:"updated_at"`
+	ID        uint               `gorm:"primaryKey" json:"-"`
+	ReportID  string             `gorm:"uniqueIndex;size:255" json:"id"`
+	Title     string             `gorm:"size:500" json:"title"`
+	Time      string             `gorm:"size:100" json:"time"`
+	Link      string             `gorm:"size:1000" json:"link"`
+	SpdTest   []SpeedtestResults `json:"spdtest"`
+	ECS       ECSResult          `json:"ecs"`
+	Media     MediaResults       `json:"media"`
+	BestTrace []BestTraceResult  `json:"besttrace"`
+	Itdog     ItdogResult        `json:"itdog"`
+	Disk      TyuDiskResult      `json:"disk"`
+	IPQuality IPQualityResult    `json:"ipquality"`
+	CreatedAt time.Time          `json:"created_at"`
+	UpdatedAt time.Time          `json:"updated_at"`
 }
 
 type SpeedtestResult struct {
@@ -196,44 +194,4 @@ type IPQualityResult struct {
 			Blacklisted int `json:"Blacklisted"`
 		} `json:"DNSBlacklist"`
 	} `json:"Mail"`
-}
-
-// JSONField is a custom type for storing JSON data in SQLite
-type JSONField[T any] struct {
-	Data *T
-}
-
-// Scan implements the sql.Scanner interface
-func (j *JSONField[T]) Scan(value interface{}) error {
-	if value == nil {
-		j.Data = nil
-		return nil
-	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		bytes = []byte(value.(string))
-	}
-	return json.Unmarshal(bytes, &j.Data)
-}
-
-// Value implements the driver.Valuer interface
-func (j JSONField[T]) Value() (driver.Value, error) {
-	if j.Data == nil {
-		return nil, nil
-	}
-	return json.Marshal(j.Data)
-}
-
-func (j JSONField[T]) GormDBDataType() string {
-	return "text"
-}
-
-// MarshalJSON implements json.Marshaler
-func (j JSONField[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(j.Data)
-}
-
-// UnmarshalJSON implements json.Unmarshaler
-func (j *JSONField[T]) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &j.Data)
 }

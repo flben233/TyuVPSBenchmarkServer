@@ -9,30 +9,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GithubLoginRequest is the request body for GitHub login
-type GithubLoginRequest struct {
-	Code string `json:"code" binding:"required"`
-}
-
 // GithubLogin handles GitHub OAuth login
 // @Summary GitHub OAuth Login
 // @Description Exchange GitHub OAuth code for JWT token
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body GithubLoginRequest true "GitHub OAuth code"
+// @Param code query string true "GitHub OAuth code"
 // @Success 200 {object} common.APIResponse[response.LoginResponse]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
-// @Router /auth/github/login [post]
+// @Router /auth/github/login [get]
 func GithubLogin(c *gin.Context) {
-	var req GithubLoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	code := c.Query("code")
+	if code == "" {
 		c.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "Invalid request: code is required"))
 		return
 	}
 
-	token, err := service.GithubLogin(req.Code)
+	token, err := service.GithubLogin(code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, "Failed to login with GitHub: "+err.Error()))
 		return
