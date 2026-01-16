@@ -2,16 +2,14 @@
   const activePath = computed(() => {
     return useRoute().path;
   });
-  const excludePaths = ['/login', '/report'];
+  const excludePaths = [];
 </script>
 
 <template>
   <div id="app">
-    <!-- <NuxtRouteAnnouncer /> -->
-    <!-- <NuxtWelcome /> -->
     <!-- TODO: 适配手机端 -->
     <Sidebar v-if="!excludePaths.includes(activePath)"/>
-    <NuxtPage />
+    <NuxtPage/>
   </div>
 </template>
 

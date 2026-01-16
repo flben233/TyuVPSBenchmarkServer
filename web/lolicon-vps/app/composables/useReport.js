@@ -9,6 +9,8 @@ export function useReport() {
       });
 
       if (resp.data.value && resp.data.value.code === 0) {
+        console.log(resp.data.value);
+        
         return resp.data.value;
       }
       return { data: [], total: 0 };
@@ -34,8 +36,52 @@ export function useReport() {
     }
   }
 
+  async function addReport(token, html) {
+    try {
+      const resp = await $fetch(`${backendUrl}/report/admin/add`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ html }),
+      });
+
+      if (resp && resp.code === 0) {
+        return { success: true, data: resp.data };
+      }
+      return { success: false, message: resp?.message || "Failed to add report" };
+    } catch (error) {
+      console.error("Failed to add report:", error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  async function deleteReport(token, id) {
+    try {
+      const resp = await $fetch(`${backendUrl}/report/admin/delete`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (resp && resp.code === 0) {
+        return { success: true };
+      }
+      return { success: false, message: resp?.message || "Failed to delete report" };
+    } catch (error) {
+      console.error("Failed to delete report:", error);
+      return { success: false, message: error.message };
+    }
+  }
+
   return {
     listReports,
     getReportDetails,
+    addReport,
+    deleteReport,
   };
 }

@@ -7,7 +7,8 @@ import {
   Notebook,
   More,
 } from "@element-plus/icons-vue";
-const { userInfo } = useAuth();
+
+const { userInfo, login, logout } = useAuth();
 const avatarUrl = ref(null);
 const activePath = computed(() => {
   console.log("Current Route Path:", useRoute().path);
@@ -21,20 +22,32 @@ if (userInfo.value) {
   console.log("No user info available");
 }
 
-const token = useRoute().params.token;
-if (token) {
-  const { login } = useAuth();
-  login(token);
-}
+watch(userInfo, (newVal) => {
+  if (newVal) {
+    avatarUrl.value = newVal.avatarUrl;
+  } else {
+    avatarUrl.value = null;
+  }
+});
+
+onMounted(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  console.log("OAuth Token from URL:", token);
+  if (token) {
+    await login(token);
+    console.log("User Info after login:", userInfo.value);
+    avatarUrl.value = userInfo.value.avatarUrl;
+  }
+});
 
 const avatarNav = (command) => {
   if (command === "login") {
-    window.location.href = "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m";
+    window.location.href = "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m&redirect_uri=http://127.0.0.1:12345/api/auth/github/login";
   } else if (command === "logout") {
-    const { logout } = useAuth();
     logout();
-  } else if (command === "profile") {
-    useRouter().push("/profile");
+  } else if (command === "center") {
+    useRouter().push("/center");
   }
 };
 </script>
@@ -49,7 +62,7 @@ const avatarNav = (command) => {
           <el-dropdown-menu>
             <el-dropdown-item v-if="!userInfo" command="login">使用Github登录</el-dropdown-item>
             <div v-else>
-              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+              <el-dropdown-item command="center">个人中心</el-dropdown-item>
               <el-dropdown-item command="logout">退出登录</el-dropdown-item>
             </div>
           </el-dropdown-menu>

@@ -62,7 +62,7 @@ export function useSearch() {
       });
 
       if (resp && resp.code === 0) {
-        return resp.data;
+        return resp;
       }
       return { data: [], total: 0, page: 1, page_size: pageSize };
     } catch (error) {
