@@ -15,7 +15,6 @@ func init() {
 // RegisterRouter wires tool endpoints.
 func RegisterRoute(base string, r *gin.Engine) {
 	group := r.Group(base + "/tool")
-	group.GET("/ip", handler.IPLookup)
 	group.GET("/traceroute", handler.Traceroute)
 	group.GET("/whois", handler.Whois)
 }

@@ -12,40 +12,6 @@ import (
 
 type GenericMap map[string]interface{}
 
-// IPLookup handles IP information lookup requests.
-// @Summary IP Lookup
-// @Description Lookup IP information by IP or domain. Accepts query parameter `target` or JSON body.
-// @Tags tool
-// @Accept json
-// @Produce json
-// @Param target query string false "Target IP or domain"
-// @Param data_source query string false "Data source: ipapi or ipinfo"
-// @Success 200 {object} common.APIResponse[GenericMap]
-// @Failure 400 {object} common.APIResponse[any]
-// @Failure 500 {object} common.APIResponse[any]
-// @Router /tool/ip [get]
-func IPLookup(ctx *gin.Context) {
-	var req service.IPRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		target := ctx.Query("target")
-		dataSource := ctx.DefaultQuery("data_source", "ipapi")
-		if target == "" {
-			ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "target is required"))
-			return
-		}
-		req.Target = target
-		req.DataSource = dataSource
-	}
-
-	results, err := service.IPInfo(&req)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, common.Success(results))
-}
-
 // Traceroute handles traceroute requests.
 // @Summary Traceroute
 // @Description Perform a traceroute to a target. Supports query params `target`, `mode` (icmp|tcp), and `port`.

@@ -31,4 +31,14 @@ func RegisterRoute(base string, r *gin.Engine) {
 			protectedAPI.POST("/hosts/:id", handler.RemoveHost)
 		}
 	}
+	{
+		// Admin routes - review hosts
+		adminAPI := r.Group(base + "/admin")
+		adminAPI.Use(auth.GetJWTMiddleware(), auth.GetAdminMiddleware())
+		{
+			adminAPI.GET("/pending", handler.ListPendingHosts)
+			adminAPI.POST("/approve/:id", handler.ApproveHost)
+			adminAPI.POST("/reject/:id", handler.RejectHost)
+		}
+	}
 }

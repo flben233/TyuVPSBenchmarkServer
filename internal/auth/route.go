@@ -22,9 +22,15 @@ func RegisterRoute(base string, r *gin.Engine) {
 
 		// Protected routes (authentication required)
 		protected := authGroup.Group("")
-		protected.Use(middleware.JWTAuth())
+		protected.Use(GetJWTMiddleware())
 		{
 			protected.GET("/user", handler.GetUserInfo)
+		}
+
+		adminRoute := authGroup.Group("")
+		adminRoute.Use(GetJWTMiddleware(), GetAdminMiddleware())
+		{
+			adminRoute.GET("/admin", handler.CheckAdminUser)
 		}
 	}
 }
@@ -42,4 +48,8 @@ func GetOptionalJWTMiddleware() gin.HandlerFunc {
 // GetAdminMiddleware returns the admin authentication middleware
 func GetAdminMiddleware() gin.HandlerFunc {
 	return middleware.CheckAdmin()
+}
+
+func GetAllowCORSMiddleware() gin.HandlerFunc {
+	return middleware.AllowCORS()
 }

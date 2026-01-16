@@ -98,14 +98,14 @@ type TyuDiskResult struct {
 }
 
 type IPQualityResult struct {
-	Head []struct {
+	Head struct {
 		IP      string `json:"IP"`
 		Command string `json:"Command"`
 		GitHub  string `json:"GitHub"`
 		Time    string `json:"Time"`
 		Version string `json:"Version"`
 	} `json:"Head"`
-	Info []struct {
+	Info struct {
 		ASN          string `json:"ASN"`
 		Organization string `json:"Organization"`
 		Latitude     string `json:"Latitude"`
@@ -133,7 +133,7 @@ type IPQualityResult struct {
 		} `json:"RegisteredRegion"`
 		Type string `json:"Type"`
 	} `json:"Info"`
-	Type []struct {
+	Type struct {
 		Usage struct {
 			IPinfo      string `json:"IPinfo"`
 			Ipregistry  string `json:"ipregistry"`
@@ -147,7 +147,7 @@ type IPQualityResult struct {
 			Ipapi      string `json:"ipapi"`
 		} `json:"Company"`
 	} `json:"Type"`
-	Score []struct {
+	Score struct {
 		IP2LOCATION string `json:"IP2LOCATION"`
 		SCAMALYTICS string `json:"SCAMALYTICS"`
 		Ipapi       string `json:"ipapi"`
@@ -155,7 +155,7 @@ type IPQualityResult struct {
 		IPQS        string `json:"IPQS"`
 		DBIP        string `json:"DBIP"`
 	} `json:"Score"`
-	Factor []struct {
+	Factor struct {
 		CountryCode map[string]string      `json:"CountryCode"`
 		Proxy       map[string]interface{} `json:"Proxy"`
 		Tor         map[string]interface{} `json:"Tor"`
@@ -164,7 +164,7 @@ type IPQualityResult struct {
 		Abuser      map[string]interface{} `json:"Abuser"`
 		Robot       map[string]interface{} `json:"Robot"`
 	} `json:"Factor"`
-	Media []struct {
+	Media struct {
 		TikTok           struct{ Status, Region, Type string } `json:"TikTok"`
 		DisneyPlus       struct{ Status, Region, Type string } `json:"DisneyPlus"`
 		Netflix          struct{ Status, Region, Type string } `json:"Netflix"`
@@ -173,7 +173,7 @@ type IPQualityResult struct {
 		Spotify          struct{ Status, Region, Type string } `json:"Spotify"`
 		ChatGPT          struct{ Status, Region, Type string } `json:"ChatGPT"`
 	} `json:"Media"`
-	Mail []struct {
+	Mail struct {
 		Port25       bool `json:"Port25"`
 		Gmail        bool `json:"Gmail"`
 		Outlook      bool `json:"Outlook"`

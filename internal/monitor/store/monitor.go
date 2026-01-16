@@ -19,6 +19,7 @@ type monitorHost struct {
 	Uploader     string
 	UploaderName string
 	History      common.JSONField[[]float32]
+	ReviewStatus common.ReviewStatus `gorm:"default:0;index"`
 }
 
 func (monitorHost) TableName() string {
@@ -58,7 +59,8 @@ func toMonitorHost(host monitorHost) model.MonitorHost {
 		Name:         host.Name,
 		Uploader:     host.Uploader,
 		UploaderName: host.UploaderName,
-		History:      *host.History.Data,
+		History:      *host.History.GetValue(),
+		ReviewStatus: host.ReviewStatus,
 	}
 }
 
@@ -69,7 +71,8 @@ func AddHost(target, name, username, userID string) (int64, error) {
 		Name:         name,
 		Uploader:     userID,
 		UploaderName: username,
-		History:      common.JSONField[[]float32]{Data: &[]float32{}},
+		History:      *common.NewJSONField([]float32{}),
+		ReviewStatus: common.ReviewStatusPending,
 	}
 	err := monitorHosts.Create(context.Background(), &host)
 	if err != nil {
@@ -112,9 +115,9 @@ func ListHostsByUploader(uploader string) ([]model.MonitorHost, error) {
 	return hostModels, err
 }
 
-// ListAllHosts lists all monitor hosts
+// ListAllHosts lists all approved monitor hosts
 func ListAllHosts() ([]model.MonitorHost, error) {
-	hosts, err := monitorHosts.Find(context.Background())
+	hosts, err := monitorHosts.Where("review_status = ?", common.ReviewStatusApproved).Find(context.Background())
 	hostModels := make([]model.MonitorHost, len(hosts))
 	for i, host := range hosts {
 		hostModels[i] = toMonitorHost(host)
@@ -137,7 +140,7 @@ func GetHost(id int64) (*model.MonitorHost, error) {
 
 // UpdateHostHistory updates the history field for a host
 func UpdateHostHistory(id int64, history []float32) error {
-	affected, err := monitorHosts.Where("id = ?", id).Update(context.Background(), "history", common.JSONField[[]float32]{Data: &history})
+	affected, err := monitorHosts.Where("id = ?", id).Update(context.Background(), "history", common.NewJSONField(history))
 	if err != nil {
 		return err
 	}
@@ -147,9 +150,31 @@ func UpdateHostHistory(id int64, history []float32) error {
 	return nil
 }
 
-// GetAllTargets returns all target addresses for monitoring
+// GetAllTargets returns all approved target addresses for monitoring
 func GetAllTargets() ([]string, error) {
 	var targets []string
-	err := db.Model(&monitorHost{}).Pluck("target", &targets).Error
+	err := db.Model(&monitorHost{}).Where("review_status = ?", common.ReviewStatusApproved).Pluck("target", &targets).Error
 	return targets, err
+}
+
+// ListPendingHosts lists all hosts awaiting review
+func ListPendingHosts() ([]model.MonitorHost, error) {
+	hosts, err := monitorHosts.Where("review_status = ?", common.ReviewStatusPending).Find(context.Background())
+	hostModels := make([]model.MonitorHost, len(hosts))
+	for i, host := range hosts {
+		hostModels[i] = toMonitorHost(host)
+	}
+	return hostModels, err
+}
+
+// UpdateReviewStatus updates the review status of a host
+func UpdateReviewStatus(id int64, status common.ReviewStatus) error {
+	affected, err := monitorHosts.Where("id = ?", id).Update(context.Background(), "review_status", status)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

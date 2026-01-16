@@ -64,7 +64,7 @@ func exchangeCodeForToken(code string, cfg *config.Config) (string, error) {
 	req.URL.RawQuery = params.Encode()
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := getHttpClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -101,7 +101,7 @@ func getGithubUserInfo(accessToken string) (*GithubUserInfo, error) {
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := getHttpClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -125,6 +125,16 @@ func getGithubUserInfo(accessToken string) (*GithubUserInfo, error) {
 	return &userInfo, nil
 }
 
+func getHttpClient() *http.Client {
+	proxyURL, _ := url.Parse(config.Get().GithubHttpProxy)
+	return &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		},
+	}
+}
+
 // generateJWTToken generates a JWT token for the user
 func generateJWTToken(userInfo *GithubUserInfo, cfg *config.Config) (string, error) {
 	// Use login name if display name is empty
@@ -137,6 +147,7 @@ func generateJWTToken(userInfo *GithubUserInfo, cfg *config.Config) (string, err
 		"name":       name,
 		"avatar_url": userInfo.AvatarURL,
 		"github_id":  userInfo.ID,
+		"login":      userInfo.Login,
 		"iat":        time.Now().Unix(),
 		"exp":        time.Now().Add(time.Second * time.Duration(cfg.JwtExpiry)).Unix(), // Token expires in configured Seconds
 	}

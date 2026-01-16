@@ -11,20 +11,20 @@ import (
 )
 
 type benchmarkResult struct {
-	ID        uint   `gorm:"primaryKey"`
-	ReportID  string `gorm:"uniqueIndex;size:255"`
-	Title     string `gorm:"size:500"`
-	Time      string `gorm:"size:100"`
-	Link      string `gorm:"size:1000"`
-	SpdTest   common.JSONField[[]model.SpeedtestResults]
-	ECS       common.JSONField[model.ECSResult]
-	Media     common.JSONField[model.MediaResults]
-	BestTrace common.JSONField[[]model.BestTraceResult]
-	Itdog     common.JSONField[model.ItdogResult]
-	Disk      common.JSONField[model.TyuDiskResult]
-	IPQuality common.JSONField[model.IPQualityResult]
-	CreatedAt common.JSONField[time.Time]
-	UpdatedAt common.JSONField[time.Time]
+	ID        uint                                       `gorm:"primaryKey"`
+	ReportID  string                                     `gorm:"uniqueIndex;size:255"`
+	Title     string                                     `gorm:"size:500"`
+	Time      time.Time                                  `gorm:"size:100"`
+	Link      string                                     `gorm:"size:1000"`
+	SpdTest   common.JSONField[[]model.SpeedtestResults] `gorm:"type:text"`
+	ECS       common.JSONField[model.ECSResult]          `gorm:"type:text"`
+	Media     common.JSONField[model.MediaResults]       `gorm:"type:text"`
+	BestTrace common.JSONField[[]model.BestTraceResult]  `gorm:"type:text"`
+	Itdog     common.JSONField[model.ItdogResult]        `gorm:"type:text"`
+	Disk      common.JSONField[model.TyuDiskResult]      `gorm:"type:text"`
+	IPQuality common.JSONField[model.IPQualityResult]    `gorm:"type:text"`
+	CreatedAt common.JSONField[time.Time]                `gorm:"type:text"`
+	UpdatedAt common.JSONField[time.Time]                `gorm:"type:text"`
 }
 
 var db *gorm.DB
@@ -57,38 +57,40 @@ func InitReportStore(dbPath string) error {
 }
 
 func modelToDBModel(report *model.BenchmarkResult) *benchmarkResult {
+	reportTime, _ := time.Parse("2006-01-02 15:04:05", report.Time)
 	return &benchmarkResult{
 		ReportID:  report.ReportID,
 		Title:     report.Title,
-		Time:      report.Time,
+		Time:      reportTime,
 		Link:      report.Link,
-		SpdTest:   common.JSONField[[]model.SpeedtestResults]{Data: &report.SpdTest},
-		ECS:       common.JSONField[model.ECSResult]{Data: &report.ECS},
-		Media:     common.JSONField[model.MediaResults]{Data: &report.Media},
-		BestTrace: common.JSONField[[]model.BestTraceResult]{Data: &report.BestTrace},
-		Itdog:     common.JSONField[model.ItdogResult]{Data: &report.Itdog},
-		Disk:      common.JSONField[model.TyuDiskResult]{Data: &report.Disk},
-		IPQuality: common.JSONField[model.IPQualityResult]{Data: &report.IPQuality},
-		CreatedAt: common.JSONField[time.Time]{Data: &report.CreatedAt},
-		UpdatedAt: common.JSONField[time.Time]{Data: &report.UpdatedAt},
+		SpdTest:   *common.NewJSONField(report.SpdTest),
+		ECS:       *common.NewJSONField(report.ECS),
+		Media:     *common.NewJSONField(report.Media),
+		BestTrace: *common.NewJSONField(report.BestTrace),
+		Itdog:     *common.NewJSONField(report.Itdog),
+		Disk:      *common.NewJSONField(report.Disk),
+		IPQuality: *common.NewJSONField(report.IPQuality),
+		CreatedAt: *common.NewJSONField(report.CreatedAt),
+		UpdatedAt: *common.NewJSONField(report.UpdatedAt),
 	}
 }
 
 func dbModelToModel(dbModel *benchmarkResult) *model.BenchmarkResult {
+	reportTime := dbModel.Time.Format("2006-01-02 15:04:05")
 	return &model.BenchmarkResult{
 		ReportID:  dbModel.ReportID,
 		Title:     dbModel.Title,
-		Time:      dbModel.Time,
+		Time:      reportTime,
 		Link:      dbModel.Link,
-		SpdTest:   *dbModel.SpdTest.Data,
-		ECS:       *dbModel.ECS.Data,
-		Media:     *dbModel.Media.Data,
-		BestTrace: *dbModel.BestTrace.Data,
-		Itdog:     *dbModel.Itdog.Data,
-		Disk:      *dbModel.Disk.Data,
-		IPQuality: *dbModel.IPQuality.Data,
-		CreatedAt: *dbModel.CreatedAt.Data,
-		UpdatedAt: *dbModel.UpdatedAt.Data,
+		SpdTest:   *dbModel.SpdTest.GetValue(),
+		ECS:       *dbModel.ECS.GetValue(),
+		Media:     *dbModel.Media.GetValue(),
+		BestTrace: *dbModel.BestTrace.GetValue(),
+		Itdog:     *dbModel.Itdog.GetValue(),
+		Disk:      *dbModel.Disk.GetValue(),
+		IPQuality: *dbModel.IPQuality.GetValue(),
+		CreatedAt: *dbModel.CreatedAt.GetValue(),
+		UpdatedAt: *dbModel.UpdatedAt.GetValue(),
 	}
 }
 
@@ -163,7 +165,7 @@ func ListReports(page, pageSize int) ([]model.BenchmarkResult, int64, error) {
 	offset := (page - 1) * pageSize
 
 	// Get paginated results
-	dbResults, err := benchmarkResults.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(ctx)
+	dbResults, err := benchmarkResults.Order("time DESC").Offset(offset).Limit(pageSize).Find(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list reports: %w", err)
 	}

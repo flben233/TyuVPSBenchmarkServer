@@ -11,11 +11,12 @@ import (
 const LookingGlassTableName = "looking_glass"
 
 type LookingGlass struct {
-	Id           int64  `gorm:"primaryKey"`
-	ServerName   string `gorm:"index"`
+	Id           int64               `gorm:"primaryKey"`
+	ServerName   string              `gorm:"index"`
 	TestURL      string
 	Uploader     string
 	UploaderName string
+	ReviewStatus common.ReviewStatus `gorm:"default:0;index"`
 }
 
 func (LookingGlass) TableName() string {
@@ -53,6 +54,7 @@ func AddRecord(serverName, testURL, username, userID string) (int64, error) {
 		TestURL:      testURL,
 		Uploader:     userID,
 		UploaderName: username,
+		ReviewStatus: common.ReviewStatusPending,
 	}
 	err := lookingGlassRecords.Create(context.Background(), &record)
 	if err != nil {
@@ -133,7 +135,7 @@ func ListRecordsByUploader(uploader string) ([]LookingGlass, error) {
 }
 
 func ListAllRecords() ([]LookingGlass, error) {
-	records, err := lookingGlassRecords.Find(context.Background())
+	records, err := lookingGlassRecords.Where("review_status = ?", common.ReviewStatusApproved).Find(context.Background())
 	return records, err
 }
 
@@ -150,9 +152,28 @@ func GetRecord(id int64) (*LookingGlass, error) {
 
 func RecordToModel(record LookingGlass) model.LookingGlass {
 	return model.LookingGlass{
-		Id:         record.Id,
-		ServerName: record.ServerName,
-		TestURL:    record.TestURL,
-		Uploader:   record.Uploader,
+		Id:           record.Id,
+		ServerName:   record.ServerName,
+		TestURL:      record.TestURL,
+		Uploader:     record.Uploader,
+		ReviewStatus: record.ReviewStatus,
 	}
+}
+
+// ListPendingRecords lists all records awaiting review
+func ListPendingRecords() ([]LookingGlass, error) {
+	records, err := lookingGlassRecords.Where("review_status = ?", common.ReviewStatusPending).Find(context.Background())
+	return records, err
+}
+
+// UpdateReviewStatus updates the review status of a record
+func UpdateReviewStatus(id int64, status common.ReviewStatus) error {
+	affected, err := lookingGlassRecords.Where("id = ?", id).Update(context.Background(), "review_status", status)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

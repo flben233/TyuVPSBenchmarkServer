@@ -1,8 +1,14 @@
 package main
 
 import (
+	"VPSBenchmarkBackend/internal/auth"
+	_ "VPSBenchmarkBackend/internal/auth"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
+	_ "VPSBenchmarkBackend/internal/lookingglass"
+	_ "VPSBenchmarkBackend/internal/monitor"
+	_ "VPSBenchmarkBackend/internal/report"
+	_ "VPSBenchmarkBackend/internal/tool"
 	"fmt"
 	"log"
 
@@ -11,7 +17,9 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// TODO: 对所有用户上传内容强制人工审核，审核通过才可公开（目前计划中的只有monitor和looking glass，数据库增加一个字段区分未审核/通过/拒绝即可）
+// TODO: 优化SQL查询性能
+// TODO: 评测记录可以关联到一个监控
+// TODO: 修正线路类型
 // @title Lolicon VPS API
 // @BasePath /api
 func main() {
@@ -34,6 +42,8 @@ func main() {
 
 	r := gin.Default()
 	r.GET("swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.Use(auth.GetAllowCORSMiddleware())
+	common.InitRouter("/api", r)
 
 	r.Run(fmt.Sprintf(":%d", config.Get().Port))
 }

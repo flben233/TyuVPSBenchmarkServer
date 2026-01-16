@@ -95,13 +95,17 @@ func AddReport(rawHTML string) (string, error) {
 			virtualization = parsedResult.ECS.Info[key]
 		}
 	}
-	seqRead, err := strconv.ParseFloat(parsedResult.Disk.Data[0][1], 32)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse disk sequential read speed: %w", err)
-	}
-	seqWrite, err := strconv.ParseFloat(parsedResult.Disk.Data[0][2], 32)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse disk sequential write speed: %w", err)
+	var seqRead, seqWrite float64
+	var err error
+	if len(parsedResult.Disk.Data) > 0 && len(parsedResult.Disk.Data[0]) == 3 {
+		seqRead, err = strconv.ParseFloat(parsedResult.Disk.Data[0][1], 32)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse disk sequential read speed: %w", err)
+		}
+		seqWrite, err = strconv.ParseFloat(parsedResult.Disk.Data[0][2], 32)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse disk sequential write speed: %w", err)
+		}
 	}
 	ei = model.InfoIndex{
 		ReportID:       reportID,

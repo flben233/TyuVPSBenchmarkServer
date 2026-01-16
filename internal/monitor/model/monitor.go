@@ -1,5 +1,7 @@
 package model
 
+import "VPSBenchmarkBackend/internal/common"
+
 type Host struct {
 	Target   string `json:"target"`
 	Name     string `json:"name"`
@@ -14,4 +16,5 @@ type MonitorHost struct {
 	Uploader     string
 	UploaderName string
 	History      []float32
+	ReviewStatus common.ReviewStatus
 }
