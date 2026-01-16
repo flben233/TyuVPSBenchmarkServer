@@ -1,20 +1,35 @@
+import { da } from "element-plus/es/locale/index.mjs";
+
 export function useTool() {
   const { backendUrl } = useAppConfig();
+  const dataSourceOptions = [
+    { label: "ipapi.is", value: "ipapi" },
+    { label: "ipinfo.io", value: "ipinfo" },
+  ];
 
   async function ipQuery(target, dataSource = "ipapi") {
-    try {
-      const resp = await useFetch(`${backendUrl}/tool/ip`, {
-        method: "GET",
-        query: { target, data_source: dataSource },
-      });
-
-      if (resp.data.value && resp.data.value.code === 0) {
-        return resp.data.value;
+    if (dataSource === "ipinfo") {
+      if (target === "") {
+        target = await $fetch("https://ipinfo.io/ip", {
+          method: "GET",
+        });
+        target = target.trim();
       }
-      return { code: -1, message: "Failed to query IP", data: null };
-    } catch (error) {
-      console.error("Failed to query IP:", error);
-      return { code: -1, message: error.message, data: null };
+      const resp = await $fetch(`https://ipinfo.io/widget/demo/${target}`, {
+        method: "GET",
+      });
+      return resp;
+    } else if (dataSource === "ipapi") {
+      if (target === "") {
+        const resp = await $fetch(`https://api.ipapi.is/`, {
+          method: "GET",
+        });
+        return resp;
+      }
+      const resp = await $fetch(`https://api.ipapi.is/?ip=${target}`, {
+        method: "GET",
+      });
+      return resp;
     }
   }
 
@@ -25,12 +40,12 @@ export function useTool() {
         query.port = port;
       }
 
-      const resp = await useFetch(`${backendUrl}/tool/traceroute`, {
+      const resp = await $fetch(`${backendUrl}/tool/traceroute`, {
         method: "GET",
         query,
       });
 
-      if (resp.data.value && resp.data.value.code === 0) {
+      if (resp.data && resp.data.code === 0) {
         return resp.data.value;
       }
       return { code: -1, message: "Failed to perform traceroute", data: null };
@@ -42,13 +57,13 @@ export function useTool() {
 
   async function whois(target) {
     try {
-      const resp = await useFetch(`${backendUrl}/tool/whois`, {
+      const resp = await $fetch(`${backendUrl}/tool/whois`, {
         method: "GET",
         query: { target },
       });
 
-      if (resp.data.value && resp.data.value.code === 0) {
-        return resp.data.value;
+      if (resp.data && resp.data.code === 0) {
+        return resp.data;
       }
       return { code: -1, message: "Failed to query WHOIS", data: null };
     } catch (error) {
@@ -61,5 +76,6 @@ export function useTool() {
     ipQuery,
     traceroute,
     whois,
+    dataSourceOptions,
   };
 }

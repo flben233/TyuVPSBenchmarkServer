@@ -1,4 +1,6 @@
 <script setup>
+import Profile from '~/components/profile.vue';
+
 const { getBackrouteTypes, getMediaNames, getVirtualizations, searchReports } =
   useSearch();
 
@@ -538,41 +540,16 @@ const gotoDetail = (reportId) => {
 
       <!-- Sidebar -->
       <el-col :span="6" :offset="1">
-        <div id="site-title">Lolicon VPS</div>
-        <div id="site-owner-container">
-          <el-avatar size="large" src="avatar.jpg" />
-          <div id="site-owner">
-            <div>ShirakawaTyu</div>
-            <div
-              style="display: grid; grid-template-columns: auto auto; gap: 8px"
-            >
-              <el-link :underline="'never'" href="https://github.com/flben233">
-                <img src="/github-mark.svg" alt="GitHub Icon" class="a-icon" />
-                <div style="font-size: 13px">GitHub</div>
-              </el-link>
-              <el-link
-                :underline="'never'"
-                href="https://space.bilibili.com/21650658"
-              >
-                <img
-                  src="/bilibili-mark.svg"
-                  alt="Bilibili Icon"
-                  class="a-icon"
-                />
-                <div style="font-size: 13px">Bilibili</div>
-              </el-link>
-            </div>
+        <Profile>
+          <div>
+            <div style="font-weight: 600; color: #303133">搜索提示</div>
+            <div class="hint-item">所有筛选条件都是可选的</div>
+            <div class="hint-item">支持多条件组合搜索</div>
+            <div class="hint-item">速度单位: Mbps</div>
+            <div class="hint-item">延迟单位: 毫秒(ms)</div>
+            <div class="hint-item">磁盘等级对应读写速度</div>
           </div>
-        </div>
-        <el-divider />
-        <div>
-          <div style="font-weight: 600; color: #303133">搜索提示</div>
-          <div class="hint-item">所有筛选条件都是可选的</div>
-          <div class="hint-item">支持多条件组合搜索</div>
-          <div class="hint-item">速度单位: Mbps</div>
-          <div class="hint-item">延迟单位: 毫秒(ms)</div>
-          <div class="hint-item">磁盘等级对应读写速度</div>
-        </div>
+        </Profile>
       </el-col>
     </el-row>
   </div>
@@ -637,37 +614,6 @@ const gotoDetail = (reportId) => {
   font-weight: 600;
   font-size: 18px;
   margin-bottom: 8px;
-}
-
-#site-title {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #303133;
-}
-
-#site-owner-container {
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-}
-
-#site-owner {
-  margin-left: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  justify-content: space-between;
-  display: flex;
-  flex-direction: column;
-  height: 56px;
-  box-sizing: border-box;
-  padding: 4px;
-}
-
-.a-icon {
-  width: 13px;
-  height: 13px;
-  margin-right: 2px;
 }
 
 .hint-item {

@@ -4,10 +4,10 @@ const { getReportDetails } = useReport();
 const reportId = route.params.id;
 
 const report = ref(null);
-const loading = ref(true);
 const data = await getReportDetails(reportId);
+const speedTestLabels = ["大陆三网多线程", "大陆三网单线程", "国际方向多线程"];
+const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
 report.value = data.data;
-loading.value = false;
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "N/A";
@@ -33,6 +33,19 @@ const getStatusColor = (status) => {
   return "info";
 };
 
+const getMediaStatusColor = (status) => {
+  if (
+    status.includes("Banned") ||
+    status.includes("Risky") ||
+    status.includes("Only") ||
+    status.includes("No") ||
+    status.includes("Failed")
+  ) {
+    return "var(--el-color-danger)";
+  }
+  return "var(--el-color-success)";
+};
+
 const goBack = () => {
   useRouter().back();
 };
@@ -48,629 +61,563 @@ const goBack = () => {
       </el-col>
     </el-row>
 
-    <el-skeleton :loading="loading" animated>
-      <template #template>
-        <el-skeleton-item
-          variant="h1"
-          style="width: 50%; margin-bottom: 16px"
-        />
-        <el-skeleton-item
-          variant="text"
-          style="width: 30%; margin-bottom: 32px"
-        />
-        <el-skeleton-item
-          variant="rect"
-          style="height: 200px; margin-bottom: 16px"
-        />
-        <el-skeleton-item
-          variant="rect"
-          style="height: 200px; margin-bottom: 16px"
-        />
-        <el-skeleton-item variant="rect" style="height: 200px" />
-      </template>
+    <div v-if="report">
+      <!-- Header -->
+      <div id="report-header">
+        <h1>{{ report.title || "测试报告" }}</h1>
+        <div class="report-meta">
+          <el-tag>ID: {{ report.id }}</el-tag>
+          <el-tag type="info" style="margin-left: 8px"
+            >创建时间: {{ formatDate(report.time) }}</el-tag
+          >
+          <el-tag type="info" style="margin-left: 8px"
+            >更新时间: {{ formatDate(report.updated_at) }}</el-tag
+          >
+        </div>
+        <div v-if="report.link" class="report-link">
+          <el-link :href="report.link" target="_blank" type="primary">
+            商家链接
+          </el-link>
+        </div>
+      </div>
 
-      <template #default>
-        <div v-if="report">
-          <!-- Header -->
-          <div id="report-header">
-            <h1>{{ report.title || "测试报告" }}</h1>
-            <div class="report-meta">
-              <el-tag>ID: {{ report.id }}</el-tag>
-              <el-tag type="info" style="margin-left: 8px"
-                >创建时间: {{ formatDate(report.created_at) }}</el-tag
+      <!-- ECS Benchmark Results -->
+      <div shadow="never" class="section-card" v-if="report.ecs">
+        <div class="card-header">
+          <span class="section-title">融合怪测试</span>
+        </div>
+
+        <!-- System Info -->
+        <div v-if="report.ecs.info" class="subsection">
+          <h3>系统信息</h3>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item
+              v-for="(value, key) in report.ecs.info"
+              :key="key"
+              :label="key"
+            >
+              {{ value }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- CPU Performance -->
+        <div v-if="report.ecs.cpu" class="subsection">
+          <h3>CPU 性能</h3>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <el-statistic
+                title="单核得分"
+                :value="report.ecs.cpu.single || 0"
+              />
+            </el-col>
+            <el-col :span="12">
+              <el-statistic
+                title="多核得分"
+                :value="report.ecs.cpu.multi || 0"
+              />
+            </el-col>
+          </el-row>
+        </div>
+
+        <!-- Memory Performance -->
+        <div v-if="report.ecs.mem" class="subsection">
+          <h3>内存性能</h3>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <el-statistic
+                title="读取速度 (MB/s)"
+                :value="report.ecs.mem.read || 0"
+                :precision="2"
+              />
+            </el-col>
+            <el-col :span="12">
+              <el-statistic
+                title="写入速度 (MB/s)"
+                :value="report.ecs.mem.write || 0"
+                :precision="2"
+              />
+            </el-col>
+          </el-row>
+        </div>
+
+        <!-- Disk Performance -->
+        <div v-if="report.ecs.disk" class="subsection">
+          <h3>磁盘性能</h3>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="顺序读取">{{
+              report.ecs.disk.seq_read
+            }}</el-descriptions-item>
+            <el-descriptions-item label="顺序写入">{{
+              report.ecs.disk.seq_write
+            }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- Mail Ports -->
+        <div v-if="report.ecs.mail" class="subsection">
+          <h3>邮件端口测试</h3>
+          <div
+            v-for="(values, port) in report.ecs.mail"
+            :key="port"
+            style="margin-bottom: 12px"
+          >
+            <h4>{{ port }}</h4>
+            <div class="tag-group">
+              <el-tag
+                :type="values[0] ? 'success' : 'danger'"
+                style="margin: 4px"
               >
-              <el-tag type="info" style="margin-left: 8px"
-                >更新时间: {{ formatDate(report.updated_at) }}</el-tag
+                SMTP: {{ values[0] ? "✓" : "✗" }}
+              </el-tag>
+              <el-tag
+                :type="values[1] ? 'success' : 'danger'"
+                style="margin: 4px"
               >
-            </div>
-            <div v-if="report.link" class="report-link">
-              <el-link :href="report.link" target="_blank" type="primary">
-                商家链接
-              </el-link>
+                POP3: {{ values[1] ? "✓" : "✗" }}
+              </el-tag>
+              <el-tag
+                :type="values[2] ? 'success' : 'danger'"
+                style="margin: 4px"
+              >
+                IMAP: {{ values[2] ? "✓" : "✗" }}
+              </el-tag>
+              <el-tag
+                :type="values[3] ? 'success' : 'danger'"
+                style="margin: 4px"
+              >
+                SMTP-SSL: {{ values[3] ? "✓" : "✗" }}
+              </el-tag>
+              <el-tag
+                :type="values[4] ? 'success' : 'danger'"
+                style="margin: 4px"
+              >
+                POP3-SSL: {{ values[4] ? "✓" : "✗" }}
+              </el-tag>
+              <el-tag
+                :type="values[5] ? 'success' : 'danger'"
+                style="margin: 4px"
+              >
+                IMAP-SSL: {{ values[5] ? "✓" : "✗" }}
+              </el-tag>
             </div>
           </div>
+        </div>
 
-          <!-- ECS Benchmark Results -->
-          <el-card shadow="never" class="section-card" v-if="report.ecs">
-            <template #header>
-              <div class="card-header">
-                <span class="section-title">ECS 性能测试</span>
-                <el-tag v-if="report.ecs.time" size="small">{{
-                  report.ecs.time
-                }}</el-tag>
-              </div>
-            </template>
-
-            <!-- System Info -->
-            <div v-if="report.ecs.info" class="subsection">
-              <h3>系统信息</h3>
-              <el-descriptions :column="2" border>
-                <el-descriptions-item
-                  v-for="(value, key) in report.ecs.info"
-                  :key="key"
-                  :label="key"
-                >
-                  {{ value }}
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <!-- CPU Performance -->
-            <div v-if="report.ecs.data.cpu" class="subsection">
-              <h3>CPU 性能</h3>
-              <el-row :gutter="16">
-                <el-col :span="12">
-                  <el-statistic
-                    title="单核得分"
-                    :value="report.ecs.cpu.single || 0"
-                  />
-                </el-col>
-                <el-col :span="12">
-                  <el-statistic
-                    title="多核得分"
-                    :value="report.ecs.cpu.multi || 0"
-                  />
-                </el-col>
-              </el-row>
-            </div>
-
-            <!-- Memory Performance -->
-            <div v-if="report.ecs.mem" class="subsection">
-              <h3>内存性能</h3>
-              <el-row :gutter="16">
-                <el-col :span="12">
-                  <el-statistic
-                    title="读取速度 (MB/s)"
-                    :value="report.ecs.mem.read || 0"
-                    :precision="2"
-                  />
-                </el-col>
-                <el-col :span="12">
-                  <el-statistic
-                    title="写入速度 (MB/s)"
-                    :value="report.ecs.mem.write || 0"
-                    :precision="2"
-                  />
-                </el-col>
-              </el-row>
-            </div>
-
-            <!-- Disk Performance -->
-            <div v-if="report.ecs.disk" class="subsection">
-              <h3>磁盘性能</h3>
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="顺序读取">{{
-                  report.ecs.disk.seq_read
-                }}</el-descriptions-item>
-                <el-descriptions-item label="顺序写入">{{
-                  report.ecs.disk.seq_write
-                }}</el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <!-- Mail Ports -->
-            <div v-if="report.ecs.mail" class="subsection">
-              <h3>邮件端口测试</h3>
-              <div class="tag-group">
-                <el-tag
-                  v-for="(values, port) in report.ecs.mail"
-                  :key="port"
-                  :type="values.some((v) => v) ? 'success' : 'danger'"
-                  style="margin: 4px"
-                >
-                  {{ port }}: {{ values.filter((v) => v).length }}/{{
-                    values.length
-                  }}
-                  可用
-                </el-tag>
-              </div>
-            </div>
-
-            <!-- Network Trace -->
-            <div v-if="report.ecs.trace" class="subsection">
-              <h3>网络路由</h3>
-              <el-descriptions :column="1" border>
-                <el-descriptions-item
-                  v-if="report.ecs.trace.back_route"
-                  label="回程路由"
-                >
-                  <pre class="code-block">{{
-                    report.ecs.trace.back_route
-                  }}</pre>
-                </el-descriptions-item>
-                <el-descriptions-item
-                  v-if="report.ecs.trace.types"
-                  label="路由类型"
-                >
-                  <div class="tag-group">
-                    <el-tag
-                      v-for="(value, key) in report.ecs.trace.types"
-                      :key="key"
-                      style="margin: 4px"
-                    >
-                      {{ key }}: {{ value }}
-                    </el-tag>
-                  </div>
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <!-- TikTok & IP Quality -->
-            <div class="subsection">
-              <el-row :gutter="16">
-                <el-col :span="12" v-if="report.ecs.tiktok">
-                  <h3>TikTok 解锁状态</h3>
-                  <el-tag
-                    :type="getStatusColor(report.ecs.tiktok)"
-                    size="large"
-                  >
-                    {{ report.ecs.tiktok }}
-                  </el-tag>
-                </el-col>
-                <el-col :span="12" v-if="report.ecs.ip_quality">
-                  <h3>IP 质量</h3>
-                  <pre class="code-block">{{ report.ecs.ip_quality }}</pre>
-                </el-col>
-              </el-row>
-            </div>
-          </el-card>
-
-          <!-- Speed Test Results -->
-          <el-card
-            shadow="never"
-            class="section-card"
-            v-if="report.spdtest?.length"
-          >
-            <template #header>
-              <span class="section-title">速度测试</span>
-            </template>
-
-            <div
-              v-for="(test, index) in report.spdtest"
-              :key="index"
-              class="subsection"
+        <!-- Network Trace -->
+        <div v-if="report.ecs.trace" class="subsection">
+          <h3>网络路由</h3>
+          <el-descriptions :column="1" border>
+            <el-descriptions-item
+              v-if="report.ecs.trace.back_route"
+              label="回程路由"
             >
-              <h3 v-if="test.time">测试时间: {{ test.time }}</h3>
-              <el-table :data="test.results" border stripe>
-                <el-table-column prop="spot" label="测试点" min-width="150" />
-                <el-table-column
-                  prop="download"
-                  label="下载速度 (Mbps)"
-                  min-width="150"
-                >
-                  <template #default="{ row }">
-                    {{ row.download?.toFixed(2) || "N/A" }}
-                  </template>
-                </el-table-column>
-                <el-table-column
-                  prop="upload"
-                  label="上传速度 (Mbps)"
-                  min-width="150"
-                >
-                  <template #default="{ row }">
-                    {{ row.upload?.toFixed(2) || "N/A" }}
-                  </template>
-                </el-table-column>
-                <el-table-column
-                  prop="latency"
-                  label="延迟 (ms)"
-                  min-width="120"
-                >
-                  <template #default="{ row }">
-                    {{ row.latency?.toFixed(2) || "N/A" }}
-                  </template>
-                </el-table-column>
-                <el-table-column
-                  prop="jitter"
-                  label="抖动 (ms)"
-                  min-width="120"
-                >
-                  <template #default="{ row }">
-                    {{ row.jitter?.toFixed(2) || "N/A" }}
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
-          </el-card>
-
-          <!-- Media Unlock Results -->
-          <el-card
-            shadow="never"
-            class="section-card"
-            v-if="report.media"
-          >
-            <template #header>
-              <span class="section-title">流媒体解锁测试</span>
-            </template>
-
-            <div v-if="report.media.ipv4?.length" class="subsection">
-              <h3>IPv4 解锁情况</h3>
-              <div
-                v-for="(block, index) in report.media.ipv4"
-                :key="'ipv4-' + index"
-              >
-                <h4>{{ block.region }}</h4>
-                <div class="tag-group">
-                  <el-tag
-                    v-for="(item, idx) in block.results"
-                    :key="idx"
-                    :type="getStatusColor(item.unlock)"
-                    style="margin: 4px"
-                  >
-                    {{ item.media }}: {{ item.unlock }}
-                  </el-tag>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="report.media.ipv6?.length" class="subsection">
-              <h3>IPv6 解锁情况</h3>
-              <div
-                v-for="(block, index) in report.media.ipv6"
-                :key="'ipv6-' + index"
-              >
-                <h4>{{ block.region }}</h4>
-                <div class="tag-group">
-                  <el-tag
-                    v-for="(item, idx) in block.results"
-                    :key="idx"
-                    :type="getStatusColor(item.unlock)"
-                    style="margin: 4px"
-                  >
-                    {{ item.media }}: {{ item.unlock }}
-                  </el-tag>
-                </div>
-              </div>
-            </div>
-          </el-card>
-
-          <!-- IP Quality Results -->
-          <el-card
-            shadow="never"
-            class="section-card"
-            v-if="report.ipquality"
-          >
-            <template #header>
-              <span class="section-title">IP 质量检测</span>
-            </template>
-
-            <!-- Head Info -->
-            <div v-if="report.ipquality.Head?.[0]" class="subsection">
-              <h3>检测信息</h3>
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="IP">{{
-                  report.ipquality.Head[0].IP
-                }}</el-descriptions-item>
-                <el-descriptions-item label="检测时间">{{
-                  report.ipquality.Head[0].Time
-                }}</el-descriptions-item>
-                <el-descriptions-item label="版本">{{
-                  report.ipquality.Head[0].Version
-                }}</el-descriptions-item>
-                <el-descriptions-item label="GitHub">
-                  <el-link
-                    :href="report.ipquality.Head[0].GitHub"
-                    target="_blank"
-                  >
-                    {{ report.ipquality.Head[0].GitHub }}
-                  </el-link>
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <!-- Geographic Info -->
-            <div v-if="report.ipquality.Info?.[0]" class="subsection">
-              <h3>地理位置信息</h3>
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="ASN">{{
-                  report.ipquality.Info[0].ASN
-                }}</el-descriptions-item>
-                <el-descriptions-item label="组织">{{
-                  report.ipquality.Info[0].Organization
-                }}</el-descriptions-item>
-                <el-descriptions-item label="大洲">
-                  {{ report.ipquality.Info[0].Continent?.Name }} ({{
-                    report.ipquality.Info[0].Continent?.Code
-                  }})
-                </el-descriptions-item>
-                <el-descriptions-item label="国家/地区">
-                  {{ report.ipquality.Info[0].Region?.Name }} ({{
-                    report.ipquality.Info[0].Region?.Code
-                  }})
-                </el-descriptions-item>
-                <el-descriptions-item label="城市">
-                  {{ report.ipquality.Info[0].City?.Name }}
-                </el-descriptions-item>
-                <el-descriptions-item label="时区">{{
-                  report.ipquality.Info[0].TimeZone
-                }}</el-descriptions-item>
-                <el-descriptions-item label="经纬度" :span="2">
-                  {{ report.ipquality.Info[0].Latitude }},
-                  {{ report.ipquality.Info[0].Longitude }}
-                </el-descriptions-item>
-                <el-descriptions-item
-                  label="地图链接"
-                  :span="2"
-                  v-if="report.ipquality.Info[0].Map"
-                >
-                  <el-link
-                    :href="report.ipquality.Info[0].Map"
-                    target="_blank"
-                    >查看地图</el-link
-                  >
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <!-- Risk Scores -->
-            <div v-if="report.ipquality.Score?.[0]" class="subsection">
-              <h3>风险评分</h3>
-              <el-descriptions :column="3" border>
-                <el-descriptions-item
-                  v-for="(value, key) in report.ipquality.Score[0]"
-                  :key="key"
-                  :label="key"
-                >
-                  {{ value }}
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <!-- Risk Factors -->
-            <div v-if="report.ipquality.Factor?.[0]" class="subsection">
-              <h3>风险因素</h3>
-              <div class="tag-group">
-                <el-tag
-                  style="margin: 4px"
-                  v-if="report.ipquality.Factor[0].VPN !== undefined"
-                >
-                  VPN: {{ report.ipquality.Factor[0].VPN ? "是" : "否" }}
-                </el-tag>
-                <el-tag
-                  style="margin: 4px"
-                  v-if="report.ipquality.Factor[0].Proxy !== undefined"
-                >
-                  代理:
-                  {{ report.ipquality.Factor[0].Proxy ? "是" : "否" }}
-                </el-tag>
-                <el-tag
-                  style="margin: 4px"
-                  v-if="report.ipquality.Factor[0].Tor !== undefined"
-                >
-                  Tor: {{ report.ipquality.Factor[0].Tor ? "是" : "否" }}
-                </el-tag>
-                <el-tag
-                  style="margin: 4px"
-                  v-if="report.ipquality.Factor[0].Server !== undefined"
-                >
-                  服务器:
-                  {{ report.ipquality.Factor[0].Server ? "是" : "否" }}
-                </el-tag>
-                <el-tag
-                  style="margin: 4px"
-                  v-if="report.ipquality.Factor[0].Abuser !== undefined"
-                >
-                  滥用者:
-                  {{ report.ipquality.Factor[0].Abuser ? "是" : "否" }}
-                </el-tag>
-                <el-tag
-                  style="margin: 4px"
-                  v-if="report.ipquality.Factor[0].Robot !== undefined"
-                >
-                  机器人:
-                  {{ report.ipquality.Factor[0].Robot ? "是" : "否" }}
-                </el-tag>
-              </div>
-            </div>
-
-            <!-- Mail Test Results -->
-            <div v-if="report.ipquality.Mail?.[0]" class="subsection">
-              <h3>邮件服务测试</h3>
-              <div class="tag-group">
-                <el-tag
-                  v-for="(value, key) in report.ipquality.Mail[0]"
-                  :key="key"
-                  :type="
-                    key === 'DNSBlacklist'
-                      ? 'info'
-                      : value
-                      ? 'success'
-                      : 'danger'
-                  "
-                  style="margin: 4px"
-                >
-                  <template v-if="key === 'DNSBlacklist'">
-                    DNS黑名单: {{ value.Blacklisted }}/{{ value.Total }} 黑名单
-                  </template>
-                  <template v-else>
-                    {{ key }}: {{ value ? "✓" : "✗" }}
-                  </template>
-                </el-tag>
-              </div>
-            </div>
-
-            <!-- Media Unlock -->
-            <div v-if="report.ipquality.Media?.[0]" class="subsection">
-              <h3>流媒体服务</h3>
-              <el-row :gutter="16">
-                <el-col
-                  :span="8"
-                  v-for="(value, key) in report.ipquality.Media[0]"
-                  :key="key"
-                >
-                  <el-card shadow="hover" class="media-card">
-                    <h4>{{ key }}</h4>
-                    <el-descriptions :column="1" size="small">
-                      <el-descriptions-item label="状态">
-                        <el-tag :type="getStatusColor(value.status)">{{
-                          value.status
-                        }}</el-tag>
-                      </el-descriptions-item>
-                      <el-descriptions-item label="地区">{{
-                        value.region
-                      }}</el-descriptions-item>
-                      <el-descriptions-item label="类型">{{
-                        value.type
-                      }}</el-descriptions-item>
-                    </el-descriptions>
-                  </el-card>
-                </el-col>
-              </el-row>
-            </div>
-
-            <!-- Type Info -->
-            <div v-if="report.ipquality.Type?.[0]" class="subsection">
-              <h3>IP 类型</h3>
-              <el-row :gutter="16">
-                <el-col :span="12" v-if="report.ipquality.Type[0].Company">
-                  <h4>公司类型</h4>
-                  <el-descriptions :column="1" border size="small">
-                    <el-descriptions-item
-                      v-for="(value, key) in report.ipquality.Type[0]
-                        .Company"
-                      :key="key"
-                      :label="key"
-                    >
-                      {{ value }}
-                    </el-descriptions-item>
-                  </el-descriptions>
-                </el-col>
-                <el-col :span="12" v-if="report.ipquality.Type[0].Usage">
-                  <h4>使用类型</h4>
-                  <el-descriptions :column="1" border size="small">
-                    <el-descriptions-item
-                      v-for="(value, key) in report.ipquality.Type[0]
-                        .Usage"
-                      :key="key"
-                      :label="key"
-                    >
-                      {{ value }}
-                    </el-descriptions-item>
-                  </el-descriptions>
-                </el-col>
-              </el-row>
-            </div>
-          </el-card>
-
-          <!-- Best Trace Results -->
-          <el-card
-            shadow="never"
-            class="section-card"
-            v-if="report.besttrace?.length"
-          >
-            <template #header>
-              <span class="section-title">BestTrace 路由追踪</span>
-            </template>
-
-            <div
-              v-for="(trace, index) in report.besttrace"
-              :key="index"
-              class="subsection"
+              <pre class="code-block">{{ report.ecs.trace.back_route }}</pre>
+            </el-descriptions-item>
+            <el-descriptions-item
+              v-if="report.ecs.trace.types"
+              label="路由类型"
             >
-              <h3>{{ trace.region }}</h3>
-              <pre class="code-block">{{ trace.route }}</pre>
-            </div>
-          </el-card>
+              <div class="card-grid">
+                <el-card
+                  v-for="(value, key) in report.ecs.trace.types"
+                  :key="key"
+                  shadow="hover"
+                  :class="{
+                    'vip-route':
+                      value.includes('精品线路') || value.includes('优质线路'),
+                  }"
+                >
+                  {{ key }}: {{ value }}
+                </el-card>
+              </div>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
 
-          <!-- ITDog Results -->
-          <el-card
-            shadow="never"
-            class="section-card"
-            v-if="report.itdog?.length"
+        <!-- TikTok & IP Quality -->
+        <div class="subsection">
+          <el-row :gutter="16">
+            <el-col :span="12" v-if="report.ecs.tiktok">
+              <h3>TikTok 解锁状态</h3>
+              <el-tag :type="getStatusColor(report.ecs.tiktok)" size="large">
+                {{ report.ecs.tiktok }}
+              </el-tag>
+            </el-col>
+            <el-col :span="12" v-if="report.ecs.ip_quality">
+              <h3>IP 质量</h3>
+              <pre class="code-block">{{ report.ecs.ip_quality }}</pre>
+            </el-col>
+          </el-row>
+        </div>
+      </div>
+
+      <!-- Disk Test Results -->
+      <div class="section-card" v-if="report.disk">
+        <div class="card-header">
+          <span class="section-title">磁盘测试</span>
+        </div>
+
+        <el-table :data="report.disk.data" border stripe>
+          <el-table-column
+            v-for="(col, index) in report.disk.data[0] || []"
+            :key="index"
+            :label="diskLabels[index]"
+            min-width="100"
           >
-            <template #header>
-              <span class="section-title">ITDog 测试结果</span>
+            <template #default="{ row }">
+              {{ row[index] }}
             </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
-            <div v-if="report.itdog.ping" class="subsection">
-              <h3>Ping 测试结果</h3>
-              <img
-                :src="'data:image/png;base64,' + report.itdog.ping"
-                alt="Ping Result"
-                style="max-width: 100%"
-              />
-            </div>
-
-            <div v-if="report.itdog.route?.length" class="subsection">
-              <h3>路由追踪结果</h3>
-              <div
-                v-for="(routeImg, index) in report.itdog.route"
-                :key="index"
-                style="margin-bottom: 16px"
-              >
-                <h4>路由 {{ index + 1 }}</h4>
-                <img
-                  :src="'data:image/png;base64,' + routeImg"
-                  alt="Route Result"
-                  style="max-width: 100%"
-                />
-              </div>
-            </div>
-          </el-card>
-
-          <!-- Disk Test Results -->
-          <el-card shadow="never" class="section-card" v-if="report.disk">
-            <template #header>
-              <div class="card-header">
-                <span class="section-title">磁盘测试</span>
-                <el-tag v-if="report.disk.time" size="small">{{
-                  report.disk.time
-                }}</el-tag>
-              </div>
-            </template>
-
-            <el-table :data="report.disk.data" border stripe>
+      <!-- Speed Test Results -->
+      <div class="section-card" v-if="report.spdtest?.length">
+        <span class="section-title">速度测试</span>
+        <el-tabs>
+          <el-tab-pane
+            v-for="(test, index) in report.spdtest"
+            :key="index"
+            :label="speedTestLabels[index]"
+            class="subsection"
+          >
+            <h3 v-if="test.time">测试时间: {{ test.time }}</h3>
+            <el-table :data="test.results" border stripe>
+              <el-table-column prop="spot" label="测试点" min-width="150" />
               <el-table-column
-                v-for="(col, index) in report.disk.data[0] || []"
-                :key="index"
-                :label="'列 ' + (index + 1)"
-                min-width="100"
+                prop="download"
+                label="下载速度 (Mbps)"
+                min-width="150"
               >
                 <template #default="{ row }">
-                  {{ row[index] }}
+                  {{ row.download?.toFixed(2) || "N/A" }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="upload"
+                label="上传速度 (Mbps)"
+                min-width="150"
+              >
+                <template #default="{ row }">
+                  {{ row.upload?.toFixed(2) || "N/A" }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="latency" label="延迟 (ms)" min-width="120">
+                <template #default="{ row }">
+                  {{ row.latency?.toFixed(2) || "N/A" }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="jitter" label="抖动 (ms)" min-width="120">
+                <template #default="{ row }">
+                  {{ row.jitter?.toFixed(2) || "N/A" }}
                 </template>
               </el-table-column>
             </el-table>
-          </el-card>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <!-- Media Unlock Results -->
+      <div class="section-card" v-if="report.media">
+        <span class="section-title">流媒体解锁测试</span>
+
+        <div v-if="report.media.ipv4?.length" class="subsection">
+          <h3>IPv4 解锁情况</h3>
+          <div class="card-grid media-unlock-grid">
+            <el-card
+              shadow="never"
+              v-for="(block, index) in report.media.ipv4"
+              :key="'ipv4-' + index"
+            >
+              <h4>{{ block.region }}</h4>
+              <div
+                v-for="(item, idx) in block.results"
+                :key="idx"
+                class="media-unlock-body"
+              >
+                <div>{{ item.media }}</div>
+                <div :style="{color: getMediaStatusColor(item.unlock)}">{{ item.unlock }}</div>
+              </div>
+            </el-card>
+          </div>
         </div>
 
-        <el-empty v-else description="未找到报告数据" />
-      </template>
-    </el-skeleton>
+        <div v-if="report.media.ipv6?.length" class="subsection">
+          <h3>IPv6 解锁情况</h3>
+          <div class="card-grid media-unlock-grid">
+            <el-card
+              shadow="never"
+              v-for="(block, index) in report.media.ipv6"
+              :key="'ipv6-' + index"
+            >
+              <h4>{{ block.region }}</h4>
+              <div
+                v-for="(item, idx) in block.results"
+                :key="idx"
+                class="media-unlock-body"
+              >
+                <div>{{ item.media }}</div>
+                <div :style="{color: getMediaStatusColor(item.unlock)}">{{ item.unlock }}</div>
+              </div>
+            </el-card>
+          </div>
+        </div>
+      </div>
+
+      <!-- IP Quality Results -->
+      <div class="section-card" v-if="report.ipquality">
+        <span class="section-title">IP 质量检测</span>
+
+        <!-- Head Info -->
+        <div v-if="report.ipquality.Head" class="subsection">
+          <h3>检测信息</h3>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="IP">{{
+              report.ipquality.Head.IP
+            }}</el-descriptions-item>
+            <el-descriptions-item label="检测时间">{{
+              report.ipquality.Head.Time
+            }}</el-descriptions-item>
+            <el-descriptions-item label="版本">{{
+              report.ipquality.Head.Version
+            }}</el-descriptions-item>
+            <el-descriptions-item label="GitHub">
+              <el-link :href="report.ipquality.Head.GitHub" target="_blank">
+                {{ report.ipquality.Head.GitHub }}
+              </el-link>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- Geographic Info -->
+        <div v-if="report.ipquality.Info" class="subsection">
+          <h3>地理位置信息</h3>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="ASN">{{
+              report.ipquality.Info.ASN
+            }}</el-descriptions-item>
+            <el-descriptions-item label="组织">{{
+              report.ipquality.Info.Organization
+            }}</el-descriptions-item>
+            <el-descriptions-item label="大洲">
+              {{ report.ipquality.Info.Continent?.Name }} ({{
+                report.ipquality.Info.Continent?.Code
+              }})
+            </el-descriptions-item>
+            <el-descriptions-item label="国家/地区">
+              {{ report.ipquality.Info.Region?.Name }} ({{
+                report.ipquality.Info.Region?.Code
+              }})
+            </el-descriptions-item>
+            <el-descriptions-item label="城市">
+              {{ report.ipquality.Info.City?.Name }}
+            </el-descriptions-item>
+            <el-descriptions-item label="时区">{{
+              report.ipquality.Info.TimeZone
+            }}</el-descriptions-item>
+            <el-descriptions-item label="经纬度" :span="2">
+              {{ report.ipquality.Info.Latitude }},
+              {{ report.ipquality.Info.Longitude }}
+            </el-descriptions-item>
+            <el-descriptions-item
+              label="地图链接"
+              :span="2"
+              v-if="report.ipquality.Info.Map"
+            >
+              <el-link :href="report.ipquality.Info.Map" target="_blank"
+                >查看地图</el-link
+              >
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- Risk Scores -->
+        <div v-if="report.ipquality.Score" class="subsection">
+          <h3>风险评分</h3>
+          <el-descriptions :column="3" border>
+            <el-descriptions-item
+              v-for="(value, key) in report.ipquality.Score"
+              :key="key"
+              :label="key"
+            >
+              {{ value }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- Risk Factors -->
+        <div v-if="report.ipquality.Factor" class="subsection">
+          <h3>风险因素</h3>
+          <div
+            v-for="(factorData, factorName) in report.ipquality.Factor"
+            :key="factorName"
+          >
+            <h4>{{ factorName }}</h4>
+            <el-descriptions
+              :column="3"
+              border
+              size="small"
+              class="factor-descriptions"
+            >
+              <el-descriptions-item
+                v-for="(value, provider) in factorData"
+                :key="provider"
+                :label="provider"
+                label-width="150px"
+                width="150px"
+              >
+                <span v-if="value === null" class="value-na">N/A</span>
+                <span
+                  v-else-if="typeof value === 'boolean'"
+                  :class="value ? 'value-danger' : 'value-success'"
+                >
+                  {{ value ? "是" : "否" }}
+                </span>
+                <span v-else>{{ value }}</span>
+              </el-descriptions-item>
+            </el-descriptions>
+          </div>
+        </div>
+
+        <!-- Mail Test Results -->
+        <div v-if="report.ipquality.Mail" class="subsection">
+          <h3>邮件服务测试</h3>
+          <div class="tag-group">
+            <el-tag
+              v-for="(value, key) in report.ipquality.Mail"
+              :key="key"
+              :type="
+                key === 'DNSBlacklist' ? 'info' : value ? 'success' : 'danger'
+              "
+              style="margin: 4px"
+            >
+              <template v-if="key === 'DNSBlacklist'">
+                DNS黑名单: {{ value.Blacklisted }}/{{ value.Total }} 黑名单
+              </template>
+              <template v-else> {{ key }}: {{ value ? "✓" : "✗" }} </template>
+            </el-tag>
+          </div>
+        </div>
+
+        <!-- Media Unlock -->
+        <div v-if="report.ipquality.Media" class="subsection">
+          <h3>流媒体服务</h3>
+          <el-row :gutter="16">
+            <el-col
+              :span="8"
+              v-for="(value, key) in report.ipquality.Media"
+              :key="key"
+              class="media-item"
+            >
+              <el-card shadow="hover" class="media-card">
+                <h4>{{ key }}</h4>
+                <el-descriptions :column="1" size="small">
+                  <el-descriptions-item label="状态">
+                    <el-tag :type="getStatusColor(value.Status)">{{
+                      value.Status
+                    }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="地区">{{
+                    value.Region
+                  }}</el-descriptions-item>
+                  <el-descriptions-item label="类型">{{
+                    value.Type
+                  }}</el-descriptions-item>
+                </el-descriptions>
+              </el-card>
+            </el-col>
+          </el-row>
+        </div>
+
+        <!-- Type Info -->
+        <div v-if="report.ipquality.Type" class="subsection">
+          <h3>IP 类型</h3>
+          <el-row :gutter="16">
+            <el-col :span="12" v-if="report.ipquality.Type.Company">
+              <h4>公司类型</h4>
+              <el-descriptions :column="1" border size="small">
+                <el-descriptions-item
+                  v-for="(value, key) in report.ipquality.Type.Company"
+                  :key="key"
+                  :label="key"
+                >
+                  {{ value }}
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-col>
+            <el-col :span="12" v-if="report.ipquality.Type.Usage">
+              <h4>使用类型</h4>
+              <el-descriptions :column="1" border size="small">
+                <el-descriptions-item
+                  v-for="(value, key) in report.ipquality.Type.Usage"
+                  :key="key"
+                  :label="key"
+                >
+                  {{ value }}
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-col>
+          </el-row>
+        </div>
+      </div>
+
+      <!-- Best Trace Results -->
+      <div class="section-card" v-if="report.besttrace?.length">
+        <span class="section-title">回程路由追踪</span>
+
+        <div
+          v-for="(trace, index) in report.besttrace"
+          :key="index"
+          class="subsection"
+        >
+          <h3>{{ trace.region }}</h3>
+          <pre class="code-block">{{ trace.route }}</pre>
+        </div>
+      </div>
+
+      <!-- ITDog Results -->
+      <div class="section-card" v-if="report.itdog">
+        <span class="section-title">ITDog</span>
+
+        <div v-if="report.itdog.ping" class="subsection">
+          <h3>全国 Ping</h3>
+          <img
+            :src="report.itdog.ping"
+            alt="Ping Result"
+            style="max-width: 100%"
+          />
+        </div>
+
+        <div v-if="report.itdog.route?.length" class="subsection">
+          <h3>去程路由追踪</h3>
+          <div
+            v-for="(routeImg, index) in report.itdog.route"
+            :key="index"
+            style="margin-bottom: 16px"
+          >
+            <h4>路由 {{ index + 1 }}</h4>
+            <img :src="routeImg" alt="Route Result" style="max-width: 100%" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <el-empty v-else description="未找到报告数据" />
   </div>
 </template>
 
 <style scoped>
 #report-root {
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px;
+  padding: 16px;
   box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #report-header {
-  margin-bottom: 32px;
+  margin-bottom: 16px;
 }
 
 #report-header h1 {
@@ -699,9 +646,11 @@ const goBack = () => {
 }
 
 .section-title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
   color: #303133;
+  margin-bottom: 12px;
+  display: inline-block;
 }
 
 .subsection {
@@ -749,13 +698,43 @@ const goBack = () => {
 
 .media-card {
   height: 100%;
-  margin-bottom: 16px;
+}
+
+.media-item {
+  margin: 8px 0;
 }
 
 .media-card h4 {
   margin: 0 0 12px 0;
   font-size: 16px;
   color: #303133;
+}
+
+.vip-route {
+  color: var(--el-color-success);
+  background-color: var(--el-color-success-light-8);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.media-unlock-body {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  width: 100%;
+  margin: 8px 0;
+  color: #303133;
+}
+
+.media-unlock-grid :deep(.el-card__body) {
+  padding: 12px;
+}
+
+.media-unlock-grid h4 {
+  margin: 2px 0 8px 0;
 }
 
 :deep(.el-descriptions__label) {
@@ -771,5 +750,28 @@ const goBack = () => {
   font-size: 24px;
   font-weight: 600;
   color: #303133;
+}
+
+.value-na {
+  color: #909399;
+}
+
+.value-success {
+  color: #67c23a;
+  font-weight: 600;
+}
+
+.value-danger {
+  color: #f56c6c;
+  font-weight: 600;
+}
+
+.factor-descriptions :deep(.factor-label) {
+  width: 150px;
+  min-width: 150px;
+}
+
+:deep(.el-tag) {
+  border: none;
 }
 </style>

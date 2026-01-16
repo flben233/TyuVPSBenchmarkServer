@@ -6,17 +6,18 @@ const page = ref(1);
 const disabled = ref(false);
 const total = ref(0);
 const loading = ref(false);
-const reportsData = await listReports(page.value);
+const pageSize = 7;
+const reportsData = await listReports(page.value, pageSize);
 reports.value = reportsData.data || [];
 total.value = reportsData.total || 0;
 const { getServerStatus } = useMonitor();
 const fmtStatus = (status) => {
   return {
     uptime: fmtSecond(status.uptime_seconds),
-    cpuUsage: `${status.cpu_usage_percent}%`,
-    memoryUsage: `${status.memory_usage_percent}%`,
-    uploadSpeed: `${status.upload_mbps} Mbps`,
-    downloadSpeed: `${status.download_mbps} Mbps`,
+    cpuUsage: `${status.cpu_usage_percent.toFixed(2)}%`,
+    memoryUsage: `${status.memory_usage_percent.toFixed(2)}%`,
+    uploadSpeed: `${status.upload_mbps.toFixed(2)} Mbps`,
+    downloadSpeed: `${status.download_mbps.toFixed(2)} Mbps`,
   };
 };
 const status = ref({
@@ -36,7 +37,7 @@ const gotoDetail = (reportId) => {
 watch(page, async (newPage) => {
   loading.value = true;
   disabled.value = true;
-  const reportsData = await listReports(newPage);
+  const reportsData = await listReports(newPage, pageSize);
   reports.value = reportsData.data || [];
   disabled.value = false;
   loading.value = false;
@@ -47,7 +48,7 @@ onMounted(async () => {
   setInterval(async () => {
     const statusData = await getServerStatus();
     status.value = fmtStatus(statusData);
-  }, 30000);
+  }, 10000);
 });
 </script>
 
@@ -74,6 +75,7 @@ onMounted(async () => {
           :background="false"
           layout="total, prev, pager, next, jumper"
           :total="total"
+          :page-size="pageSize"
         />
       </el-col>
       <el-col :span="6" :offset="1">
@@ -114,6 +116,7 @@ onMounted(async () => {
   width: 100%;
   padding: 16px;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 #report-title {
   font-size: 28px;

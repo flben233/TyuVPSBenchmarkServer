@@ -11,7 +11,7 @@ hosts.value = data.map(host => ({
 }));
 loading.value = false;
 
-// Auto-refresh every 30 seconds
+// Auto-refresh every 10 seconds
 const refreshInterval = ref(null);
 onMounted(() => {
   refreshInterval.value = setInterval(async () => {
@@ -20,7 +20,10 @@ onMounted(() => {
       ...host,
       stats: calculateStats(host.history || [])
     }));
-  }, 30000);
+    console.log("Updated hosts:", hosts.value);
+    console.log("Data fetched:", data);
+    
+  }, 10000);
 });
 
 onUnmounted(() => {
