@@ -53,9 +53,11 @@ func ListHosts(userID string, isAdmin bool) ([]response.HostResponse, error) {
 	result := make([]response.HostResponse, len(hosts))
 	for i, host := range hosts {
 		result[i] = response.HostResponse{
-			Id:     host.Id,
-			Target: host.Target,
-			Name:   host.Name,
+			Id:           host.Id,
+			Target:       host.Target,
+			Name:         host.Name,
+			UploaderName: host.UploaderName,
+			ReviewStatus: int(host.ReviewStatus),
 		}
 	}
 	return result, nil

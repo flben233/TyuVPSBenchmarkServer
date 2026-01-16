@@ -57,9 +57,11 @@ func ListRecords(userID string, isAdmin bool) ([]response.LookingGlassResponse, 
 	result := make([]response.LookingGlassResponse, len(records))
 	for i, record := range records {
 		result[i] = response.LookingGlassResponse{
-			Id:         record.Id,
-			ServerName: record.ServerName,
-			TestURL:    record.TestURL,
+			Id:           record.Id,
+			ServerName:   record.ServerName,
+			TestURL:      record.TestURL,
+			UploaderName: record.UploaderName,
+			ReviewStatus: int(record.ReviewStatus),
 		}
 	}
 	return result, nil
@@ -74,9 +76,10 @@ func ListAllRecords() ([]response.LookingGlassResponse, error) {
 	result := make([]response.LookingGlassResponse, len(records))
 	for i, record := range records {
 		result[i] = response.LookingGlassResponse{
-			Id:         record.Id,
-			ServerName: record.ServerName,
-			TestURL:    record.TestURL,
+			Id:           record.Id,
+			ServerName:   record.ServerName,
+			TestURL:      record.TestURL,
+			UploaderName: record.UploaderName,
 		}
 	}
 	return result, nil

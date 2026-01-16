@@ -4,7 +4,9 @@ import (
 	"VPSBenchmarkBackend/internal/auth/response"
 	"VPSBenchmarkBackend/internal/auth/service"
 	"VPSBenchmarkBackend/internal/common"
+	"VPSBenchmarkBackend/internal/config"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,8 +34,12 @@ func GithubLogin(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, "Failed to login with GitHub: "+err.Error()))
 		return
 	}
-
-	c.JSON(http.StatusOK, common.Success(response.LoginResponse{Token: token}))
+	query := url.Values{}
+	query.Add("token", token)
+	rawQuery := query.Encode()
+	frontendURL := config.Get().FrontendURL + "?" + rawQuery
+	c.Redirect(http.StatusPermanentRedirect, frontendURL)
+	// c.JSON(http.StatusOK, common.Success(response.LoginResponse{Token: token}))
 }
 
 // GetUserInfo returns the current user's information from JWT
@@ -61,4 +67,17 @@ func GetUserInfo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, common.Success(userInfo))
+}
+
+// CheckAdminUser is a dummy handler to check if the user is admin
+// @Summary Check Admin User
+// @Description Check if the current user is an admin
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} common.APIResponse[any]
+// @Failure 403 {object} common.APIResponse[any]
+// @Router /auth/admin [get]
+func CheckAdminUser(c *gin.Context) {
+	c.JSON(http.StatusOK, common.Success[any](nil))
 }

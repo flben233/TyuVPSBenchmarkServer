@@ -2,7 +2,6 @@ package service
 
 import (
 	"VPSBenchmarkBackend/internal/common"
-	"VPSBenchmarkBackend/internal/config"
 	"VPSBenchmarkBackend/internal/monitor/model"
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/internal/monitor/store"
@@ -13,7 +12,7 @@ import (
 )
 
 func init() {
-	interval := time.Duration(config.Get().MonitorQueryInterval) * time.Second
+	interval := 60 * time.Second
 	common.RegisterCronJob(interval, queryHosts)
 }
 
@@ -57,7 +56,7 @@ func queryHosts() {
 		stats := <-resultCh
 		if stats != nil {
 			host := hostMap[stats.Addr]
-			history := append(host.History, float32(stats.AvgRtt.Milliseconds())/1000.0)
+			history := append(host.History, float32(stats.AvgRtt.Milliseconds()))
 			// Keep only last 100 values
 			if len(history) > 100 {
 				history = history[len(history)-100:]
@@ -82,7 +81,7 @@ func GetStatistics() ([]response.StatisticsResponse, error) {
 	for _, host := range hosts {
 		statistics = append(statistics, response.StatisticsResponse{
 			Name:     host.Name,
-			Uploader: host.Uploader,
+			Uploader: host.UploaderName,
 			History:  host.History,
 		})
 	}
