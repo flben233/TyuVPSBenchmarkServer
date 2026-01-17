@@ -38,7 +38,7 @@ const handleReset = () => {
   <div id="tool-root">
     <el-row>
       <el-col :span="24" id="tool-title"> WHOIS查询 </el-col>
-      <el-col :span="17">
+      <el-col :span="17" :xs="24">
         <div class="tool-form-card">
           <el-form label-width="120px" label-position="left">
             <el-form-item label="查询目标">
@@ -72,7 +72,7 @@ const handleReset = () => {
         </div>
       </el-col>
 
-      <el-col :span="6" :offset="1">
+      <el-col :span="6" :xs="0" :offset="1">
         <Profile>
           <div>
             <div style="font-weight: 600; color: #303133">关于WHOIS</div>

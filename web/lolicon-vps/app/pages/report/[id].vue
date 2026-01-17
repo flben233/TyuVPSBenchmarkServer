@@ -1,5 +1,5 @@
 <script setup>
-import MonitorWidget from '~/components/monitor-widget.vue';
+import MonitorWidget from "~/components/monitor-widget.vue";
 
 const route = useRoute();
 const { getReportDetails } = useReport();
@@ -86,11 +86,11 @@ const goBack = () => {
       <div id="report-header">
         <h1>{{ report.title || "测试报告" }}</h1>
         <div class="report-meta">
-          <el-tag>ID: {{ report.id }}</el-tag>
-          <el-tag type="info" style="margin-left: 8px"
+          <el-tag effect="dark">ID: {{ report.id }}</el-tag>
+          <el-tag effect="dark" type="info" style="margin-left: 8px"
             >创建时间: {{ formatDate(report.time) }}</el-tag
           >
-          <el-tag type="info" style="margin-left: 8px"
+          <el-tag effect="dark" type="info" style="margin-left: 8px"
             >更新时间: {{ formatDate(report.updated_at) }}</el-tag
           >
         </div>
@@ -191,36 +191,42 @@ const goBack = () => {
             <h4>{{ port }}</h4>
             <div class="tag-group">
               <el-tag
+                effect="dark"
                 :type="values[0] ? 'success' : 'danger'"
                 style="margin: 4px"
               >
                 SMTP: {{ values[0] ? "✓" : "✗" }}
               </el-tag>
               <el-tag
+                effect="dark"
                 :type="values[1] ? 'success' : 'danger'"
                 style="margin: 4px"
               >
                 POP3: {{ values[1] ? "✓" : "✗" }}
               </el-tag>
               <el-tag
+                effect="dark"
                 :type="values[2] ? 'success' : 'danger'"
                 style="margin: 4px"
               >
                 IMAP: {{ values[2] ? "✓" : "✗" }}
               </el-tag>
               <el-tag
+                effect="dark"
                 :type="values[3] ? 'success' : 'danger'"
                 style="margin: 4px"
               >
                 SMTP-SSL: {{ values[3] ? "✓" : "✗" }}
               </el-tag>
               <el-tag
+                effect="dark"
                 :type="values[4] ? 'success' : 'danger'"
                 style="margin: 4px"
               >
                 POP3-SSL: {{ values[4] ? "✓" : "✗" }}
               </el-tag>
               <el-tag
+                effect="dark"
                 :type="values[5] ? 'success' : 'danger'"
                 style="margin: 4px"
               >
@@ -266,7 +272,11 @@ const goBack = () => {
           <el-row :gutter="16">
             <el-col :span="12" v-if="report.ecs.tiktok">
               <h3>TikTok 解锁状态</h3>
-              <el-tag :type="getStatusColor(report.ecs.tiktok)" size="large">
+              <el-tag
+                effect="dark"
+                :type="getStatusColor(report.ecs.tiktok)"
+                size="large"
+              >
                 {{ report.ecs.tiktok }}
               </el-tag>
             </el-col>
@@ -363,7 +373,9 @@ const goBack = () => {
                 class="media-unlock-body"
               >
                 <div>{{ item.media }}</div>
-                <div :style="{color: getMediaStatusColor(item.unlock)}">{{ item.unlock }}</div>
+                <div :style="{ color: getMediaStatusColor(item.unlock) }">
+                  {{ item.unlock }}
+                </div>
               </div>
             </el-card>
           </div>
@@ -384,7 +396,9 @@ const goBack = () => {
                 class="media-unlock-body"
               >
                 <div>{{ item.media }}</div>
-                <div :style="{color: getMediaStatusColor(item.unlock)}">{{ item.unlock }}</div>
+                <div :style="{ color: getMediaStatusColor(item.unlock) }">
+                  {{ item.unlock }}
+                </div>
               </div>
             </el-card>
           </div>
@@ -511,6 +525,7 @@ const goBack = () => {
           <h3>邮件服务测试</h3>
           <div class="tag-group">
             <el-tag
+              effect="dark"
               v-for="(value, key) in report.ipquality.Mail"
               :key="key"
               :type="
@@ -540,9 +555,11 @@ const goBack = () => {
                 <h4>{{ key }}</h4>
                 <el-descriptions :column="1" size="small">
                   <el-descriptions-item label="状态">
-                    <el-tag :type="getStatusColor(value.Status)">{{
-                      value.Status
-                    }}</el-tag>
+                    <el-tag
+                      effect="dark"
+                      :type="getStatusColor(value.Status)"
+                      >{{ value.Status }}</el-tag
+                    >
                   </el-descriptions-item>
                   <el-descriptions-item label="地区">{{
                     value.Region
@@ -743,16 +760,19 @@ const goBack = () => {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 16px;
 }
 
 .media-unlock-body {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  width: 100%;
+  gap: 8px;
   margin: 8px 0;
+  padding: 8px;
   color: #303133;
+  background-color: #f5f7fa;
+  border-radius: 4px;
 }
 
 .media-unlock-grid :deep(.el-card__body) {

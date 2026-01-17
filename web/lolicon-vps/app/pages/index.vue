@@ -64,7 +64,7 @@ onUnmounted(() => {
   <div id="index-root">
     <el-row>
       <el-col :span="24" id="report-title"> 测试记录 </el-col>
-      <el-col :span="17">
+      <el-col :span="17" :xs="24">
         <el-skeleton :rows="5" animated v-if="loading" />
         <el-card
           v-if="!loading"
@@ -86,7 +86,7 @@ onUnmounted(() => {
           :page-size="pageSize"
         />
       </el-col>
-      <el-col :span="6" :offset="1">
+      <el-col :span="6" :xs="0" :offset="1">
         <Profile>
           <ClientOnly>
             <div>

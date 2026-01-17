@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import ReportUploader from "~/components/report-uploader.vue";
 
 const { token, isAdmin } = useAuth();
 const {
@@ -19,7 +20,6 @@ const {
   approveRecord,
   rejectRecord,
 } = useLookingGlass();
-const { addReport, deleteReport } = useReport();
 
 const activeTab = ref("monitor");
 const loading = ref(true);
@@ -41,12 +41,6 @@ const addRecordForm = ref({
   testUrl: "",
 });
 const addRecordDialogVisible = ref(false);
-
-// Report data
-const fileInput = useTemplateRef("report-selector");
-const addReportDialogVisible = ref(false);
-const reportFile = ref(null);
-const selectedMonitorId = ref(null);
 
 // Load data on mount
 onMounted(async () => {
@@ -260,85 +254,6 @@ async function handleRejectRecord(id) {
   }
 }
 
-// Report functions
-async function handleFileSelect(event) {
-  if (!event.target.files.length) {
-    ElMessage.warning("请选择HTML文件");
-    return;
-  }
-
-  reportFile.value = event.target.files[0];
-  // Reset file input
-  event.target.value = "";
-  // Open dialog to select monitor
-  addReportDialogVisible.value = true;
-}
-
-async function handleAddReport() {
-  if (!reportFile.value) {
-    ElMessage.warning("请选择HTML文件");
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const htmlContent = await reportFile.value.text();
-    const result = await addReport(
-      token.value,
-      htmlContent,
-      selectedMonitorId.value || undefined
-    );
-    if (result.success) {
-      ElMessage.success(`报告添加成功。ID: ${result.data.id}`);
-      addReportDialogVisible.value = false;
-      reportFile.value = null;
-      selectedMonitorId.value = null;
-    } else {
-      ElMessage.error(result.message || "添加报告失败");
-    }
-  } catch (error) {
-    ElMessage.error("添加报告失败");
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function handleDeleteReport() {
-  try {
-    const { value: reportId } = await ElMessageBox.prompt(
-      "请输入报告 ID",
-      "删除报告",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        inputPattern: /.+/,
-        inputErrorMessage: "报告 ID 是必填项",
-      }
-    );
-
-    loading.value = true;
-    const result = await deleteReport(token.value, reportId);
-    if (result.success) {
-      ElMessage.success("报告删除成功");
-    } else {
-      ElMessage.error(result.message || "删除报告失败");
-    }
-  } catch (error) {
-    if (error !== "cancel") {
-      ElMessage.error("删除报告失败");
-    }
-  } finally {
-    loading.value = false;
-  }
-}
-
-function showFileSelector() {
-  if (fileInput) {
-    console.log(fileInput);
-    fileInput.value.click();
-  }
-}
-
 function getReviewStatusText(status) {
   switch (status) {
     case 0:
@@ -411,7 +326,7 @@ function getReviewStatusType(status) {
                 />
                 <el-table-column prop="review_status" label="状态" width="120">
                   <template #default="{ row }">
-                    <el-tag :type="getReviewStatusType(row.review_status)">
+                    <el-tag :type="getReviewStatusType(row.review_status)" effect="dark">
                       {{ getReviewStatusText(row.review_status) }}
                     </el-tag>
                   </template>
@@ -530,7 +445,7 @@ function getReviewStatusType(status) {
                 />
                 <el-table-column prop="review_status" label="状态" width="120">
                   <template #default="{ row }">
-                    <el-tag :type="getReviewStatusType(row.review_status)">
+                    <el-tag :type="getReviewStatusType(row.review_status)" effect="dark">
                       {{ getReviewStatusText(row.review_status) }}
                     </el-tag>
                   </template>
@@ -615,30 +530,7 @@ function getReviewStatusType(status) {
 
           <!-- Admin: Report Management Tab -->
           <el-tab-pane label="报告管理" name="report" v-if="isAdmin">
-            <el-card shadow="never">
-              <template #header>
-                <span>报告管理（仅管理员）</span>
-              </template>
-
-              <el-space direction="vertical" style="width: 100%" :size="16">
-                <input
-                  type="file"
-                  ref="report-selector"
-                  style="display: none"
-                  @change="handleFileSelect"
-                />
-                <el-button
-                  type="primary"
-                  @click="showFileSelector"
-                  :loading="loading"
-                >
-                  添加报告
-                </el-button>
-                <el-button type="danger" @click="handleDeleteReport">
-                  删除报告
-                </el-button>
-              </el-space>
-            </el-card>
+            <report-uploader :token="token" :hosts="hosts" />
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -692,36 +584,6 @@ function getReviewStatusType(status) {
       <template #footer>
         <el-button @click="addRecordDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleAddRecord" :loading="loading"
-          >添加</el-button
-        >
-      </template>
-    </el-dialog>
-
-    <!-- Add Report Dialog -->
-    <el-dialog v-model="addReportDialogVisible" title="添加报告" width="500px">
-      <el-form label-width="120px">
-        <el-form-item label="文件">
-          <span>{{ reportFile?.name || "未选择文件" }}</span>
-        </el-form-item>
-        <el-form-item label="关联监控主机">
-          <el-select
-            v-model="selectedMonitorId"
-            placeholder="选择监控主机（可选）"
-            clearable
-            style="width: 100%"
-          >
-            <el-option
-              v-for="host in hosts"
-              :key="host.id"
-              :label="host.name"
-              :value="host.id"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="addReportDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAddReport" :loading="loading"
           >添加</el-button
         >
       </template>

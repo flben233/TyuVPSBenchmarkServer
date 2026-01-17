@@ -8,6 +8,7 @@ import {
   More,
 } from "@element-plus/icons-vue";
 
+const mode = ref("vertical");
 const { userInfo, login, logout } = useAuth();
 const avatarUrl = ref(null);
 const activePath = computed(() => {
@@ -22,6 +23,14 @@ if (userInfo.value) {
   console.log("No user info available");
 }
 
+function handleWidthChange() {
+  if (window.innerWidth < 768) {
+    mode.value = "horizontal";
+  } else {
+    mode.value = "vertical";
+  }
+}
+
 watch(userInfo, (newVal) => {
   if (newVal) {
     avatarUrl.value = newVal.avatarUrl;
@@ -31,6 +40,8 @@ watch(userInfo, (newVal) => {
 });
 
 onMounted(async () => {
+  handleWidthChange();
+  window.addEventListener('resize', handleWidthChange);
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
   console.log("OAuth Token from URL:", token);
@@ -41,9 +52,14 @@ onMounted(async () => {
   }
 });
 
+onUnmounted(() => {
+  window.removeEventListener('resize', handleWidthChange);
+});
+
 const avatarNav = (command) => {
   if (command === "login") {
-    window.location.href = "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m&redirect_uri=http://127.0.0.1:12345/api/auth/github/login";
+    window.location.href =
+      "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m&redirect_uri=http://127.0.0.1:12345/api/auth/github/login";
   } else if (command === "logout") {
     logout();
   } else if (command === "center") {
@@ -53,14 +69,22 @@ const avatarNav = (command) => {
 </script>
 
 <template>
-  <el-menu :collapse="true" :default-active="activePath" router>
+  <el-menu
+    id="m-root"
+    :mode="mode"
+    :collapse="true"
+    :default-active="activePath"
+    router
+  >
     <div class="m-avatar-container">
-      <el-dropdown @command="avatarNav">
+      <el-dropdown @command="avatarNav" class="m-avatar-dropdown">
         <el-avatar v-if="avatarUrl" :src="avatarUrl" />
         <el-avatar v-else :icon="UserFilled" />
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item v-if="!userInfo" command="login">使用Github登录</el-dropdown-item>
+            <el-dropdown-item v-if="!userInfo" command="login"
+              >使用Github登录</el-dropdown-item
+            >
             <div v-else>
               <el-dropdown-item command="center">个人中心</el-dropdown-item>
               <el-dropdown-item command="logout">退出登录</el-dropdown-item>
@@ -85,7 +109,6 @@ const avatarNav = (command) => {
         <Odometer />
       </el-icon>
     </el-menu-item>
-    <!-- TODO: 添加loogking glass列表相关页面和接口 -->
     <el-menu-item index="/looking-glass" class="menu-item">
       <el-icon size="24">
         <Notebook />
@@ -111,12 +134,22 @@ const avatarNav = (command) => {
 </template>
 
 <style scoped>
+@media screen and (max-width: 768px) {
+  #m-root {
+    width: 100% !important;
+  }
+  .m-avatar-dropdown {
+    margin: auto;
+    padding: 6px;
+  }
+}
+
 .m-avatar-container {
   width: 100%;
   text-align: center;
   padding: 8px;
   box-sizing: border-box;
-  /* cursor: pointer; */
+  margin: auto;
 }
 .menu-item {
   display: flex;

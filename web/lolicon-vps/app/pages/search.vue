@@ -195,7 +195,7 @@ const gotoDetail = (reportId) => {
   <div id="search-root">
     <el-row>
       <el-col :span="24" id="search-title"> 高级搜索 </el-col>
-      <el-col :span="17">
+      <el-col :span="17" :xs="24">
         <el-tabs v-model="mainTab">
           <!-- Search Panel -->
           <el-tab-pane label="搜索条件" name="search">
@@ -499,7 +499,7 @@ const gotoDetail = (reportId) => {
                   :loading="loading"
                   >搜索</el-button
                 >
-                <el-button @click="handleReset">重置</el-button>
+                <el-button text bg @click="handleReset">重置</el-button>
               </el-form>
             </div>
           </el-tab-pane>
@@ -539,7 +539,7 @@ const gotoDetail = (reportId) => {
       </el-col>
 
       <!-- Sidebar -->
-      <el-col :span="6" :offset="1">
+      <el-col :span="6" :xs="0" :offset="1">
         <Profile>
           <div>
             <div style="font-weight: 600; color: #303133">搜索提示</div>

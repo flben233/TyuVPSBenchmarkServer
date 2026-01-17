@@ -2,7 +2,6 @@ let userInfo = ref(null);
 let token = ref(null);
 let isAdmin = ref(false);
 
-// TODO：持久化登陆状态
 export function useAuth() {
   const { backendUrl } = useAppConfig();
 
@@ -49,6 +48,9 @@ export function useAuth() {
   async function logout() {
     token.value = null;
     userInfo.value = null;
+    isAdmin.value = false;
+    sessionStorage.removeItem("auth_token");
+    location.reload();
   }
 
   async function checkAdmin() {
