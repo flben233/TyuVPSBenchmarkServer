@@ -18,5 +18,5 @@ export default defineNuxtConfig({
   },
   modules: ["@element-plus/nuxt"],
   // 手动全局引入 Element Plus 的 CSS
-  css: ["element-plus/dist/index.css"],
+  css: ["element-plus/dist/index.css", "@/assets/main.css"],
 });
