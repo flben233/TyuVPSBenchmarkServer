@@ -43,7 +43,7 @@ func AddReport(ctx *gin.Context) {
 		return
 	}
 
-	reportID, err := service.AddReport(req.HTML)
+	reportID, err := service.AddReport(req.HTML, req.MonitorID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return

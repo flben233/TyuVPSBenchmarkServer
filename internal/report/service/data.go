@@ -6,6 +6,7 @@ import (
 	"VPSBenchmarkBackend/internal/report/response"
 	"VPSBenchmarkBackend/internal/report/store"
 	"fmt"
+	"strings"
 )
 
 // ListReports returns a list of all reports with pagination
@@ -119,5 +120,21 @@ func GetAllVirtualizations() ([]string, error) {
 
 // GetAllBackRouteTypes returns all distinct back route types
 func GetAllBackRouteTypes() ([]string, error) {
-	return store.GetAllBackRouteTypes()
+	routeTypes, err := store.GetAllBackRouteTypes()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get back route types: %w", err)
+	}
+	uniqueRouteTypes := make(map[string]interface{})
+	for _, rt := range routeTypes {
+		rtParts := strings.Split(rt, " ")
+		for i := 0; i < len(rtParts); i += 2 {
+			t := rtParts[i] + " " + rtParts[i+1]
+			uniqueRouteTypes[t] = nil
+		}
+	}
+	routeTypes = make([]string, 0, len(uniqueRouteTypes))
+	for rt := range uniqueRouteTypes {
+		routeTypes = append(routeTypes, rt)
+	}
+	return routeTypes, nil
 }

@@ -6,13 +6,14 @@ import (
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/internal/monitor/store"
 	"log"
+	"strconv"
 	"time"
 
 	probing "github.com/prometheus-community/pro-bing"
 )
 
 func init() {
-	interval := 60 * time.Second
+	interval := 120 * time.Second
 	common.RegisterCronJob(interval, queryHosts)
 }
 
@@ -57,9 +58,9 @@ func queryHosts() {
 		if stats != nil {
 			host := hostMap[stats.Addr]
 			history := append(host.History, float32(stats.AvgRtt.Milliseconds()))
-			// Keep only last 100 values
-			if len(history) > 100 {
-				history = history[len(history)-100:]
+			// Keep only last 720 values
+			if len(history) > 720 {
+				history = history[len(history)-720:]
 			}
 			err := store.UpdateHostHistory(host.Id, history)
 			if err != nil {
@@ -69,11 +70,25 @@ func queryHosts() {
 	}
 }
 
-func GetStatistics() ([]response.StatisticsResponse, error) {
-	// Get all monitoring hosts
-	hosts, err := store.ListAllHosts()
-	if err != nil {
-		return nil, err
+func GetStatistics(id string) ([]response.StatisticsResponse, error) {
+	var hosts []model.MonitorHost
+	var err error
+	if id != "" {
+		idNumber, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		host, err := store.GetHost(idNumber)
+		if err != nil {
+			return nil, err
+		}
+		hosts = append(hosts, *host)
+	} else {
+		// Get all monitoring hosts
+		hosts, err = store.ListAllHosts()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Convert to response

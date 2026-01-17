@@ -18,8 +18,6 @@ import (
 )
 
 // TODO: 优化SQL查询性能
-// TODO: 评测记录可以关联到一个监控
-// TODO: 修正线路类型
 // @title Lolicon VPS API
 // @BasePath /api
 func main() {

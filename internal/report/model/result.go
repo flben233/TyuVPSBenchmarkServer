@@ -60,6 +60,7 @@ type BenchmarkResult struct {
 	Itdog     ItdogResult        `json:"itdog"`
 	Disk      TyuDiskResult      `json:"disk"`
 	IPQuality IPQualityResult    `json:"ipquality"`
+	MonitorID *int64             `gorm:"size:255" json:"monitor_id"` // Optional monitor ID for association
 	CreatedAt time.Time          `json:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at"`
 }

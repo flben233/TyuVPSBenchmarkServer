@@ -11,20 +11,21 @@ import (
 )
 
 type benchmarkResult struct {
-	ID        uint                                       `gorm:"primaryKey"`
-	ReportID  string                                     `gorm:"uniqueIndex;size:255"`
-	Title     string                                     `gorm:"size:500"`
-	Time      time.Time                                  `gorm:"size:100"`
-	Link      string                                     `gorm:"size:1000"`
-	SpdTest   common.JSONField[[]model.SpeedtestResults] `gorm:"type:text"`
-	ECS       common.JSONField[model.ECSResult]          `gorm:"type:text"`
-	Media     common.JSONField[model.MediaResults]       `gorm:"type:text"`
-	BestTrace common.JSONField[[]model.BestTraceResult]  `gorm:"type:text"`
-	Itdog     common.JSONField[model.ItdogResult]        `gorm:"type:text"`
-	Disk      common.JSONField[model.TyuDiskResult]      `gorm:"type:text"`
-	IPQuality common.JSONField[model.IPQualityResult]    `gorm:"type:text"`
-	CreatedAt common.JSONField[time.Time]                `gorm:"type:text"`
-	UpdatedAt common.JSONField[time.Time]                `gorm:"type:text"`
+	ID        uint   `gorm:"primaryKey"`
+	ReportID  string `gorm:"uniqueIndex;size:255"`
+	Title     string `gorm:"size:500"`
+	Time      time.Time
+	Link      string `gorm:"size:1000"`
+	SpdTest   common.JSONField[[]model.SpeedtestResults]
+	ECS       common.JSONField[model.ECSResult]
+	Media     common.JSONField[model.MediaResults]
+	BestTrace common.JSONField[[]model.BestTraceResult]
+	Itdog     common.JSONField[model.ItdogResult]
+	Disk      common.JSONField[model.TyuDiskResult]
+	IPQuality common.JSONField[model.IPQualityResult]
+	MonitorID *int64 `gorm:"size:255"` // Optional monitor ID for association
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 var db *gorm.DB
@@ -70,8 +71,9 @@ func modelToDBModel(report *model.BenchmarkResult) *benchmarkResult {
 		Itdog:     *common.NewJSONField(report.Itdog),
 		Disk:      *common.NewJSONField(report.Disk),
 		IPQuality: *common.NewJSONField(report.IPQuality),
-		CreatedAt: *common.NewJSONField(report.CreatedAt),
-		UpdatedAt: *common.NewJSONField(report.UpdatedAt),
+		MonitorID: report.MonitorID,
+		CreatedAt: report.CreatedAt,
+		UpdatedAt: report.UpdatedAt,
 	}
 }
 
@@ -89,8 +91,9 @@ func dbModelToModel(dbModel *benchmarkResult) *model.BenchmarkResult {
 		Itdog:     *dbModel.Itdog.GetValue(),
 		Disk:      *dbModel.Disk.GetValue(),
 		IPQuality: *dbModel.IPQuality.GetValue(),
-		CreatedAt: *dbModel.CreatedAt.GetValue(),
-		UpdatedAt: *dbModel.UpdatedAt.GetValue(),
+		MonitorID: dbModel.MonitorID,
+		CreatedAt: dbModel.CreatedAt,
+		UpdatedAt: dbModel.UpdatedAt,
 	}
 }
 
@@ -345,7 +348,7 @@ func SearchReports(keyword *string, mediaUnlocks []string, virtualization *strin
 	// Calculate offset and get paginated results
 	offset := (page - 1) * pageSize
 	var results []benchmarkResult
-	if err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&results).Error; err != nil {
+	if err := query.Order("time DESC").Offset(offset).Limit(pageSize).Find(&results).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to search reports: %w", err)
 	}
 	convertedResults := make([]model.BenchmarkResult, len(results))
