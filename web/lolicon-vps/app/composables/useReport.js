@@ -36,7 +36,7 @@ export function useReport() {
     }
   }
 
-  async function addReport(token, html) {
+  async function addReport(token, html, monitor_id) {
     try {
       const resp = await $fetch(`${backendUrl}/report/admin/add`, {
         method: "POST",
@@ -44,7 +44,10 @@ export function useReport() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ html }),
+        body: JSON.stringify({ 
+          html: html,
+          monitor_id: monitor_id
+        }),
       });
 
       if (resp && resp.code === 0) {

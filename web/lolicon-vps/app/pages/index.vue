@@ -28,7 +28,9 @@ const status = ref({
   downloadSpeed: "1 Mbps",
 });
 const statusData = await getServerStatus();
-status.value = fmtStatus(statusData);
+if (statusData) {
+  status.value = fmtStatus(statusData); 
+}
 
 const gotoDetail = (reportId) => {
   useRouter().push(`/report/${reportId}`);
@@ -43,12 +45,18 @@ watch(page, async (newPage) => {
   loading.value = false;
 });
 
-
+let intervalId;
 onMounted(async () => {
-  setInterval(async () => {
+  intervalId = setInterval(async () => {
     const statusData = await getServerStatus();
     status.value = fmtStatus(statusData);
   }, 10000);
+});
+
+onUnmounted(() => {
+  if (intervalId) {
+    clearInterval(intervalId);
+  }
 });
 </script>
 

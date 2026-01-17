@@ -1,13 +1,33 @@
 <script setup>
+import MonitorWidget from '~/components/monitor-widget.vue';
+
 const route = useRoute();
 const { getReportDetails } = useReport();
+const { getStatistics } = useMonitor();
 const reportId = route.params.id;
 
 const report = ref(null);
 const data = await getReportDetails(reportId);
 const speedTestLabels = ["大陆三网多线程", "大陆三网单线程", "国际方向多线程"];
 const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
+const monitorData = ref(null);
 report.value = data.data;
+
+let intervalId;
+onMounted(async () => {
+  if (report.value?.monitor_id) {
+    intervalId = setInterval(async () => {
+      monitorData.value = (await getStatistics(report.value.monitor_id))[0];
+    }, 60000);
+    monitorData.value = (await getStatistics(report.value.monitor_id))[0];
+  }
+});
+
+onUnmounted(() => {
+  if (intervalId) {
+    clearInterval(intervalId);
+  }
+});
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "N/A";
@@ -80,6 +100,12 @@ const goBack = () => {
           </el-link>
         </div>
       </div>
+
+      <monitor-widget
+        v-if="monitorData"
+        :host-data="monitorData"
+        style="margin-bottom: 16px"
+      />
 
       <!-- ECS Benchmark Results -->
       <div shadow="never" class="section-card" v-if="report.ecs">

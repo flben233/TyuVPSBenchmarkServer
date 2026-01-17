@@ -1,10 +1,11 @@
 export function useMonitor() {
   const { backendUrl } = useAppConfig();
 
-  async function getStatistics() {
+  async function getStatistics(id = null) {
     try {
       const resp = await $fetch(`${backendUrl}/monitor/statistics`, {
         method: "GET",
+        query: id ? { id } : {},
       });
 
       if (resp && resp.code === 0) {
@@ -85,7 +86,10 @@ export function useMonitor() {
       if (resp && resp.code === 0) {
         return { success: true };
       }
-      return { success: false, message: resp?.message || "Failed to remove host" };
+      return {
+        success: false,
+        message: resp?.message || "Failed to remove host",
+      };
     } catch (error) {
       console.error("Failed to remove host:", error);
       return { success: false, message: error.message };
@@ -123,7 +127,10 @@ export function useMonitor() {
       if (resp && resp.code === 0) {
         return { success: true };
       }
-      return { success: false, message: resp?.message || "Failed to approve host" };
+      return {
+        success: false,
+        message: resp?.message || "Failed to approve host",
+      };
     } catch (error) {
       console.error("Failed to approve host:", error);
       return { success: false, message: error.message };
@@ -142,7 +149,10 @@ export function useMonitor() {
       if (resp && resp.code === 0) {
         return { success: true };
       }
-      return { success: false, message: resp?.message || "Failed to reject host" };
+      return {
+        success: false,
+        message: resp?.message || "Failed to reject host",
+      };
     } catch (error) {
       console.error("Failed to reject host:", error);
       return { success: false, message: error.message };
