@@ -21,7 +21,7 @@ func generateID() string {
 }
 
 // AddReport parses and saves a new benchmark report
-func AddReport(rawHTML string) (string, error) {
+func AddReport(rawHTML string, monitorID *int64) (string, error) {
 	if rawHTML == "" {
 		return "", errors.New("raw HTML content is required")
 	}
@@ -160,6 +160,7 @@ func AddReport(rawHTML string) (string, error) {
 		Itdog:     parsedResult.Itdog,
 		Disk:      parsedResult.Disk,
 		IPQuality: parsedResult.IPQuality,
+		MonitorID: monitorID,
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
 	}

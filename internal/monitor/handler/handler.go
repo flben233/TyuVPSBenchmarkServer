@@ -142,7 +142,8 @@ func ListHosts(ctx *gin.Context) {
 // @Failure 500 {object} common.APIResponse[any]
 // @Router /monitor/statistics [get]
 func GetStatistics(ctx *gin.Context) {
-	stats, err := service.GetStatistics()
+	id := ctx.Query("id")
+	stats, err := service.GetStatistics(id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
