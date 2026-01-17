@@ -8,9 +8,7 @@ export function useReport() {
         query: { page: page, page_size: pageSize },
       });
 
-      if (resp.data.value && resp.data.value.code === 0) {
-        console.log(resp.data.value);
-        
+      if (resp.data.value && resp.data.value.code === 0) {   
         return resp.data.value;
       }
       return { data: [], total: 0 };

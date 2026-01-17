@@ -48,7 +48,7 @@ function calculateStats(history) {
   const slowest = Math.max(...validLatencies) + " ms";
   const average =
     (validLatencies.reduce((a, b) => a + b, 0) / validLatencies.length).toFixed(
-      2
+      2,
     ) + " ms";
 
   return {
@@ -72,7 +72,8 @@ function getGraphPoints(history) {
 
   return history.map((latency, index) => {
     const x = index * pointWidth;
-    const y = latency > 0 ? height - (latency / maxLatency) * (height - 5) : height;
+    const y =
+      latency > 0 ? height - (latency / maxLatency) * (height - 5) : height;
     return { x, y, latency };
   });
 }
@@ -203,15 +204,15 @@ function createPath(points) {
 }
 
 .stat-warning {
-  color: #E6A23C;
+  color: #e6a23c;
 }
 
 .stat-success {
-  color: #67C23A;
+  color: #67c23a;
 }
 
 .stat-danger {
-  color: #F56C6C;
+  color: #f56c6c;
 }
 
 .host-graph {
@@ -219,9 +220,26 @@ function createPath(points) {
 }
 
 .latency-graph {
-  border: 1px solid #DCDFE6;
+  border: 1px solid #dcdfe6;
   border-radius: 4px;
-  background-color: #F5F7FA;
+  background-color: #f5f7fa;
 }
 
+@media screen and (max-width: 768px) {
+  .host-stats {
+    justify-content: center;
+  }
+  .host-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .host-graph {
+    margin-left: 0 !important;
+    margin-top: 12px;
+  }
+  .host-info {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+}
 </style>

@@ -2,19 +2,22 @@
   const activePath = computed(() => {
     return useRoute().path;
   });
-  const excludePaths = [];
+  const excludePaths = ["/slide/"];
 </script>
 
 <template>
   <div id="app">
-    <!-- TODO: 适配手机端 -->
-    <!-- TODO: 批量上传报告 -->
-    <Sidebar v-if="!excludePaths.includes(activePath)"/>
+    <Sidebar v-if="!excludePaths.some(path => activePath.includes(path))"/>
     <NuxtPage/>
   </div>
 </template>
 
 <style>
+  @media screen and (max-width: 768px) {
+    #app {
+      flex-direction: column;
+    }
+  }
   #app {
     display: flex;
     height: 100vh;
@@ -57,8 +60,5 @@
   }
   .el-popper__arrow {
     display: none;
-  }
-  :deep(.el-tag) {
-    border: none;
   }
 </style>
