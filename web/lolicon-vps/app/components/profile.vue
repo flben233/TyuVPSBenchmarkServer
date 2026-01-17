@@ -28,7 +28,7 @@
   font-size: 24px;
   font-weight: 600;
   margin-bottom: 16px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 #site-owner-container {
   margin-bottom: 24px;

@@ -132,7 +132,7 @@ function createPath(points) {
           <path
             :d="createPath(getGraphPoints(host.history))"
             fill="none"
-            stroke="#409EFF"
+            stroke="#39C5BB"
             stroke-width="2"
           />
           <circle
@@ -141,7 +141,7 @@ function createPath(points) {
             :cx="point.x"
             :cy="point.y"
             :r="point.latency === 0 ? 3 : 2"
-            :fill="point.latency === 0 ? '#F56C6C' : '#409EFF'"
+            :fill="point.latency === 0 ? '#F56C6C' : '#39C5BB'"
           />
         </svg>
       </div>
@@ -234,7 +234,7 @@ function createPath(points) {
     gap: 8px;
   }
   .host-graph {
-    margin-left: 0 !important;
+    margin-left: 0;
     margin-top: 12px;
   }
   .host-info {
