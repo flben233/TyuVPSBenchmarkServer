@@ -8,6 +8,7 @@
 <template>
   <div id="app">
     <!-- TODO: 适配手机端 -->
+    <!-- TODO: 批量上传报告 -->
     <Sidebar v-if="!excludePaths.includes(activePath)"/>
     <NuxtPage/>
   </div>
@@ -25,7 +26,7 @@
   }
   .el-input__wrapper, .el-select__wrapper {
     box-shadow: none !important;
-    border-radius: 0;
+    border-radius: 0 !important;
     border-bottom: 1px var(--el-border-color) solid;
     padding: 1px 8px;
     transition: var(--el-transition-border);
@@ -56,5 +57,8 @@
   }
   .el-popper__arrow {
     display: none;
+  }
+  :deep(.el-tag) {
+    border: none;
   }
 </style>
