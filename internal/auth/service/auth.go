@@ -126,6 +126,11 @@ func getGithubUserInfo(accessToken string) (*GithubUserInfo, error) {
 }
 
 func getHttpClient() *http.Client {
+	if config.Get().GithubHttpProxy == "" {
+		return &http.Client{
+			Timeout: 30 * time.Second,
+		}
+	}
 	proxyURL, _ := url.Parse(config.Get().GithubHttpProxy)
 	return &http.Client{
 		Timeout: 30 * time.Second,
