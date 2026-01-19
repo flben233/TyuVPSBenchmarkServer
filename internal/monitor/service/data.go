@@ -2,14 +2,17 @@ package service
 
 import (
 	"VPSBenchmarkBackend/internal/common"
+	"VPSBenchmarkBackend/internal/config"
 	"VPSBenchmarkBackend/internal/monitor/model"
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/internal/monitor/store"
+	"bytes"
+	"encoding/json"
+	"io"
 	"log"
+	"net/http"
 	"strconv"
 	"time"
-
-	probing "github.com/prometheus-community/pro-bing"
 )
 
 func init() {
@@ -31,41 +34,35 @@ func queryHosts() {
 		targets[i] = host.Target
 		hostMap[host.Target] = &hosts[i]
 	}
-	// Query hosts
-	resultCh := make(chan *probing.Statistics, len(targets))
-	for _, target := range targets {
-		go func(t string) {
-			pinger, err := probing.NewPinger(t)
-			if err != nil {
-				log.Printf("Failed to create pinger for %s: %v", t, err)
-				resultCh <- nil
-				return
-			}
-			pinger.SetPrivileged(true)
-			pinger.Count = 1
-			pinger.Timeout = 1000 * time.Millisecond
-			err = pinger.Run()
-			if err != nil {
-				log.Printf("Failed to ping %s: %v", t, err)
-				resultCh <- nil
-				return
-			}
-			resultCh <- pinger.Statistics()
-		}(target)
+	req, err := json.Marshal(targets)
+	if err != nil {
+		log.Printf("Failed to marshal targets: %v", err)
+		return
 	}
-	for i := 0; i < len(targets); i++ {
-		stats := <-resultCh
-		if stats != nil {
-			host := hostMap[stats.Addr]
-			history := append(host.History, float32(stats.AvgRtt.Milliseconds()))
-			// Keep only last 720 values
-			if len(history) > 720 {
-				history = history[len(history)-720:]
-			}
-			err := store.UpdateHostHistory(host.Id, history)
-			if err != nil {
-				log.Printf("Failed to update history for %s: %v", stats.Addr, err)
-			}
+	resp, err := http.Post(config.Get().ExporterURL+"/monitor", "application/json", bytes.NewReader(req))
+	if err != nil {
+		log.Printf("Failed to get exporter data: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Failed to read exporter response body: %v", err)
+		return
+	}
+	var data map[string]float32
+	err = json.Unmarshal(bodyBytes, &data)
+	for addr, rtt := range data {
+		host := hostMap[addr]
+		history := append(host.History, rtt)
+		// Keep only last 720 values
+		if len(history) > 720 {
+			history = history[len(history)-720:]
+		}
+		err := store.UpdateHostHistory(host.Id, history)
+		if err != nil {
+			log.Printf("Failed to update history for %s: %v", addr, err)
 		}
 	}
 }

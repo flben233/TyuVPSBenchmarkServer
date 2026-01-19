@@ -1,11 +1,13 @@
 {
 	"port": 12345,
 	"baseUrl": "/api",
-	"clientId": "github-client-id",
-	"clientSecret": "github-client-secret",
-	"jwtSecret": "super-secret",
-	"jwtExpiry": 3600,
-	"adminId": "admin-id",
-	"ipApiKey": "ip-api-key",
-	"maxHostsPerUser": 5
+	"clientId": "",
+	"clientSecret": "",
+	"jwtSecret": "",
+	"jwtExpiry": 86400,
+	"adminId": "",
+	"maxHostsPerUser": 5,
+	"frontendUrl": "http://localhost:3000",
+	"githubHttpsProxy": "http://127.0.0.1:10808",
+	"exporterUrl": "http://127.0.0.1:20831/exporter"
 }
