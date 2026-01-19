@@ -1,6 +1,11 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/config"
+	"bytes"
+	"encoding/json"
+	"io"
+	"net/http"
 	"os/exec"
 	"strconv"
 )
@@ -11,7 +16,7 @@ type TracertRequest struct {
 	Port   uint16 `json:"port"`
 }
 
-func Traceroute(req *TracertRequest) string {
+func ExportTracert(req *TracertRequest) string {
 	// Needs to install nexttrace
 	var cmd *exec.Cmd
 	params := []string{"--fast-trace", "--json"}
@@ -28,4 +33,21 @@ func Traceroute(req *TracertRequest) string {
 	cmd = exec.Command("nexttrace", params...)
 	result, _ := cmd.Output()
 	return string(result)
+}
+
+func Traceroute(req *TracertRequest) string {
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return "failed to marshal request: " + err.Error()
+	}
+	resp, err := http.Post(config.Get().ExporterURL+"/tracert", "application/json", bytes.NewReader(reqBody))
+	if err != nil {
+		return "failed to call traceroute service: " + err.Error()
+	}
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "failed to read traceroute service response: " + err.Error()
+	}
+	return string(bodyBytes)
 }

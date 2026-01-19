@@ -13,10 +13,10 @@ type Config struct {
 	JwtSecret       string `json:"jwtSecret"`
 	JwtExpiry       int    `json:"jwtExpiry"` // in seconds
 	AdminID         string `json:"adminId"`
-	IPApiKey        string `json:"ipApiKey"`
 	MaxHostsPerUser int    `json:"maxHostsPerUser"`
 	FrontendURL     string `json:"frontendUrl"`
 	GithubHttpProxy string `json:"githubHttpsProxy"`
+	ExporterURL     string `json:"exporterUrl"`
 }
 
 var cfg *Config
