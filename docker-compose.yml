@@ -6,8 +6,6 @@ services:
       - "12345:12345"
     volumes:
       - ./data:/app/data
-      - ./statics/test_results:/app/statics/test_results
-      - ./statics/reports:/app/statics/reports
       - type: bind
       - source: ./config.json
       - target: /app/config.json
