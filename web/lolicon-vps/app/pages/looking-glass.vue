@@ -7,7 +7,7 @@ lgData.value = data;
 
 <template>
   <div id="lg-root">
-    <div id="lg-title"> Looking Glass </div>
+    <div id="lg-title"> Looking Glass 列表 </div>
     <el-empty v-if="lgData.length === 0" description="暂无 Looking Glass 数据" />
     <el-card class="lg-item" v-for="item in lgData" :key="item.id" shadow="never">
       <div class="lg-item-header">

@@ -16,7 +16,25 @@ export default defineNuxtConfig({
       }),
     ],
   },
-  modules: ["@element-plus/nuxt"],
+  nitro: {
+    devProxy: {
+      "/api": {
+        target: "http://127.0.0.1:12345/api",
+      },
+    },
+    routeRules: {
+      "/api/**": {
+        proxy: "http://127.0.0.1:12345/api/**",
+      },
+    },
+  },
+  modules: ["@element-plus/nuxt", "@nuxtjs/sitemap", "@nuxtjs/robots"],
   // 手动全局引入 Element Plus 的 CSS
   css: ["element-plus/dist/index.css", "@/assets/main.css"],
+  sitemap: {
+    sources: ["/__sitemap__/urls"],
+  },
+  robots: {
+    sitemap: ["/sitemap.xml"],
+  }
 });
