@@ -36,7 +36,7 @@ jobs:
         context: .
         file: ./Dockerfile.server
         push: true
-        tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}-server:latest
+        tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}/server:latest
 
     - name: Build and push exporter
       uses: docker/build-push-action@v6
@@ -44,4 +44,4 @@ jobs:
         context: .
         file: ./Dockerfile.exporter
         push: true
-        tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}-exporter:latest
+        tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}/exporter:latest
