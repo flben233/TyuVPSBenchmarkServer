@@ -12,15 +12,11 @@ const mode = ref("vertical");
 const { userInfo, login, logout } = useAuth();
 const avatarUrl = ref(null);
 const activePath = computed(() => {
-  console.log("Current Route Path:", useRoute().path);
   return useRoute().path;
 });
 
 if (userInfo.value) {
-  console.log("User Info:", userInfo.value);
   avatarUrl.value = userInfo.value.avatarUrl;
-} else {
-  console.log("No user info available");
 }
 
 function handleWidthChange() {
