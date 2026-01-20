@@ -1,13 +1,17 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+# This workflow will build the frontend (Nuxt) project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
 
-name: Go
+name: Frontend
 
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - 'web/lolicon-vps/**'
   pull_request:
     branches: [ "master" ]
+    paths:
+      - 'web/lolicon-vps/**'
   workflow_dispatch:
 
 jobs:
@@ -26,18 +30,10 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build and push server
+    - name: Build and push frontend
       uses: docker/build-push-action@v6
       with:
-        context: .
-        file: ./Dockerfile.server
+        context: ./web/lolicon-vps
+        file: ./web/lolicon-vps/Dockerfile
         push: true
-        tags: ${{ github.actor }}/vps-benchmark-server:latest
-
-    - name: Build and push exporter
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        file: ./Dockerfile.exporter
-        push: true
-        tags: ${{ github.actor }}/vps-benchmark-exporter:latest
+        tags: ${{ github.actor }}/vps-benchmark-frontend:latest
