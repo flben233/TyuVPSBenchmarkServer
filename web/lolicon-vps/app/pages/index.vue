@@ -7,7 +7,11 @@ const disabled = ref(false);
 const total = ref(0);
 const loading = ref(false);
 const pageSize = 7;
-const reportsData = await listReports(page.value, pageSize);
+const resp = await listReports(page.value, pageSize);
+let reportsData;
+if (reportsData.data.value && reportsData.data.value.code === 0) {
+  reportsData = reportsData.data.value;
+}
 reports.value = reportsData.data || [];
 total.value = reportsData.total || 0;
 const { getServerStatus } = useMonitor();
@@ -39,7 +43,11 @@ const gotoDetail = (reportId) => {
 watch(page, async (newPage) => {
   loading.value = true;
   disabled.value = true;
-  const reportsData = await listReports(newPage, pageSize);
+  const resp = await listReports(newPage, pageSize);
+  let reportsData;
+  if (resp.data.value && resp.data.value.code === 0) {
+    reportsData = resp.data.value;
+  }
   reports.value = reportsData.data || [];
   disabled.value = false;
   loading.value = false;

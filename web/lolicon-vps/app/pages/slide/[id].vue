@@ -9,9 +9,9 @@ const speedTestType = ref(0);
 
 // Fetch report data on client side
 const { getReportDetails } = useReport();
-const data = await getReportDetails(reportId);
-if (data && data.data) {
-  report.value = data.data;
+const resp = await getReportDetails(reportId);
+if (resp.data.value && resp.data.value.code === 0) {
+  report.value = resp.data.value.data;
 }
 
 const speedTestLabels = ["大陆三网多线程", "大陆三网单线程", "国际方向多线程"];
