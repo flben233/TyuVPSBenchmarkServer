@@ -23,7 +23,6 @@ export function useMonitor() {
       const resp = await $fetch(`${backendUrl}/monitor/status`, {
         method: "GET",
       });
-      console.log("Server status response:", resp);
 
       if (resp && resp.code === 0) {
         return resp.data;
