@@ -1,3 +1,3 @@
 export default defineAppConfig({
-  backendUrl: "/api",
+  backendUrl: "http://backend:12345/api",
 });
