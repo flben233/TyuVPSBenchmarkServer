@@ -12,6 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  SCOPE: lolicon-vps
 
 jobs:
   build:
@@ -35,7 +36,7 @@ jobs:
         context: .
         file: ./Dockerfile.server
         push: true
-        tags: ${{ github.actor }}/vps-benchmark-server:latest
+        tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}/server:latest
 
     - name: Build and push exporter
       uses: docker/build-push-action@v6
@@ -43,4 +44,4 @@ jobs:
         context: .
         file: ./Dockerfile.exporter
         push: true
-        tags: ${{ env.REGISTRY }}/${{ github.actor }}/vps-benchmark-exporter:latest
+        tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}/exporter:latest
