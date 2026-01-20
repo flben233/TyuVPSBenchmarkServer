@@ -6,6 +6,9 @@ import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
+  runtimeConfig: {
+    backendUrl: ""
+  },
   app: {
     head: {
       title: 'Lolicon VPS - 云服务器评测', // 网站标题
@@ -31,11 +34,11 @@ export default defineNuxtConfig({
     ],
   },
   nitro: {
-    routeRules: {
-      "/api/**": {
-        proxy: `http://backend:12345/**`,
-      },
-    },
+    devProxy: {
+      "/api": {
+        target: process.env.NUXT_BACKEND_URL
+      }
+    }
   },
   modules: ["@element-plus/nuxt", "@nuxtjs/sitemap", "@nuxtjs/robots"],
   // 手动全局引入 Element Plus 的 CSS
