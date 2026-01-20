@@ -2,8 +2,6 @@ import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
-console.log("Backend URL:", process.env.NUXT_BACKEND_URL);
-
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
@@ -13,7 +11,9 @@ export default defineNuxtConfig({
       title: 'Lolicon VPS - 云服务器评测', // 网站标题
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' }
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: 'VPS云服务器性能评测平台，提供VPS测速、服务器监控、IP查询、路由追踪、WHOIS查询等工具，支持三网回程线路测试与流媒体解锁检测' },
+        { name: 'keywords', content: 'VPS测评,云服务器评测,VPS测速,服务器性能测试,VPS benchmark,主机监控,IP查询,路由追踪,traceroute,WHOIS查询,Looking Glass,回程线路,三网测速,流媒体解锁,Netflix解锁,中国电信,中国移动,中国联通,KVM,虚拟化,磁盘IO测试,网络延迟,带宽测试' }
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
@@ -33,7 +33,7 @@ export default defineNuxtConfig({
   nitro: {
     routeRules: {
       "/api/**": {
-        proxy: `${process.env.NUXT_BACKEND_URL}/**`,
+        proxy: `http://backend:12345/**`,
       },
     },
   },
