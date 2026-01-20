@@ -6,8 +6,14 @@ name: Go
 on:
   push:
     branches: [ "master" ]
+    paths-ignore:
+      - 'web/lolicon-vps/**'
+      - '.github/workflows/frontend.yml'
   pull_request:
     branches: [ "master" ]
+    paths-ignore:
+      - 'web/lolicon-vps/**'
+      - '.github/workflows/frontend.yml'
   workflow_dispatch:
 
 env:
