@@ -1,7 +1,13 @@
 {
-  "outputDir": ".\\statics\\reports",
-  "inputDir": ".\\statics\\test_results",
-  "staticsDir": ".\\statics",
-  "port": 12345,
-  "url": "https://vps.lolicon.llc"
+	"port": 12345,
+	"baseUrl": "/api",
+	"clientId": "",
+	"clientSecret": "",
+	"jwtSecret": "",
+	"jwtExpiry": 86400,
+	"adminId": "",
+	"maxHostsPerUser": 5,
+	"frontendUrl": "http://localhost:3000",
+	"githubHttpsProxy": "http://127.0.0.1:10808",
+	"exporterUrl": "http://127.0.0.1:20831/exporter"
 }
