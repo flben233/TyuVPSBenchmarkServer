@@ -41,3 +41,5 @@ go.work
 VPSBenchmarkBackend
 VPSBenchmarkBackend.iml
 .env
+
+node_modules/

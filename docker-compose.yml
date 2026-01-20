@@ -1,6 +1,6 @@
 services:
-  vps-benchmark:
-    image: vps-benchmark:latest
+  backend:
+    image: ghcr.io/flben233/lolicon-vps/server:latest
     restart: unless-stopped
     ports:
       - "12345:12345"
@@ -9,6 +9,16 @@ services:
       - type: bind
       - source: ./config.json
       - target: /app/config.json
+  
+  frontend:
+    image: ghcr.io/flben233/lolicon-vps/frontend:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NUXT_SITE_URL=https://vps.lolicon.llc
+      - NUXT_SITE_NAME=Lolicon VPS
+      - NUXT_BACKEND_URL=http://backend:12345/api
 
   watchtower:
     image: "containrrr/watchtower:latest-dev"

@@ -17,14 +17,9 @@ export default defineNuxtConfig({
     ],
   },
   nitro: {
-    devProxy: {
-      "/api": {
-        target: "http://127.0.0.1:12345/api",
-      },
-    },
     routeRules: {
       "/api/**": {
-        proxy: "http://127.0.0.1:12345/api/**",
+        proxy: `${process.env.NUXT_BACKEND_URL}/**`,
       },
     },
   },
