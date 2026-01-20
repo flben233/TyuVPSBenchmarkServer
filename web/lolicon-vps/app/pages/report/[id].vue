@@ -7,7 +7,11 @@ const { getStatistics } = useMonitor();
 const reportId = route.params.id;
 
 const report = ref(null);
-const data = await getReportDetails(reportId);
+const resp = await getReportDetails(reportId);
+let data;
+if (resp.data.value && resp.data.value.code === 0) {
+  data = resp.data.value;
+}
 const speedTestLabels = ["大陆三网多线程", "大陆三网单线程", "国际方向多线程"];
 const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
 const monitorData = ref(null);
