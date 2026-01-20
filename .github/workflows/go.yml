@@ -35,7 +35,7 @@ jobs:
         context: .
         file: ./Dockerfile.server
         push: true
-        tags: ${{ github.actor }}/vps-benchmark-server:latest
+        tags: ${{ env.REGISTRY }}/${{ github.repository }}/vps-benchmark-server:latest
 
     - name: Build and push exporter
       uses: docker/build-push-action@v6
