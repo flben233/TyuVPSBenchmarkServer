@@ -1,10 +1,43 @@
-/.idea/
-/data/
-/statics/reports/
-/statics/test_results/
-VPSBenchmarkBackend.iml
-statics/index.html
-statics/sitemap.xml
-VPSBenchmarkBackend.exe
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+benchmark_server
+benchmark_server.exe
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Database files
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go workspace file
+go.work
+
+# Temporary files
+*.tmp
+*.log
+
+/statics/
 VPSBenchmarkBackend
+VPSBenchmarkBackend.iml
 .env
