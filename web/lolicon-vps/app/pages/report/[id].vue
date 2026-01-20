@@ -8,7 +8,7 @@ const reportId = route.params.id;
 
 const report = ref(null);
 const resp = await getReportDetails(reportId);
-let data;
+let data = { data: null };
 if (resp.data.value && resp.data.value.code === 0) {
   data = resp.data.value;
 }

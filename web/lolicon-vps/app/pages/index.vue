@@ -9,8 +9,8 @@ const loading = ref(false);
 const pageSize = 7;
 const resp = await listReports(page.value, pageSize);
 let reportsData;
-if (reportsData.data.value && reportsData.data.value.code === 0) {
-  reportsData = reportsData.data.value;
+if (resp.data.value && resp.data.value.code === 0) {
+  reportsData = resp.data.value;
 }
 reports.value = reportsData.data || [];
 total.value = reportsData.total || 0;
@@ -44,7 +44,7 @@ watch(page, async (newPage) => {
   loading.value = true;
   disabled.value = true;
   const resp = await listReports(newPage, pageSize);
-  let reportsData;
+  let reportsData = { data: [], total: 0 };
   if (resp.data.value && resp.data.value.code === 0) {
     reportsData = resp.data.value;
   }
