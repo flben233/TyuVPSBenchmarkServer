@@ -16,6 +16,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  SCOPE: lolicon-vps
 
 jobs:
   build:
@@ -39,4 +40,4 @@ jobs:
         context: ./web/lolicon-vps
         file: ./web/lolicon-vps/Dockerfile
         push: true
-        tags: ${{ env.REGISTRY }}/${{ github.actor }}/vps-benchmark-frontend:latest
+        tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}/frontend:latest
