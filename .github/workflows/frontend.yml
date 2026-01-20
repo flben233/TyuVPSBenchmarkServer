@@ -39,4 +39,4 @@ jobs:
         context: ./web/lolicon-vps
         file: ./web/lolicon-vps/Dockerfile
         push: true
-        tags: ${{ github.actor }}/vps-benchmark-frontend:latest
+        tags: ${{ env.REGISTRY }}/${{ github.actor }}/vps-benchmark-frontend:latest
