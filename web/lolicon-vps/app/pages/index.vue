@@ -8,9 +8,11 @@ const total = ref(0);
 const loading = ref(false);
 const pageSize = 7;
 const resp = await listReports(page.value, pageSize);
-let reportsData;
+let reportsData = { data: [], total: 0 };
 if (resp.data.value && resp.data.value.code === 0) {
   reportsData = resp.data.value;
+} else {
+  console.log("Failed to fetch reports:", resp);
 }
 reports.value = reportsData.data || [];
 total.value = reportsData.total || 0;
