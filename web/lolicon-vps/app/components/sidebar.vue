@@ -58,8 +58,7 @@ onUnmounted(() => {
 
 const avatarNav = (command) => {
   if (command === "login") {
-    window.location.href =
-      "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m&redirect_uri=http://127.0.0.1:12345/api/auth/github/login";
+    window.location.href = "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m";
   } else if (command === "logout") {
     logout();
   } else if (command === "center") {
