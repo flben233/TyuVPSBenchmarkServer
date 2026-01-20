@@ -16,13 +16,13 @@ export default defineNuxtConfig({
       }),
     ],
   },
-  nitro: {
-    routeRules: {
-      "/api/**": {
-        proxy: `${process.env.NUXT_BACKEND_URL}/**`,
-      },
-    },
-  },
+  // nitro: {
+  //   routeRules: {
+  //     "/api/**": {
+  //       proxy: `${process.env.NUXT_BACKEND_URL}/**`,
+  //     },
+  //   },
+  // },
   modules: ["@element-plus/nuxt", "@nuxtjs/sitemap", "@nuxtjs/robots"],
   // 手动全局引入 Element Plus 的 CSS
   css: ["element-plus/dist/index.css", "@/assets/main.css"],
