@@ -43,4 +43,4 @@ jobs:
         context: .
         file: ./Dockerfile.exporter
         push: true
-        tags: ${{ github.actor }}/vps-benchmark-exporter:latest
+        tags: ${{ env.REGISTRY }}/${{ github.actor }}/vps-benchmark-exporter:latest
