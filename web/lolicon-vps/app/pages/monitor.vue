@@ -51,6 +51,7 @@ onUnmounted(() => {
   width: 100%;
   padding: 16px;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 #monitor-title {
