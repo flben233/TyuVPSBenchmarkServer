@@ -117,7 +117,7 @@ func ListHostsByUploader(uploader string) ([]model.MonitorHost, error) {
 
 // ListAllHosts lists all approved monitor hosts
 func ListAllHosts() ([]model.MonitorHost, error) {
-	hosts, err := monitorHosts.Where("review_status = ?", common.ReviewStatusApproved).Order("name desc").Find(context.Background())
+	hosts, err := monitorHosts.Where("review_status = ?", common.ReviewStatusApproved).Order("name asc").Find(context.Background())
 	hostModels := make([]model.MonitorHost, len(hosts))
 	for i, host := range hosts {
 		hostModels[i] = toMonitorHost(host)
