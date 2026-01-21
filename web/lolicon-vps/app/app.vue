@@ -7,6 +7,7 @@
 
 <template>
   <div id="app">
+    <NuxtLoadingIndicator color="#39C5BB" />
     <Sidebar v-if="!excludePaths.some(path => activePath.includes(path))"/>
     <NuxtPage/>
   </div>
