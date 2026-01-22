@@ -1,5 +1,4 @@
 FROM golang:1.24-alpine AS builder
-RUN apk add --no-cache gcc musl-dev
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -9,5 +8,6 @@ RUN CGO_ENABLED=0 go build -o exporter ./cmd/exporter
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/exporter .
+RUN apk add curl whois && curl -sL nxtrace.org/nt | bash
 EXPOSE 20831
 CMD ["./exporter"]
