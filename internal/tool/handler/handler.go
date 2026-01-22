@@ -46,8 +46,12 @@ func Traceroute(ctx *gin.Context) {
 		return
 	}
 
-	output := service.Traceroute(&req)
-	ctx.JSON(http.StatusOK, common.Success(response.RawResponse{Raw: output}))
+	outputErr, output := service.Traceroute(&req)
+	if outputErr != nil {
+		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, outputErr.Error()))
+		return
+	}
+	ctx.JSON(http.StatusOK, common.Success(output))
 }
 
 // Whois handles WHOIS lookup requests.

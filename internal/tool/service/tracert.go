@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 type TracertRequest struct {
@@ -19,7 +20,7 @@ type TracertRequest struct {
 func ExportTracert(req *TracertRequest) string {
 	// Needs to install nexttrace
 	var cmd *exec.Cmd
-	params := []string{"--fast-trace", "--json"}
+	params := []string{"--json"}
 	if req.Mode == "tcp" {
 		params = append(params, "--tcp")
 		if req.Port != 0 {
@@ -35,19 +36,25 @@ func ExportTracert(req *TracertRequest) string {
 	return string(result)
 }
 
-func Traceroute(req *TracertRequest) string {
+func Traceroute(req *TracertRequest) (error, map[string]interface{}) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		return "failed to marshal request: " + err.Error()
+		return err, nil
 	}
 	resp, err := http.Post(config.Get().ExporterURL+"/tracert", "application/json", bytes.NewReader(reqBody))
 	if err != nil {
-		return "failed to call traceroute service: " + err.Error()
+		return err, nil
 	}
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "failed to read traceroute service response: " + err.Error()
+		return err, nil
 	}
-	return string(bodyBytes)
+	bodyStr := string(bodyBytes)[strings.Index(string(bodyBytes), "{"):]
+	var result map[string]interface{}
+	err = json.Unmarshal([]byte(bodyStr), &result)
+	if err != nil {
+		return err, nil
+	}
+	return nil, result
 }
