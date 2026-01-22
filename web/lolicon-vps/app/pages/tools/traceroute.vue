@@ -109,7 +109,7 @@ const handleReset = () => {
               </el-table-column>
               <el-table-column label="RTT" min-width="120">
                 <template #default="{ row }">
-                  <span v-if="row[0]?.Success && row[0]?.RTT">{{ (row[0].RTT / 1000).toFixed(2) }} ms</span>
+                  <span v-if="row[0]?.Success && row[0]?.RTT">{{ (row[0].RTT / 1000000).toFixed(2) }} ms</span>
                   <span v-else style="color: #909399;">*</span>
                 </template>
               </el-table-column>
