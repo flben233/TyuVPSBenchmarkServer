@@ -8,6 +8,6 @@ RUN CGO_ENABLED=0 go build -o exporter ./cmd/exporter
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/exporter .
-RUN apk add curl whois bash && curl -sL nxtrace.org/nt | bash
+RUN apk add curl bash && curl -sL nxtrace.org/nt | bash
 EXPOSE 20831
 CMD ["./exporter"]
