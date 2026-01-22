@@ -11,12 +11,12 @@ import (
 // ParsedResult is a temporary structure for parsed data
 type ParsedResult struct {
 	SpdTest   []model.SpeedtestResults
-	ECS       model.ECSResult
-	Media     model.MediaResults
+	ECS       *model.ECSResult
+	Media     *model.MediaResults
 	BestTrace []model.BestTraceResult
-	Itdog     model.ItdogResult
-	Disk      model.TyuDiskResult
-	IPQuality model.IPQualityResult
+	Itdog     *model.ItdogResult
+	Disk      *model.TyuDiskResult
+	IPQuality *model.IPQualityResult
 	Title     string
 	Time      string
 	Link      string

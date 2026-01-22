@@ -7,18 +7,20 @@ import (
 	"strings"
 )
 
-func ECSParser(textLines []string) model.ECSResult {
+func ECSParser(textLines []string) *model.ECSResult {
 	blocks := []string{"基础信息查询", "CPU测试", "内存测试", "磁盘dd读写测试", "TikTok解锁", "IP质量检测", "邮件端口检测", "三网回程", "回程路由--", "----------------"}
 	blkIdx := -1
 	result := model.ECSResult{}
 	tmpTypes := make(map[string]string)
 	for i, j := 0, 0; blkIdx < len(blocks) && j < len(textLines); j++ {
+		// Check for block start
 		if !strings.Contains(textLines[j], blocks[0]) && blkIdx == -1 {
 			continue
 		} else if blkIdx == -1 {
 			i = j + 1
 			blkIdx++
 		}
+		// blocks[blkIdx+1] is to ensure all blocks are processed
 		if blkIdx+1 < len(blocks) && strings.Contains(textLines[j], blocks[blkIdx+1]) {
 			switch blkIdx {
 			case 0:
@@ -51,7 +53,10 @@ func ECSParser(textLines []string) model.ECSResult {
 			break
 		}
 	}
-	return result
+	if blkIdx == -1 {
+		return nil
+	}
+	return &result
 }
 
 func infoParser(textLines []string) map[string]string {

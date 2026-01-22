@@ -72,5 +72,15 @@ func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 		}
 		finalResults = append(finalResults, model.SpeedtestResults{Results: results, Time: time})
 	}
-	return finalResults
+	some := false
+	for _, res := range finalResults {
+		if len(res.Results) > 0 {
+			some = true
+			break
+		}
+	}
+	if some {
+		return finalResults
+	}
+	return []model.SpeedtestResults{}
 }

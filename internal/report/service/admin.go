@@ -50,19 +50,9 @@ func AddReport(rawHTML string, monitorID *int64) (string, error) {
 		}
 	}
 
-	convertMediaIndex(false, parsedResult.Media.IPv4)
-	convertMediaIndex(true, parsedResult.Media.IPv6)
-	if strings.Contains(parsedResult.ECS.Tiktok, "【") {
-		i1 := model.MediaIndex{
-			ReportID: reportID,
-			Region:   strings.Trim(parsedResult.ECS.Tiktok, "【】"),
-			Media:    "TikTok",
-			Unlock:   true,
-			IPv6:     false,
-		}
-		mi = append(mi, i1)
-		i1.IPv6 = true
-		mi = append(mi, i1)
+	if parsedResult.Media != nil {
+		convertMediaIndex(false, parsedResult.Media.IPv4)
+		convertMediaIndex(true, parsedResult.Media.IPv6)
 	}
 
 	for _, st := range parsedResult.SpdTest {
@@ -85,19 +75,57 @@ func AddReport(rawHTML string, monitorID *int64) (string, error) {
 			})
 		}
 	}
+
 	ipv6Support := false
 	virtualization := ""
-	for key := range parsedResult.ECS.Info {
-		if strings.Contains(key, "IPV6") {
-			ipv6Support = true
+	if parsedResult.ECS != nil {
+		// Parse IPv6 support and virtualization from ECS.Info
+		for key := range parsedResult.ECS.Info {
+			if strings.Contains(key, "IPV6") {
+				ipv6Support = true
+			}
+			if strings.Contains(key, "虚拟化") {
+				virtualization = parsedResult.ECS.Info[key]
+			}
 		}
-		if strings.Contains(key, "虚拟化") {
-			virtualization = parsedResult.ECS.Info[key]
+		// Parse backtrace data from ECS.Trace.Types
+		// Filter items where value contains "线路" (route type)
+		for spot, routeType := range parsedResult.ECS.Trace.Types {
+			if strings.Contains(routeType, "线路") {
+				isp := ""
+				if strings.Contains(spot, "电信") {
+					isp = model.ISPChinaTelecom
+				} else if strings.Contains(spot, "联通") {
+					isp = model.ISPChinaUnicom
+				} else if strings.Contains(spot, "移动") {
+					isp = model.ISPChinaMobile
+				}
+				bi = append(bi, model.BacktraceIndex{
+					ReportID:  reportID,
+					Spot:      spot,
+					RouteType: routeType,
+					ISP:       isp,
+				})
+			}
+		}
+		// Parse media unlock from ECS.Tiktok
+		if strings.Contains(parsedResult.ECS.Tiktok, "【") {
+			i1 := model.MediaIndex{
+				ReportID: reportID,
+				Region:   strings.Trim(parsedResult.ECS.Tiktok, "【】"),
+				Media:    "TikTok",
+				Unlock:   true,
+				IPv6:     false,
+			}
+			mi = append(mi, i1)
+			i1.IPv6 = true
+			mi = append(mi, i1)
 		}
 	}
+
 	var seqRead, seqWrite float64
 	var err error
-	if len(parsedResult.Disk.Data) > 0 && len(parsedResult.Disk.Data[0]) == 3 {
+	if parsedResult.Disk != nil && len(parsedResult.Disk.Data) > 0 && len(parsedResult.Disk.Data[0]) == 3 {
 		seqRead, err = strconv.ParseFloat(parsedResult.Disk.Data[0][1], 32)
 		if err != nil {
 			return "", fmt.Errorf("failed to parse disk sequential read speed: %w", err)
@@ -113,27 +141,6 @@ func AddReport(rawHTML string, monitorID *int64) (string, error) {
 		Virtualization: virtualization,
 		SeqRead:        float32(seqRead),
 		SeqWrite:       float32(seqWrite),
-	}
-
-	// Parse backtrace data from ECS.Trace.Types
-	// Filter items where value contains "线路" (route type)
-	for spot, routeType := range parsedResult.ECS.Trace.Types {
-		if strings.Contains(routeType, "线路") {
-			isp := ""
-			if strings.Contains(spot, "电信") {
-				isp = model.ISPChinaTelecom
-			} else if strings.Contains(spot, "联通") {
-				isp = model.ISPChinaUnicom
-			} else if strings.Contains(spot, "移动") {
-				isp = model.ISPChinaMobile
-			}
-			bi = append(bi, model.BacktraceIndex{
-				ReportID:  reportID,
-				Spot:      spot,
-				RouteType: routeType,
-				ISP:       isp,
-			})
-		}
 	}
 
 	// Check if report already exists

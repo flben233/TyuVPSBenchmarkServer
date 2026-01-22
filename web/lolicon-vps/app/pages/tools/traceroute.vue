@@ -67,6 +67,9 @@ const handleReset = () => {
                 placeholder="TCP模式端口号"
               />
             </el-form-item>
+            <el-form-item label="数据源">
+              <div style="color: var(--el-text-color-regular); padding: 0 8px;">NextTrace</div>
+            </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="handleQuery" :loading="loading">
                 追踪
@@ -86,7 +89,6 @@ const handleReset = () => {
           <div class="result-header">追踪结果</div>
 
           <!-- Hops Table -->
-          <el-card shadow="never" class="result-card">
             <el-table :data="result.Hops" border style="width: 100%">
               <el-table-column prop="TTL" label="跳数" width="80" align="center">
                 <template #default="{ row }">
@@ -95,63 +97,50 @@ const handleReset = () => {
               </el-table-column>
               <el-table-column label="IP地址" min-width="150">
                 <template #default="{ row }">
-                  <div v-for="(hop, index) in row" :key="index">
-                    <span v-if="hop.Success && hop.Address">{{ hop.Address.IP }}</span>
-                    <span v-else style="color: #909399;">*</span>
-                  </div>
+                  <span v-if="row[0]?.Success && row[0]?.Address">{{ row[0].Address.IP }}</span>
+                  <span v-else style="color: #909399;">*</span>
                 </template>
               </el-table-column>
               <el-table-column label="主机名" min-width="150">
                 <template #default="{ row }">
-                  <div v-for="(hop, index) in row" :key="index">
-                    <span v-if="hop.Hostname">{{ hop.Hostname }}</span>
-                    <span v-else style="color: #909399;">-</span>
-                  </div>
+                  <span v-if="row[0]?.Hostname">{{ row[0].Hostname }}</span>
+                  <span v-else style="color: #909399;">-</span>
                 </template>
               </el-table-column>
               <el-table-column label="RTT" min-width="120">
                 <template #default="{ row }">
-                  <div v-for="(hop, index) in row" :key="index">
-                    <span v-if="hop.Success && hop.RTT">{{ (hop.RTT / 1000).toFixed(2) }} ms</span>
-                    <span v-else style="color: #909399;">*</span>
-                  </div>
+                  <span v-if="row[0]?.Success && row[0]?.RTT">{{ (row[0].RTT / 1000).toFixed(2) }} ms</span>
+                  <span v-else style="color: #909399;">*</span>
                 </template>
               </el-table-column>
               <el-table-column label="地理位置" min-width="200">
                 <template #default="{ row }">
-                  <div v-for="(hop, index) in row" :key="index">
-                    <span v-if="hop.Success && hop.Geo">
-                      <span v-if="hop.Geo.country || hop.Geo.prov || hop.Geo.city">
-                        {{ hop.Geo.country }} {{ hop.Geo.prov }} {{ hop.Geo.city }}
+                    <span v-if="row[0]?.Success && row[0]?.Geo">
+                      <span v-if="row[0].Geo.country || row[0].Geo.prov || row[0].Geo.city">
+                        {{ row[0].Geo.country }} {{ row[0].Geo.prov }} {{ row[0].Geo.city }}
                       </span>
-                      <span v-else-if="hop.Geo.whois">{{ hop.Geo.whois }}</span>
+                      <span v-else-if="row[0].Geo.whois">{{ row[0].Geo.whois }}</span>
                       <span v-else style="color: #909399;">-</span>
                     </span>
                     <span v-else style="color: #909399;">-</span>
-                  </div>
                 </template>
               </el-table-column>
               <el-table-column label="AS" min-width="150">
                 <template #default="{ row }">
-                  <div v-for="(hop, index) in row" :key="index">
-                    <span v-if="hop.Success && hop.Geo?.asnumber">{{ hop.Geo.asnumber }}</span>
-                    <span v-else style="color: #909399;">-</span>
-                  </div>
+                  <span v-if="row[0]?.Success && row[0]?.Geo?.asnumber">{{ row[0].Geo.asnumber }}</span>
+                  <span v-else style="color: #909399;">-</span>
                 </template>
               </el-table-column>
             </el-table>
-          </el-card>
 
           <!-- Trace Map -->
-          <div v-if="result.TraceMapUrl" class="map-section">
+          <div v-if="result.TraceMapUrl.includes('https://assets.nxtrace.org/tracemap/')" class="map-section">
             <div class="result-header">路由地图</div>
-            <el-card shadow="never" class="result-card">
-              <iframe
-                :src="result.TraceMapUrl"
-                class="trace-map-iframe"
-                frameborder="0"
-              ></iframe>
-            </el-card>
+            <iframe
+              :src="result.TraceMapUrl"
+              class="trace-map-iframe"
+              frameborder="0"
+            ></iframe>
           </div>
         </div>
       </el-col>
@@ -176,6 +165,7 @@ const handleReset = () => {
   width: 100%;
   padding: 16px;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 #tool-title {
@@ -200,10 +190,6 @@ const handleReset = () => {
   font-size: 18px;
   font-weight: 600;
   color: #303133;
-  margin-bottom: 16px;
-}
-
-.result-card {
   margin-bottom: 16px;
 }
 

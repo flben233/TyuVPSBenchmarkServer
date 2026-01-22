@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func MediaParser(textLines []string) model.MediaResults {
+func MediaParser(textLines []string) *model.MediaResults {
 	starts := []string{"** 正在测试 IPv4 解锁情况", "** 正在测试 IPv6 解锁情况"}
 	results := model.MediaResults{}
 	i := 0
@@ -35,7 +35,10 @@ func MediaParser(textLines []string) model.MediaResults {
 			results.IPv6 = result
 		}
 	}
-	return results
+	if len(results.IPv4) == 0 && len(results.IPv6) == 0 {
+		return nil
+	}
+	return &results
 }
 
 func processMBlk(textLines []string, results []model.MediaBlock) (int, []model.MediaBlock) {

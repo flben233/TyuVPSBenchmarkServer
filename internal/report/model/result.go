@@ -54,12 +54,12 @@ type BenchmarkResult struct {
 	Time      string             `gorm:"size:100" json:"time"`
 	Link      string             `gorm:"size:1000" json:"link"`
 	SpdTest   []SpeedtestResults `json:"spdtest"`
-	ECS       ECSResult          `json:"ecs"`
-	Media     MediaResults       `json:"media"`
+	ECS       *ECSResult         `json:"ecs"`
+	Media     *MediaResults      `json:"media"`
 	BestTrace []BestTraceResult  `json:"besttrace"`
-	Itdog     ItdogResult        `json:"itdog"`
-	Disk      TyuDiskResult      `json:"disk"`
-	IPQuality IPQualityResult    `json:"ipquality"`
+	Itdog     *ItdogResult       `json:"itdog"`
+	Disk      *TyuDiskResult     `json:"disk"`
+	IPQuality *IPQualityResult   `json:"ipquality"`
 	MonitorID *int64             `gorm:"size:255" json:"monitor_id"` // Optional monitor ID for association
 	CreatedAt time.Time          `json:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at"`

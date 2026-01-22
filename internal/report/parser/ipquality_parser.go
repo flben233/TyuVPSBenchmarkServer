@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func IPQualityParser(textLines []string) model.IPQualityResult {
+func IPQualityParser(textLines []string) *model.IPQualityResult {
 	result := model.IPQualityResult{}
 	inBlock := false
 	inJSON := false
@@ -32,6 +32,8 @@ func IPQualityParser(textLines []string) model.IPQualityResult {
 	}
 	if jsonData != "" {
 		json.NewDecoder(strings.NewReader(jsonData)).Decode(&result)
+	} else {
+		return nil
 	}
-	return result
+	return &result
 }
