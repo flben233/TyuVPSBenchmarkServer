@@ -71,7 +71,7 @@ func AddHost(target, name, username, userID string) (int64, error) {
 		Name:         name,
 		Uploader:     userID,
 		UploaderName: username,
-		History:      *common.NewJSONField([]float32{}),
+		History:      *common.NewJSONField(&[]float32{}),
 		ReviewStatus: common.ReviewStatusPending,
 	}
 	err := monitorHosts.Create(context.Background(), &host)
@@ -140,7 +140,7 @@ func GetHost(id int64) (*model.MonitorHost, error) {
 
 // UpdateHostHistory updates the history field for a host
 func UpdateHostHistory(id int64, history []float32) error {
-	affected, err := monitorHosts.Where("id = ?", id).Update(context.Background(), "history", common.NewJSONField(history))
+	affected, err := monitorHosts.Where("id = ?", id).Update(context.Background(), "history", common.NewJSONField(&history))
 	if err != nil {
 		return err
 	}

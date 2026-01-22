@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func TyuDiskParser(textLines []string) model.TyuDiskResult {
+func TyuDiskParser(textLines []string) *model.TyuDiskResult {
 	startCase := "-------------------------------- TyuDiskMark --------------------------------"
 	endCase := "-----------------------------------------------------------------------------"
 	result := model.TyuDiskResult{Data: make([][]string, 0)}
@@ -27,5 +27,8 @@ func TyuDiskParser(textLines []string) model.TyuDiskResult {
 	if i < len(textLines) {
 		result.Time = strings.Replace(textLines[i+2], "北京时间: ", "", 1)
 	}
-	return result
+	if inBlock == false {
+		return nil
+	}
+	return &result
 }

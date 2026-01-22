@@ -20,8 +20,8 @@ type JSONField[T any] struct {
 	data *T
 }
 
-func NewJSONField[T any](data T) *JSONField[T] {
-	return &JSONField[T]{data: &data}
+func NewJSONField[T any](data *T) *JSONField[T] {
+	return &JSONField[T]{data: data}
 }
 
 func (j *JSONField[T]) GetValue() *T {
