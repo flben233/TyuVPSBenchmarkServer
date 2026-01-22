@@ -24,7 +24,7 @@ func Tracert(ctx *gin.Context) {
 		return
 	}
 	results := ts.ExportTracert(&req)
-	ctx.JSON(200, results)
+	ctx.String(200, results)
 }
 
 func main() {
