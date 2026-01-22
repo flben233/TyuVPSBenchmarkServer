@@ -45,8 +45,8 @@ export function useTool() {
         query,
       });
 
-      if (resp.data && resp.data.code === 0) {
-        return resp.data.value;
+      if (resp && resp.code === 0) {
+        return resp;
       }
       return { code: -1, message: "Failed to perform traceroute", data: null };
     } catch (error) {
@@ -62,8 +62,8 @@ export function useTool() {
         query: { target },
       });
 
-      if (resp.data && resp.data.code === 0) {
-        return resp.data;
+      if (resp && resp.code === 0) {
+        return resp;
       }
       return { code: -1, message: "Failed to query WHOIS", data: null };
     } catch (error) {
