@@ -9,7 +9,9 @@ import (
 func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 	startCases := []string{
 		"大陆三网+教育网 IPv4 多线程测速，v",
+		"大陆三网+教育网 IPv6 多线程测速，v",
 		"大陆三网+教育网 IPv4 单线程测速，v",
+		"大陆三网+教育网 IPv6 单线程测速，v",
 		"各大洲 IPv4 八线程测速，v"}
 	endCase := "系统时间："
 	finalResults := make([]model.SpeedtestResults, 0)
@@ -64,13 +66,15 @@ func SpeedtestParser(textLines []string) []model.SpeedtestResults {
 				head++
 			}
 		}
-		head += i + 2
-		if head >= len(textLines) {
-			time = ""
-		} else {
-			time = strings.Replace(textLines[head-1], "北京时间: ", "", 1)
+		if inBlock {
+			head += i + 2
+			if head >= len(textLines) {
+				time = ""
+			} else {
+				time = strings.Replace(textLines[head-1], "北京时间: ", "", 1)
+			}
+			finalResults = append(finalResults, model.SpeedtestResults{Results: results, Time: time})
 		}
-		finalResults = append(finalResults, model.SpeedtestResults{Results: results, Time: time})
 	}
 	some := false
 	for _, res := range finalResults {
