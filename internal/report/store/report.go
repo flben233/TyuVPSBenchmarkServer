@@ -387,7 +387,7 @@ func intersect(a, b []string) []string {
 // GetAllMediaNames returns all distinct media names from MediaIndex
 func GetAllMediaNames() ([]string, error) {
 	var mediaNames []string
-	if err := db.Model(&model.MediaIndex{}).Distinct().Pluck("media", &mediaNames).Error; err != nil {
+	if err := db.Model(&model.MediaIndex{}).Distinct().Pluck("media", &mediaNames).Order("media asc").Error; err != nil {
 		return nil, fmt.Errorf("failed to get media names: %w", err)
 	}
 	return mediaNames, nil
