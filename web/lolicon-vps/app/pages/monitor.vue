@@ -1,4 +1,15 @@
 <script setup>
+useHead({
+  title: '主机监控 - Lolicon VPS',
+  meta: [
+    { name: 'description', content: '实时监控服务器状态，包括CPU使用率、内存占用、磁盘使用、网络流量等关键指标，支持自动刷新' },
+    { name: 'keywords', content: '服务器监控,主机监控,VPS监控,CPU监控,内存监控,磁盘监控,网络监控,实时监控,服务器状态' },
+    { property: 'og:title', content: '主机监控 - Lolicon VPS' },
+    { property: 'og:description', content: '实时监控服务器状态，查看CPU、内存、磁盘等关键指标' },
+    { property: 'og:type', content: 'website' }
+  ]
+});
+
 const { getStatistics } = useMonitor();
 const hostsData = ref([]);
 const loading = ref(true);

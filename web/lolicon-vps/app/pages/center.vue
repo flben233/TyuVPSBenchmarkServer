@@ -1,4 +1,15 @@
 <script setup>
+useHead({
+  title: '个人中心 - Lolicon VPS',
+  meta: [
+    { name: 'description', content: '管理您的监控主机、Looking Glass记录和VPS测试报告，查看审核状态，支持管理员审核功能' },
+    { name: 'keywords', content: '个人中心,用户中心,监控管理,Looking Glass管理,报告管理,VPS管理' },
+    { property: 'og:title', content: '个人中心 - Lolicon VPS' },
+    { property: 'og:description', content: '管理您的监控主机、Looking Glass记录和测试报告' },
+    { property: 'og:type', content: 'website' }
+  ]
+});
+
 import { ref, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import ReportUploader from "~/components/report-uploader.vue";

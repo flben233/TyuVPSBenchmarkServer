@@ -12,6 +12,34 @@ let data = { data: null };
 if (resp.data.value && resp.data.value.code === 0) {
   data = resp.data.value;
 }
+
+// Dynamic metadata based on report data
+const reportTitle = computed(
+  () => report.value?.title || `测试报告 #${reportId}`,
+);
+const reportDescription = computed(() => {
+  if (!report.value) return "VPS性能测试报告详情";
+  return `${report.value.title || `测试报告 #${reportId}`} - 查看详细的VPS性能测试数据，包括CPU、内存、磁盘、网络速度、回程路由、流媒体解锁等信息`;
+});
+
+useHead({
+  title: () => `${reportTitle.value} - Lolicon VPS`,
+  meta: [
+    { name: "description", content: () => reportDescription.value },
+    {
+      name: "keywords",
+      content:
+        "VPS测试报告,性能测试详情,服务器评测,CPU测试,内存测试,磁盘测试,网络测试,回程路由,流媒体解锁",
+    },
+    {
+      property: "og:title",
+      content: () => `${reportTitle.value} - Lolicon VPS`,
+    },
+    { property: "og:description", content: () => reportDescription.value },
+    { property: "og:type", content: "article" },
+  ],
+});
+
 const speedTestLabels = ["大陆三网多线程", "大陆三网单线程", "国际方向多线程"];
 const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
 const monitorData = ref(null);
@@ -68,6 +96,25 @@ const getMediaStatusColor = (status) => {
     return "var(--el-color-danger)";
   }
   return "var(--el-color-success)";
+};
+
+const getIPScoreColor = (score) => {
+  if (score.includes("%")) {
+    score = parseFloat(score.replace("%", "")) / 100;
+  }
+  if (isNaN(score)) {
+    return "var(--el-color-info)";
+  }
+  if (score < 1) {
+    score *= 100;
+  }
+  if (score < 20) {
+    return "var(--el-color-success)";
+  } else if (score < 60) {
+    return "var(--el-color-warning)";
+  } else {
+    return "var(--el-color-danger)";
+  }
 };
 
 const goBack = () => {
@@ -485,7 +532,7 @@ const goBack = () => {
               :key="key"
               :label="key"
             >
-              {{ value }}
+              <div :style="{ color: getIPScoreColor(value) }">{{ value }}</div>
             </el-descriptions-item>
           </el-descriptions>
         </div>
