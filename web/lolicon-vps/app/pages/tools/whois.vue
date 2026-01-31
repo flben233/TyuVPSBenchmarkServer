@@ -1,4 +1,15 @@
 <script setup>
+useHead({
+  title: 'WHOIS查询 - Lolicon VPS',
+  meta: [
+    { name: 'description', content: 'WHOIS查询工具，查询域名注册信息、注册商详情、域名过期日期、域名服务器等信息' },
+    { name: 'keywords', content: 'WHOIS查询,域名查询,域名注册信息,域名WHOIS,IP WHOIS,域名到期时间,域名注册商' },
+    { property: 'og:title', content: 'WHOIS查询 - Lolicon VPS' },
+    { property: 'og:description', content: 'WHOIS查询工具，查询域名和IP的注册信息' },
+    { property: 'og:type', content: 'website' }
+  ]
+});
+
 const { whois } = useTool();
 
 const target = ref("");

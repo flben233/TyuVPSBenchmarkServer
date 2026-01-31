@@ -1,4 +1,15 @@
 <script setup>
+useHead({
+  title: 'Lolicon VPS - 云服务器评测',
+  meta: [
+    { name: 'description', content: 'VPS云服务器性能评测平台，提供VPS测速、服务器监控、IP查询、路由追踪、WHOIS查询等工具，支持三网回程线路测试与流媒体解锁检测' },
+    { name: 'keywords', content: 'VPS测评,云服务器评测,VPS测速,服务器性能测试,VPS benchmark,主机监控,IP查询,路由追踪,traceroute,WHOIS查询,Looking Glass,回程线路,三网测速,流媒体解锁,Netflix解锁,中国电信,中国移动,中国联通,KVM,虚拟化,磁盘IO测试,网络延迟,带宽测试' },
+    { property: 'og:title', content: 'Lolicon VPS - 云服务器评测' },
+    { property: 'og:description', content: 'VPS云服务器性能评测平台，提供VPS测速、服务器监控、IP查询、路由追踪、WHOIS查询等工具，支持三网回程线路测试与流媒体解锁检测' },
+    { property: 'og:type', content: 'website' }
+  ]
+});
+
 // const { userInfo, token, login } = useAuth();
 const { listReports } = useReport();
 const reports = ref([]);

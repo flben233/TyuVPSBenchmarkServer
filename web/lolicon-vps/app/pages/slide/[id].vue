@@ -14,6 +14,32 @@ if (resp.data.value && resp.data.value.code === 0) {
   report.value = resp.data.value.data;
 }
 
+// Dynamic metadata based on report data
+const slideTitle = computed(
+  () => report.value?.title || `测试报告幻灯片 #${reportId}`,
+);
+const slideDescription = computed(() => {
+  if (!report.value) return "VPS性能测试报告幻灯片演示";
+  return `${report.value.title || `测试报告 #${reportId}`} - 幻灯片演示模式，查看性能测试、网络路由、流媒体解锁等测试结果`;
+});
+
+useHead({
+  title: () => `${slideTitle.value} - Lolicon VPS`,
+  meta: [
+    { name: "description", content: () => slideDescription.value },
+    {
+      name: "keywords",
+      content: "VPS测试幻灯片,性能测试演示,测试报告演示,服务器评测展示",
+    },
+    {
+      property: "og:title",
+      content: () => `${slideTitle.value} - Lolicon VPS`,
+    },
+    { property: "og:description", content: () => slideDescription.value },
+    { property: "og:type", content: "article" },
+  ],
+});
+
 const speedTestLabels = ["大陆三网多线程", "大陆三网单线程", "国际方向多线程"];
 
 // Define slides based on the order in AGENTS.md
@@ -159,6 +185,25 @@ const getMediaStatusColor = (status) => {
     return "var(--el-color-danger)";
   }
   return "var(--el-color-success)";
+};
+
+const getIPScoreColor = (score) => {
+  if (score.includes("%")) {
+    score = parseFloat(score.replace("%", "")) / 100;
+  }
+  if (isNaN(score)) {
+    return "var(--el-color-info)";
+  }
+  if (score < 1) {
+    score *= 100;
+  }
+  if (score < 20) {
+    return "var(--el-color-success)";
+  } else if (score < 60) {
+    return "var(--el-color-warning)";
+  } else {
+    return "var(--el-color-danger)";
+  }
 };
 
 const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
@@ -405,10 +450,7 @@ const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
           </div>
 
           <!-- Geographic Info -->
-          <div
-            v-if="currentSlide.data.Info"
-            class="subsection"
-          >
+          <div v-if="currentSlide.data.Info" class="subsection">
             <h3>地理位置信息</h3>
             <el-descriptions label-width="150px" :column="2" border>
               <el-descriptions-item label="ASN">{{
@@ -429,14 +471,11 @@ const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
           </div>
 
           <!-- Risk Scores -->
-          <div
-            v-if="currentSlide.data.Score"
-            class="subsection"
-          >
+          <div v-if="currentSlide.data.Score" class="subsection">
             <h3>风险评分</h3>
             <el-descriptions :column="3" border>
               <el-descriptions-item
-              label-width="150px"
+                label-width="150px"
                 v-for="(value, key) in currentSlide.data.Score"
                 :key="key"
                 :label="key"
@@ -451,7 +490,8 @@ const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
               <el-col :span="12" v-if="report.ipquality.Type.Company">
                 <h4>公司类型</h4>
                 <el-descriptions :column="1" border size="small">
-                  <el-descriptions-item label-width="150px"
+                  <el-descriptions-item
+                    label-width="150px"
                     v-for="(value, key) in report.ipquality.Type.Company"
                     :key="key"
                     :label="key"
@@ -463,12 +503,15 @@ const diskLabels = ["测试项目", "读速度 (MB/s)", "写速度 (MB/s)"];
               <el-col :span="12" v-if="report.ipquality.Type.Usage">
                 <h4>使用类型</h4>
                 <el-descriptions :column="1" border size="small">
-                  <el-descriptions-item label-width="150px"
+                  <el-descriptions-item
+                    label-width="150px"
                     v-for="(value, key) in report.ipquality.Type.Usage"
                     :key="key"
                     :label="key"
                   >
-                    {{ value }}
+                    <div :style="{ color: getIPScoreColor(value) }">
+                      {{ value }}
+                    </div>
                   </el-descriptions-item>
                 </el-descriptions>
               </el-col>

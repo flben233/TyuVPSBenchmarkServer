@@ -1,4 +1,15 @@
 <script setup>
+useHead({
+  title: '路由追踪 - Lolicon VPS',
+  meta: [
+    { name: 'description', content: '路由追踪工具，支持ICMP和TCP模式，追踪到目标服务器的网络路径，显示每一跳的延迟和地理位置信息' },
+    { name: 'keywords', content: '路由追踪,traceroute,网络诊断,ping,网络延迟,路由跟踪,NextTrace,ICMP,TCP,网络路径' },
+    { property: 'og:title', content: '路由追踪 - Lolicon VPS' },
+    { property: 'og:description', content: '路由追踪工具，追踪到目标服务器的网络路径' },
+    { property: 'og:type', content: 'website' }
+  ]
+});
+
 const { traceroute } = useTool();
 
 const target = ref("");

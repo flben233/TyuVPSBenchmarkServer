@@ -1,4 +1,15 @@
 <script setup>
+useHead({
+  title: 'Looking Glass 列表 - Lolicon VPS',
+  meta: [
+    { name: 'description', content: 'Looking Glass 工具列表，提供全球各地服务器的网络测试工具，可进行路由追踪、Ping测试等网络诊断' },
+    { name: 'keywords', content: 'Looking Glass,LG,路由追踪,网络测试,Ping测试,网络诊断,traceroute,BGP' },
+    { property: 'og:title', content: 'Looking Glass 列表 - Lolicon VPS' },
+    { property: 'og:description', content: 'Looking Glass 工具列表，提供全球各地服务器的网络测试工具' },
+    { property: 'og:type', content: 'website' }
+  ]
+});
+
 const lgData = ref([]);
 const { listPublicLookingGlass } = useLookingGlass();
 const data = await listPublicLookingGlass();

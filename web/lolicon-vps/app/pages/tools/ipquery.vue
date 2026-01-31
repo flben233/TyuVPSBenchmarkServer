@@ -1,4 +1,15 @@
 <script setup>
+useHead({
+  title: 'IP查询 - Lolicon VPS',
+  meta: [
+    { name: 'description', content: 'IP地址查询工具，查询IP地理位置、ISP信息、ASN信息、数据中心检测、代理VPN检测等详细信息，支持多种数据源' },
+    { name: 'keywords', content: 'IP查询,IP地址查询,IP归属地,IP地理位置,ISP查询,ASN查询,IP代理检测,VPN检测,数据中心检测,IP地址定位' },
+    { property: 'og:title', content: 'IP查询 - Lolicon VPS' },
+    { property: 'og:description', content: 'IP地址查询工具，查询IP地理位置、ISP等详细信息' },
+    { property: 'og:type', content: 'website' }
+  ]
+});
+
 const { ipQuery, dataSourceOptions } = useTool();
 
 const target = ref("");

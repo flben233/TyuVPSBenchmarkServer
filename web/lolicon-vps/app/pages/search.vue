@@ -1,4 +1,15 @@
 <script setup>
+useHead({
+  title: '高级搜索 - Lolicon VPS',
+  meta: [
+    { name: 'description', content: 'VPS性能测试报告高级搜索，支持按虚拟化类型、回程线路、网络速度、流媒体解锁等多条件筛选查找' },
+    { name: 'keywords', content: 'VPS搜索,服务器搜索,性能测试搜索,回程线路搜索,流媒体解锁搜索,三网测速搜索,VPS筛选' },
+    { property: 'og:title', content: '高级搜索 - Lolicon VPS' },
+    { property: 'og:description', content: 'VPS性能测试报告高级搜索，支持多条件筛选' },
+    { property: 'og:type', content: 'website' }
+  ]
+});
+
 import Profile from '~/components/profile.vue';
 
 const { getBackrouteTypes, getMediaNames, getVirtualizations, searchReports } =
