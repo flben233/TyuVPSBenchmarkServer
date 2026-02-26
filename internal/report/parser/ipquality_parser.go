@@ -3,8 +3,11 @@ package parser
 import (
 	"VPSBenchmarkBackend/internal/report/model"
 	"encoding/json"
+	"regexp"
 	"strings"
 )
+
+var ansiRegex = regexp.MustCompile("\\x1b\\[?[0-9;]*[a-zA-Z]")
 
 func IPQualityParser(textLines []string) *model.IPQualityResult {
 	result := model.IPQualityResult{}
@@ -31,7 +34,11 @@ func IPQualityParser(textLines []string) *model.IPQualityResult {
 		}
 	}
 	if jsonData != "" {
-		json.NewDecoder(strings.NewReader(jsonData)).Decode(&result)
+		jsonData = ansiRegex.ReplaceAllString(jsonData, "")
+		err := json.NewDecoder(strings.NewReader(jsonData)).Decode(&result)
+		if err != nil {
+			return nil
+		}
 	} else {
 		return nil
 	}
