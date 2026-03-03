@@ -214,10 +214,6 @@ async function handleUpdateMonitor() {
     ElMessage.warning("请输入报告 ID");
     return;
   }
-  if (updateMonitorId.value == null) {
-    ElMessage.warning("请选择监控主机");
-    return;
-  }
 
   loading.value = true;
   try {
@@ -415,7 +411,8 @@ async function handleUpdateMonitor() {
         <el-form-item label="监控主机">
           <el-select
             v-model="updateMonitorId"
-            placeholder="选择监控主机"
+            placeholder="选择监控主机（可选）"
+            clearable
             style="width: 100%"
           >
             <el-option
