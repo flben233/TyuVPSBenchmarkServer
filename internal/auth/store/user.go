@@ -16,7 +16,10 @@ var (
 	userGroups gorm.Interface[model.UserGroup]
 )
 
-const DefaultUserGroupId = 0
+const (
+	DefaultUserGroupId  uint32 = 0
+	DefaultAdminGroupId uint32 = 1
+)
 
 func init() {
 	// Register the initializer
@@ -41,6 +44,23 @@ func createDefaultUserGroup() error {
 	return userGroups.Create(ctx, &defaultGroup)
 }
 
+func createDefaultAdminGroup() error {
+	count, err := userGroups.Where("id = ?", DefaultAdminGroupId).Count(ctx, "*")
+	if err != nil {
+		return err
+	} else if count > 0 {
+		return nil
+	}
+	defaultAdminGroup := model.UserGroup{
+		ID:           DefaultAdminGroupId,
+		Name:         "Admin",
+		MaxHostNum:   65535,
+		InspectorNum: 65535,
+		IsAdmin:      true,
+	}
+	return userGroups.Create(ctx, &defaultAdminGroup)
+}
+
 func InitUserStore(dbPath string) error {
 	db = common.GetDB()
 	users = gorm.G[model.User](db)
@@ -49,6 +69,10 @@ func InitUserStore(dbPath string) error {
 		return err
 	}
 	err := createDefaultUserGroup()
+	if err != nil {
+		return err
+	}
+	err = createDefaultAdminGroup()
 	return err
 }
 

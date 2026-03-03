@@ -54,11 +54,15 @@ func GithubLogin(code string) (string, error) {
 	}
 
 	if !exist {
+		gid := store.DefaultUserGroupId
+		if cfg.AdminID == userInfo.ID {
+			gid = store.DefaultAdminGroupId
+		}
 		user := model.User{
 			ID:      userInfo.ID,
 			Name:    userInfo.Name,
 			Login:   userInfo.Login,
-			GroupID: store.DefaultUserGroupId, // Default group ID, can be updated later by admin
+			GroupID: gid, // Default group ID, can be updated later by admin
 		}
 		// Create user in database if not exists
 		if err = store.CreateUser(&user); err != nil {
