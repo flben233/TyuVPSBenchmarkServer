@@ -57,7 +57,7 @@ export function useLookingGlass() {
 
   async function removeRecord(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/lookingglass/records/${id}`, {
+      const resp = await $fetch(`${backendUrl}/lookingglass/records/delete/${id}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
