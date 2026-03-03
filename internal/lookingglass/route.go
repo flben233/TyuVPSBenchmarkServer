@@ -27,8 +27,8 @@ func RegisterRoute(base string, r *gin.Engine) {
 		{
 			protectedAPI.GET("/records", handler.ListRecords)
 			protectedAPI.POST("/records", handler.AddRecord)
-			protectedAPI.PUT("/records/:id", handler.UpdateRecord)
-			protectedAPI.DELETE("/records/:id", handler.RemoveRecord)
+			protectedAPI.POST("/records/update/:id", handler.UpdateRecord)
+			protectedAPI.POST("/records/delete/:id", handler.RemoveRecord)
 		}
 	}
 	{
