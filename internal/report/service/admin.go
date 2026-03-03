@@ -204,7 +204,7 @@ func DeleteReport(reportID string) error {
 	return nil
 }
 
-func UpdateReport(reportID string, monitorID int64, otherInfo string) error {
+func UpdateReport(reportID string, monitorID *int64, otherInfo string) error {
 	if reportID == "" {
 		return errors.New("report ID is required")
 	}
