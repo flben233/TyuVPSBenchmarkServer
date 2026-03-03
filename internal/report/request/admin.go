@@ -12,6 +12,6 @@ type DeleteReportRequest struct {
 
 type UpdateReportRequest struct {
 	ID        string `json:"id" binding:"required"`
-	MonitorID int64  `json:"monitor_id" binding:"required"`
+	MonitorID *int64 `json:"monitor_id"`
 	OtherInfo string `json:"other_info"`
 }
