@@ -17,8 +17,8 @@ var (
 )
 
 const (
-	DefaultUserGroupId  uint32 = 0
-	DefaultAdminGroupId uint32 = 1
+	DefaultUserGroupId  uint32 = 1
+	DefaultAdminGroupId uint32 = 2
 )
 
 func init() {
