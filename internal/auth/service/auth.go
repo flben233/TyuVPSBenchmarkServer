@@ -1,6 +1,8 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/auth/model"
+	"VPSBenchmarkBackend/internal/auth/store"
 	"VPSBenchmarkBackend/internal/config"
 	"encoding/json"
 	"errors"
@@ -44,6 +46,24 @@ func GithubLogin(code string) (string, error) {
 	userInfo, err := getGithubUserInfo(accessToken)
 	if err != nil {
 		return "", err
+	}
+
+	exist, err := store.UserExists(userInfo.ID)
+	if err != nil {
+		return "", err
+	}
+
+	if !exist {
+		user := model.User{
+			ID:      userInfo.ID,
+			Name:    userInfo.Name,
+			Login:   userInfo.Login,
+			GroupID: store.DefaultUserGroupId, // Default group ID, can be updated later by admin
+		}
+		// Create user in database if not exists
+		if err = store.CreateUser(&user); err != nil {
+			return "", err
+		}
 	}
 
 	// Generate JWT token

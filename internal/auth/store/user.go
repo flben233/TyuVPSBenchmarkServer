@@ -16,9 +16,29 @@ var (
 	userGroups gorm.Interface[model.UserGroup]
 )
 
+const DefaultUserGroupId = 0
+
 func init() {
 	// Register the initializer
 	common.RegisterDBInitializer(InitUserStore)
+}
+
+// Create a default user group if it doesn't exist
+func createDefaultUserGroup() error {
+	count, err := userGroups.Where("id = ?", DefaultUserGroupId).Count(ctx, "*")
+	if err != nil {
+		return err
+	} else if count > 0 {
+		return nil
+	}
+	defaultGroup := model.UserGroup{
+		ID:           DefaultUserGroupId,
+		Name:         "Default",
+		MaxHostNum:   5,
+		InspectorNum: 10,
+		IsAdmin:      false,
+	}
+	return userGroups.Create(ctx, &defaultGroup)
 }
 
 func InitUserStore(dbPath string) error {
@@ -28,13 +48,19 @@ func InitUserStore(dbPath string) error {
 	if err := db.AutoMigrate(&model.User{}, &model.UserGroup{}); err != nil {
 		return err
 	}
-	return nil
+	err := createDefaultUserGroup()
+	return err
 }
 
 // User CRUD
 
 func CreateUser(user *model.User) error {
 	return users.Create(ctx, user)
+}
+
+func UserExists(id int64) (bool, error) {
+	count, err := users.Where("id = ?", id).Count(ctx, "*")
+	return count > 0, err
 }
 
 func GetUserByID(id int64) (model.User, error) {
