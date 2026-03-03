@@ -44,7 +44,7 @@ func ListUserGroups() ([]model.UserGroup, error) {
 }
 
 func UpdateUserGroup(group *model.UserGroup) error {
-	_, err := store.UpdateUserGroup(*group)
+	err := store.UpdateUserGroup(*group)
 	return err
 }
 
