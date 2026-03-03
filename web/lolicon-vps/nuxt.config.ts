@@ -40,8 +40,8 @@ export default defineNuxtConfig({
     ],
   },
   routeRules: {
-    "/report/**": { swr: 31536000 },
-    "/slide/**": { swr: 31536000 },
+    "/report/**": { cache: { maxAge: 300 } },
+    "/slide/**": { cache: { maxAge: 300 } },
     "/tools/**": { prerender: true },
     "/center": { prerender: true },
     "/index": { cache: { maxAge: 300 } },
