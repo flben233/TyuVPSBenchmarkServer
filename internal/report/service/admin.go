@@ -21,7 +21,7 @@ func generateID() string {
 }
 
 // AddReport parses and saves a new benchmark report
-func AddReport(rawHTML string, monitorID *int64) (string, error) {
+func AddReport(rawHTML string, monitorID *int64, otherInfo string) (string, error) {
 	if rawHTML == "" {
 		return "", errors.New("raw HTML content is required")
 	}
@@ -168,6 +168,7 @@ func AddReport(rawHTML string, monitorID *int64) (string, error) {
 		Disk:      parsedResult.Disk,
 		IPQuality: parsedResult.IPQuality,
 		MonitorID: monitorID,
+		OtherInfo: otherInfo,
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
 	}
@@ -203,12 +204,12 @@ func DeleteReport(reportID string) error {
 	return nil
 }
 
-func UpdateReportMonitorID(reportID string, monitorID int64) error {
+func UpdateReport(reportID string, monitorID int64, otherInfo string) error {
 	if reportID == "" {
 		return errors.New("report ID is required")
 	}
 
-	err := store.UpdateReportMonitorID(reportID, monitorID)
+	err := store.UpdateReport(reportID, monitorID, otherInfo)
 	if err != nil {
 		return fmt.Errorf("failed to update report monitor ID: %w", err)
 	}

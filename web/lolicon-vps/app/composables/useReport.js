@@ -15,7 +15,7 @@ export function useReport() {
       });
   }
 
-  async function addReport(token, html, monitor_id) {
+  async function addReport(token, html, monitor_id, other_info) {
     try {
       const resp = await $fetch(`${backendUrl}/report/admin/add`, {
         method: "POST",
@@ -23,9 +23,10 @@ export function useReport() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           html: html,
-          monitor_id: monitor_id
+          monitor_id: monitor_id,
+          other_info: other_info || "",
         }),
       });
 
@@ -60,23 +61,23 @@ export function useReport() {
     }
   }
 
-  async function updateReportMonitorID(token, id, monitorId) {
+  async function updateReport(token, id, monitorId, otherInfo) {
     try {
-      const resp = await $fetch(`${backendUrl}/report/admin/update-monitor`, {
+      const resp = await $fetch(`${backendUrl}/report/admin/update`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id, monitor_id: monitorId }),
+        body: JSON.stringify({ id, monitor_id: monitorId, other_info: otherInfo || "" }),
       });
 
       if (resp && resp.code === 0) {
         return { success: true };
       }
-      return { success: false, message: resp?.message || "Failed to update monitor ID" };
+      return { success: false, message: resp?.message || "Failed to update report" };
     } catch (error) {
-      console.error("Failed to update report monitor ID:", error);
+      console.error("Failed to update report:", error);
       return { success: false, message: error.message };
     }
   }
@@ -86,6 +87,6 @@ export function useReport() {
     getReportDetails,
     addReport,
     deleteReport,
-    updateReportMonitorID,
+    updateReport,
   };
 }
