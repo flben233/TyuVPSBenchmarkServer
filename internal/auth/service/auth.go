@@ -6,6 +6,7 @@ import (
 	"VPSBenchmarkBackend/internal/config"
 	"encoding/json"
 	"errors"
+	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"net/url"
@@ -48,12 +49,12 @@ func GithubLogin(code string) (string, error) {
 		return "", err
 	}
 
-	exist, err := store.UserExists(userInfo.ID)
-	if err != nil {
+	userRecord, err := store.GetUserByID(userInfo.ID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", err
 	}
 
-	if !exist {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		gid := store.DefaultUserGroupId
 		if cfg.AdminID == userInfo.ID {
 			gid = store.DefaultAdminGroupId
@@ -66,6 +67,17 @@ func GithubLogin(code string) (string, error) {
 		}
 		// Create user in database if not exists
 		if err = store.CreateUser(&user); err != nil {
+			return "", err
+		}
+	} else {
+		userRecord = model.User{
+			ID:      userRecord.ID,
+			Name:    userInfo.Name,
+			Login:   userInfo.Login,
+			GroupID: userRecord.GroupID, // Keep existing group ID
+		}
+		// Update user info in database if exists
+		if _, err = store.UpdateUser(userRecord); err != nil {
 			return "", err
 		}
 	}

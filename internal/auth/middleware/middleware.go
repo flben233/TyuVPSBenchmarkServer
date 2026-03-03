@@ -58,8 +58,8 @@ func JWTAuth() gin.HandlerFunc {
 			if name, ok := claims["name"].(string); ok {
 				c.Set("user_name", name)
 			}
-			if id, ok := claims["id"].(string); ok {
-				c.Set("user_id", id)
+			if id, ok := claims["github_id"].(float64); ok {
+				c.Set("user_id", int64(id))
 			}
 			if avatarURL, ok := claims["avatar_url"].(string); ok {
 				c.Set("user_avatar_url", avatarURL)
