@@ -13,7 +13,7 @@ const props = defineProps({
   },
 });
 
-const { addReport, deleteReport, updateReport } = useReport();
+const { addReport, deleteReport, updateReport, getReportDetails } = useReport();
 
 // Report data
 const fileInput = useTemplateRef("report-selector");
@@ -32,6 +32,31 @@ const updateMonitorDialogVisible = ref(false);
 const updateReportId = ref("");
 const updateMonitorId = ref(null);
 const updateOtherInfo = ref("");
+const fetchingReport = ref(false);
+
+async function fetchOriginalValues() {
+  if (!updateReportId.value) {
+    ElMessage.warning("请先输入报告 ID");
+    return;
+  }
+
+  fetchingReport.value = true;
+  try {
+    const resp = await getReportDetails(updateReportId.value);
+    if (resp.data.value && resp.data.value.code === 0) {
+      const report = resp.data.value.data;
+      updateMonitorId.value = report.monitor_id || null;
+      updateOtherInfo.value = report.other_info || "";
+      ElMessage.success("已填充原值");
+    } else {
+      ElMessage.error("未找到该报告");
+    }
+  } catch (error) {
+    ElMessage.error("获取报告信息失败");
+  } finally {
+    fetchingReport.value = false;
+  }
+}
 
 // Report functions
 async function handleFileSelect(event) {
@@ -380,7 +405,12 @@ async function handleUpdateMonitor() {
     <el-dialog v-model="updateMonitorDialogVisible" title="更新报告" width="500px">
       <el-form label-width="120px">
         <el-form-item label="报告 ID">
-          <el-input v-model="updateReportId" placeholder="请输入报告 ID" />
+          <div style="display: flex; gap: 8px; width: 100%">
+            <el-input v-model="updateReportId" placeholder="请输入报告 ID" />
+            <el-button @click="fetchOriginalValues" :loading="fetchingReport">
+              填充原值
+            </el-button>
+          </div>
         </el-form-item>
         <el-form-item label="监控主机">
           <el-select
