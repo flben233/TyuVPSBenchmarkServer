@@ -53,7 +53,7 @@ func ListUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, common.Success(users))
 }
 
-// UpdateUser handles PUT /auth/admin/user
+// UpdateUser handles POST /auth/admin/user/update
 // @Summary Update User
 // @Description Update an existing user
 // @Tags auth
@@ -64,7 +64,7 @@ func ListUsers(c *gin.Context) {
 // @Success 200 {object} common.APIResponse[any]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
-// @Router /auth/admin/user [put]
+// @Router /auth/admin/user [post]
 func UpdateUser(c *gin.Context) {
 	var user model.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -116,7 +116,7 @@ func DeleteUser(c *gin.Context) {
 // @Success 201 {object} common.APIResponse[any]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
-// @Router /auth/admin/group [post]
+// @Router /auth/admin/group/create [post]
 func CreateUserGroup(c *gin.Context) {
 	var group model.UserGroup
 	if err := c.ShouldBindJSON(&group); err != nil {
@@ -148,7 +148,7 @@ func ListUserGroups(c *gin.Context) {
 	c.JSON(http.StatusOK, common.Success(groups))
 }
 
-// UpdateUserGroup handles PUT /auth/admin/group
+// UpdateUserGroup handles POST /auth/admin/group/update
 // @Summary Update User Group
 // @Description Update an existing user group
 // @Tags auth
@@ -159,7 +159,7 @@ func ListUserGroups(c *gin.Context) {
 // @Success 200 {object} common.APIResponse[any]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
-// @Router /auth/admin/group [put]
+// @Router /auth/admin/group [post]
 func UpdateUserGroup(c *gin.Context) {
 	var group model.UserGroup
 	if err := c.ShouldBindJSON(&group); err != nil {
