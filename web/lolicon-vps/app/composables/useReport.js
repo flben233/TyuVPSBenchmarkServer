@@ -60,10 +60,32 @@ export function useReport() {
     }
   }
 
+  async function updateReportMonitorID(token, id, monitorId) {
+    try {
+      const resp = await $fetch(`${backendUrl}/report/admin/update-monitor`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, monitor_id: monitorId }),
+      });
+
+      if (resp && resp.code === 0) {
+        return { success: true };
+      }
+      return { success: false, message: resp?.message || "Failed to update monitor ID" };
+    } catch (error) {
+      console.error("Failed to update report monitor ID:", error);
+      return { success: false, message: error.message };
+    }
+  }
+
   return {
     listReports,
     getReportDetails,
     addReport,
     deleteReport,
+    updateReportMonitorID,
   };
 }

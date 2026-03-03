@@ -11,11 +11,11 @@ import (
 )
 
 type benchmarkResult struct {
-	ID        uint   `gorm:"primaryKey"`
-	ReportID  string `gorm:"uniqueIndex;size:255"`
-	Title     string `gorm:"size:500"`
-	Time      time.Time
-	Link      string `gorm:"size:1000"`
+	ID        uint      `gorm:"primaryKey"`
+	ReportID  string    `gorm:"uniqueIndex;size:255"`
+	Title     string    `gorm:"size:500"`
+	Time      time.Time `gorm:"index:,sort:desc"`
+	Link      string    `gorm:"size:1000"`
 	SpdTest   common.JSONField[[]model.SpeedtestResults]
 	ECS       common.JSONField[model.ECSResult]
 	Media     common.JSONField[model.MediaResults]
@@ -409,4 +409,10 @@ func GetAllBackRouteTypes() ([]string, error) {
 		return nil, fmt.Errorf("failed to get back route types: %w", err)
 	}
 	return routeTypes, nil
+}
+
+func UpdateReportMonitorID(reportID string, monitorID int64) error {
+	ctx := context.Background()
+	_, err := benchmarkResults.Where("report_id = ?", reportID).Update(ctx, "monitor_id", monitorID)
+	return err
 }

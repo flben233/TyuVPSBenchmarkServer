@@ -202,3 +202,15 @@ func DeleteReport(reportID string) error {
 
 	return nil
 }
+
+func UpdateReportMonitorID(reportID string, monitorID int64) error {
+	if reportID == "" {
+		return errors.New("report ID is required")
+	}
+
+	err := store.UpdateReportMonitorID(reportID, monitorID)
+	if err != nil {
+		return fmt.Errorf("failed to update report monitor ID: %w", err)
+	}
+	return nil
+}

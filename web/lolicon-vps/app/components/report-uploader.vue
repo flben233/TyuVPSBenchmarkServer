@@ -13,7 +13,7 @@ const props = defineProps({
   },
 });
 
-const { addReport, deleteReport } = useReport();
+const { addReport, deleteReport, updateReportMonitorID } = useReport();
 
 // Report data
 const fileInput = useTemplateRef("report-selector");
@@ -25,6 +25,11 @@ const fileMonitorMapping = ref([]);
 const uploadProgress = ref(0);
 const uploadingBatch = ref(false);
 const loading = ref(false);
+
+// Update monitor data
+const updateMonitorDialogVisible = ref(false);
+const updateReportId = ref("");
+const updateMonitorId = ref(null);
 
 // Report functions
 async function handleFileSelect(event) {
@@ -171,6 +176,38 @@ function showFileSelector() {
     fileInput.value.click();
   }
 }
+
+async function handleUpdateMonitor() {
+  if (!updateReportId.value) {
+    ElMessage.warning("请输入报告 ID");
+    return;
+  }
+  if (updateMonitorId.value == null) {
+    ElMessage.warning("请选择监控主机");
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const result = await updateReportMonitorID(
+      props.token,
+      updateReportId.value,
+      updateMonitorId.value
+    );
+    if (result.success) {
+      ElMessage.success("监控主机更新成功");
+      updateMonitorDialogVisible.value = false;
+      updateReportId.value = "";
+      updateMonitorId.value = null;
+    } else {
+      ElMessage.error(result.message || "更新监控主机失败");
+    }
+  } catch (error) {
+    ElMessage.error("更新监控主机失败");
+  } finally {
+    loading.value = false;
+  }
+}
 </script>
 
 <template>
@@ -198,6 +235,9 @@ function showFileSelector() {
         </el-button>
         <el-button type="danger" @click="handleDeleteReport">
           删除报告
+        </el-button>
+        <el-button type="warning" @click="updateMonitorDialogVisible = true">
+          更新监控主机
         </el-button>
       </el-space>
     </el-card>
@@ -307,6 +347,37 @@ function showFileSelector() {
               ? `批量上传 (${reportFiles.length} 个文件)`
               : "添加"
           }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Update Monitor Dialog -->
+    <el-dialog v-model="updateMonitorDialogVisible" title="更新监控主机" width="500px">
+      <el-form label-width="120px">
+        <el-form-item label="报告 ID">
+          <el-input v-model="updateReportId" placeholder="请输入报告 ID" />
+        </el-form-item>
+        <el-form-item label="监控主机">
+          <el-select
+            v-model="updateMonitorId"
+            placeholder="选择监控主机"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="host in hosts"
+              :key="host.id"
+              :label="host.name"
+              :value="host.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="updateMonitorDialogVisible = false" :disabled="loading"
+          >取消</el-button
+        >
+        <el-button type="primary" @click="handleUpdateMonitor" :loading="loading">
+          更新
         </el-button>
       </template>
     </el-dialog>
