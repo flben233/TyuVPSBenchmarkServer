@@ -61,6 +61,7 @@ type BenchmarkResult struct {
 	Disk      *TyuDiskResult     `json:"disk"`
 	IPQuality *IPQualityResult   `json:"ipquality"`
 	MonitorID *int64             `gorm:"size:255" json:"monitor_id"` // Optional monitor ID for association
+	OtherInfo string             `gorm:"size:4096" json:"other_info"`
 	CreatedAt time.Time          `json:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at"`
 }

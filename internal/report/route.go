@@ -30,6 +30,6 @@ func RegisterRoute(base string, r *gin.Engine) {
 		adminAPI.Use(auth.GetAdminMiddleware()) // Additional admin check middleware
 		adminAPI.POST("/add", handler.AddReport)
 		adminAPI.POST("/delete", handler.DeleteReport)
-		adminAPI.POST("/update-monitor", handler.UpdateReportMonitorID)
+		adminAPI.POST("/update", handler.UpdateReport)
 	}
 }

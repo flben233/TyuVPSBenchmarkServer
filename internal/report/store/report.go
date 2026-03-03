@@ -24,6 +24,7 @@ type benchmarkResult struct {
 	Disk      common.JSONField[model.TyuDiskResult]
 	IPQuality common.JSONField[model.IPQualityResult]
 	MonitorID *int64 `gorm:"size:255"` // Optional monitor ID for association
+	OtherInfo string `gorm:"size:4096"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -72,6 +73,7 @@ func modelToDBModel(report *model.BenchmarkResult) *benchmarkResult {
 		Disk:      *common.NewJSONField(report.Disk),
 		IPQuality: *common.NewJSONField(report.IPQuality),
 		MonitorID: report.MonitorID,
+		OtherInfo: report.OtherInfo,
 		CreatedAt: report.CreatedAt,
 		UpdatedAt: report.UpdatedAt,
 	}
@@ -92,6 +94,7 @@ func dbModelToModel(dbModel *benchmarkResult) *model.BenchmarkResult {
 		Disk:      dbModel.Disk.GetValue(),
 		IPQuality: dbModel.IPQuality.GetValue(),
 		MonitorID: dbModel.MonitorID,
+		OtherInfo: dbModel.OtherInfo,
 		CreatedAt: dbModel.CreatedAt,
 		UpdatedAt: dbModel.UpdatedAt,
 	}
@@ -411,8 +414,10 @@ func GetAllBackRouteTypes() ([]string, error) {
 	return routeTypes, nil
 }
 
-func UpdateReportMonitorID(reportID string, monitorID int64) error {
-	ctx := context.Background()
-	_, err := benchmarkResults.Where("report_id = ?", reportID).Update(ctx, "monitor_id", monitorID)
+func UpdateReport(reportID string, monitorID int64, otherInfo string) error {
+	err := db.Model(&model.BenchmarkResult{}).Where("report_id = ?", reportID).Updates(map[string]interface{}{
+		"monitor_id": monitorID,
+		"other_info": otherInfo,
+	}).Error
 	return err
 }

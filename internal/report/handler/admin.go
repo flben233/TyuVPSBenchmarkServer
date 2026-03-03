@@ -43,7 +43,7 @@ func AddReport(ctx *gin.Context) {
 		return
 	}
 
-	reportID, err := service.AddReport(req.HTML, req.MonitorID)
+	reportID, err := service.AddReport(req.HTML, req.MonitorID, req.OtherInfo)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
@@ -84,21 +84,21 @@ func DeleteReport(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, common.SuccessWithMessage[any]("Report deleted successfully", nil))
 }
 
-// UpdateReportMonitorID handles POST /report/admin/update-monitor
+// UpdateReport handles POST /report/admin/update
 // @Summary Update the Monitor ID of a Report (Admin)
 // @Description Update the monitor ID of a report by ID. Requires admin authentication.
 // @Tags report
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body request.UpdateReportMonitorIDRequest false "Report ID"
+// @Param request body request.UpdateReportRequest false "Report ID"
 // @Success 200 {object} common.APIResponse[any]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 401 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
 // @Router /report/admin/delete [post]
-func UpdateReportMonitorID(ctx *gin.Context) {
-	var req request.UpdateReportMonitorIDRequest
+func UpdateReport(ctx *gin.Context) {
+	var req request.UpdateReportRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "invalid request format"))
 		return
@@ -109,7 +109,7 @@ func UpdateReportMonitorID(ctx *gin.Context) {
 		return
 	}
 
-	if err := service.UpdateReportMonitorID(req.ID, req.MonitorID); err != nil {
+	if err := service.UpdateReport(req.ID, req.MonitorID, req.OtherInfo); err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
 	}

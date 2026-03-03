@@ -150,6 +150,9 @@ const goBack = () => {
             商家链接
           </el-link>
         </div>
+        <div v-if="report.other_info" class="report-other-info">
+          <el-tag type="info" effect="plain">{{ report.other_info }}</el-tag>
+        </div>
       </div>
 
       <monitor-widget
@@ -726,6 +729,10 @@ const goBack = () => {
 }
 
 .report-link {
+  margin-top: 12px;
+}
+
+.report-other-info {
   margin-top: 12px;
 }
 

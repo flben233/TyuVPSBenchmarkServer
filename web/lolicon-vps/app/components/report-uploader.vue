@@ -13,13 +13,14 @@ const props = defineProps({
   },
 });
 
-const { addReport, deleteReport, updateReportMonitorID } = useReport();
+const { addReport, deleteReport, updateReport } = useReport();
 
 // Report data
 const fileInput = useTemplateRef("report-selector");
 const addReportDialogVisible = ref(false);
 const reportFile = ref(null);
 const selectedMonitorId = ref(null);
+const otherInfo = ref("");
 const reportFiles = ref([]);
 const fileMonitorMapping = ref([]);
 const uploadProgress = ref(0);
@@ -30,6 +31,7 @@ const loading = ref(false);
 const updateMonitorDialogVisible = ref(false);
 const updateReportId = ref("");
 const updateMonitorId = ref(null);
+const updateOtherInfo = ref("");
 
 // Report functions
 async function handleFileSelect(event) {
@@ -53,6 +55,7 @@ async function handleFileSelect(event) {
     fileMonitorMapping.value = files.map((file) => ({
       file: file,
       monitorId: null,
+      otherInfo: "",
     }));
   }
 
@@ -84,10 +87,12 @@ async function handleAddReport() {
         try {
           const htmlContent = await reportFiles.value[i].text();
           const monitorId = fileMonitorMapping.value[i].monitorId;
+          const fileOtherInfo = fileMonitorMapping.value[i].otherInfo;
           const result = await addReport(
             props.token,
             htmlContent,
-            monitorId || undefined
+            monitorId || undefined,
+            fileOtherInfo || undefined
           );
 
           if (result.success) {
@@ -123,13 +128,15 @@ async function handleAddReport() {
       const result = await addReport(
         props.token,
         htmlContent,
-        selectedMonitorId.value || undefined
+        selectedMonitorId.value || undefined,
+        otherInfo.value || undefined
       );
       if (result.success) {
         ElMessage.success(`报告添加成功。ID: ${result.data.id}`);
         addReportDialogVisible.value = false;
         reportFile.value = null;
         selectedMonitorId.value = null;
+        otherInfo.value = "";
       } else {
         ElMessage.error(result.message || "添加报告失败");
       }
@@ -189,21 +196,23 @@ async function handleUpdateMonitor() {
 
   loading.value = true;
   try {
-    const result = await updateReportMonitorID(
+    const result = await updateReport(
       props.token,
       updateReportId.value,
-      updateMonitorId.value
+      updateMonitorId.value,
+      updateOtherInfo.value || undefined
     );
     if (result.success) {
-      ElMessage.success("监控主机更新成功");
+      ElMessage.success("报告更新成功");
       updateMonitorDialogVisible.value = false;
       updateReportId.value = "";
       updateMonitorId.value = null;
+      updateOtherInfo.value = "";
     } else {
-      ElMessage.error(result.message || "更新监控主机失败");
+      ElMessage.error(result.message || "更新报告失败");
     }
   } catch (error) {
-    ElMessage.error("更新监控主机失败");
+    ElMessage.error("更新报告失败");
   } finally {
     loading.value = false;
   }
@@ -237,7 +246,7 @@ async function handleUpdateMonitor() {
           删除报告
         </el-button>
         <el-button type="warning" @click="updateMonitorDialogVisible = true">
-          更新监控主机
+          更新报告
         </el-button>
       </el-space>
     </el-card>
@@ -264,6 +273,14 @@ async function handleUpdateMonitor() {
                 :value="host.id"
               />
             </el-select>
+          </el-form-item>
+          <el-form-item label="其他信息">
+            <el-input
+              v-model="otherInfo"
+              type="textarea"
+              :rows="3"
+              placeholder="输入其他信息（可选）"
+            />
           </el-form-item>
         </template>
 
@@ -321,6 +338,14 @@ async function handleUpdateMonitor() {
                       :value="host.id"
                     />
                   </el-select>
+                  <el-input
+                    v-model="mapping.otherInfo"
+                    type="textarea"
+                    :rows="2"
+                    placeholder="其他信息（可选）"
+                    size="small"
+                    style="margin-top: 8px"
+                  />
                 </div>
               </div>
             </div>
@@ -351,8 +376,8 @@ async function handleUpdateMonitor() {
       </template>
     </el-dialog>
 
-    <!-- Update Monitor Dialog -->
-    <el-dialog v-model="updateMonitorDialogVisible" title="更新监控主机" width="500px">
+    <!-- Update Report Dialog -->
+    <el-dialog v-model="updateMonitorDialogVisible" title="更新报告" width="500px">
       <el-form label-width="120px">
         <el-form-item label="报告 ID">
           <el-input v-model="updateReportId" placeholder="请输入报告 ID" />
@@ -370,6 +395,14 @@ async function handleUpdateMonitor() {
               :value="host.id"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item label="其他信息">
+          <el-input
+            v-model="updateOtherInfo"
+            type="textarea"
+            :rows="3"
+            placeholder="输入其他信息（可选）"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
