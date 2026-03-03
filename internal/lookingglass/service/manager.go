@@ -1,7 +1,7 @@
 package service
 
 import (
-	"VPSBenchmarkBackend/internal/config"
+	authUtil "VPSBenchmarkBackend/internal/auth/util"
 	"VPSBenchmarkBackend/internal/lookingglass/response"
 	"VPSBenchmarkBackend/internal/lookingglass/store"
 )
@@ -12,39 +12,38 @@ func (e *RecordLimitError) Error() string {
 	return "Looking glass record limit reached"
 }
 
-func AddRecord(userID, username, serverName, testURL string, isAdmin bool) (int64, error) {
-	if !isAdmin {
+func AddRecord(userID int64, username, serverName, testURL string) (int64, error) {
+	if authUtil.IsAdmin(userID) {
 		cnt, err := store.CountUserRecords(userID)
 		if err != nil {
 			return 0, err
 		}
-		limit := config.Get().MaxHostsPerUser
-		if cnt >= int64(limit) {
+		if authUtil.CheckHostQuota(userID, cnt) {
 			return 0, &RecordLimitError{}
 		}
 	}
 	return store.AddRecord(serverName, testURL, username, userID)
 }
 
-func UpdateRecord(userID string, id int64, serverName, testURL string, isAdmin bool) error {
-	if isAdmin {
+func UpdateRecord(userID int64, id int64, serverName, testURL string) error {
+	if authUtil.IsAdmin(userID) {
 		return store.UpdateRecordAsAdmin(id, serverName, testURL)
 	}
 	return store.UpdateRecord(id, serverName, testURL, userID)
 }
 
-func RemoveRecord(userID string, id int64, isAdmin bool) error {
-	if isAdmin {
+func RemoveRecord(userID int64, id int64) error {
+	if authUtil.IsAdmin(userID) {
 		return store.RemoveRecordAsAdmin(id)
 	}
 	return store.RemoveRecord(id, userID)
 }
 
-func ListRecords(userID string, isAdmin bool) ([]response.LookingGlassResponse, error) {
+func ListRecords(userID int64) ([]response.LookingGlassResponse, error) {
 	var records []store.LookingGlass
 	var err error
 
-	if isAdmin {
+	if authUtil.IsAdmin(userID) {
 		records, err = store.ListAllRecords()
 	} else {
 		records, err = store.ListRecordsByUploader(userID)
