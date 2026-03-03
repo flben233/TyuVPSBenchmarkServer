@@ -414,7 +414,7 @@ func GetAllBackRouteTypes() ([]string, error) {
 	return routeTypes, nil
 }
 
-func UpdateReport(reportID string, monitorID int64, otherInfo string) error {
+func UpdateReport(reportID string, monitorID *int64, otherInfo string) error {
 	err := db.Model(&benchmarkResult{}).Where("report_id = ?", reportID).Updates(map[string]interface{}{
 		"monitor_id": monitorID,
 		"other_info": otherInfo,
