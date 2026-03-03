@@ -2,7 +2,6 @@ package store
 
 import (
 	"VPSBenchmarkBackend/internal/common"
-	"VPSBenchmarkBackend/internal/lookingglass/model"
 	"context"
 
 	"gorm.io/gorm"
@@ -11,10 +10,10 @@ import (
 const LookingGlassTableName = "looking_glass"
 
 type LookingGlass struct {
-	Id           int64               `gorm:"primaryKey"`
-	ServerName   string              `gorm:"index"`
+	Id           int64  `gorm:"primaryKey"`
+	ServerName   string `gorm:"index"`
 	TestURL      string
-	Uploader     string
+	Uploader     int64
 	UploaderName string
 	ReviewStatus common.ReviewStatus `gorm:"default:0;index"`
 }
@@ -40,7 +39,7 @@ func InitLookingGlassStore(dbPath string) error {
 	return nil
 }
 
-func CountUserRecords(userID string) (int64, error) {
+func CountUserRecords(userID int64) (int64, error) {
 	cnt, err := lookingGlassRecords.Where("uploader = ?", userID).Count(context.Background(), "*")
 	if err != nil {
 		return 0, err
@@ -48,7 +47,7 @@ func CountUserRecords(userID string) (int64, error) {
 	return cnt, nil
 }
 
-func AddRecord(serverName, testURL, username, userID string) (int64, error) {
+func AddRecord(serverName, testURL, username string, userID int64) (int64, error) {
 	record := LookingGlass{
 		ServerName:   serverName,
 		TestURL:      testURL,
@@ -63,7 +62,7 @@ func AddRecord(serverName, testURL, username, userID string) (int64, error) {
 	return record.Id, nil
 }
 
-func UpdateRecord(id int64, serverName, testURL, uploader string) error {
+func UpdateRecord(id int64, serverName, testURL string, uploader int64) error {
 	record, err := GetRecord(id)
 	if err != nil {
 		return err
@@ -107,7 +106,7 @@ func UpdateRecordAsAdmin(id int64, serverName, testURL string) error {
 	return nil
 }
 
-func RemoveRecord(id int64, uploader string) error {
+func RemoveRecord(id int64, uploader int64) error {
 	affected, err := lookingGlassRecords.Where("id = ? AND uploader = ?", id, uploader).Delete(context.Background())
 	if err != nil {
 		return err
@@ -129,7 +128,7 @@ func RemoveRecordAsAdmin(id int64) error {
 	return nil
 }
 
-func ListRecordsByUploader(uploader string) ([]LookingGlass, error) {
+func ListRecordsByUploader(uploader int64) ([]LookingGlass, error) {
 	records, err := lookingGlassRecords.Where("uploader = ?", uploader).Find(context.Background())
 	return records, err
 }
@@ -148,16 +147,6 @@ func GetRecord(id int64) (*LookingGlass, error) {
 		return nil, nil
 	}
 	return &records[0], nil
-}
-
-func RecordToModel(record LookingGlass) model.LookingGlass {
-	return model.LookingGlass{
-		Id:           record.Id,
-		ServerName:   record.ServerName,
-		TestURL:      record.TestURL,
-		Uploader:     record.Uploader,
-		ReviewStatus: record.ReviewStatus,
-	}
 }
 
 // ListPendingRecords lists all records awaiting review

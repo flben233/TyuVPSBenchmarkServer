@@ -13,7 +13,7 @@ type MonitorHost struct {
 	Id           int64
 	Target       string
 	Name         string
-	Uploader     string
+	Uploader     int64
 	UploaderName string
 	History      []float32
 	ReviewStatus common.ReviewStatus

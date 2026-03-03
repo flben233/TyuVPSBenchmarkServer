@@ -2,10 +2,10 @@ package handler
 
 import (
 	"VPSBenchmarkBackend/internal/common"
-	"VPSBenchmarkBackend/internal/config"
 	"VPSBenchmarkBackend/internal/lookingglass/request"
 	"VPSBenchmarkBackend/internal/lookingglass/response"
 	"VPSBenchmarkBackend/internal/lookingglass/service"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -33,16 +33,16 @@ func AddRecord(ctx *gin.Context) {
 		return
 	}
 
-	userID, exists := ctx.Get("user_login")
+	userID, exists := ctx.Get("user_id")
 	userName, exists := ctx.Get("user_name")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 		return
 	}
-	isAdmin := config.Get().AdminID == userID.(string)
-	id, err := service.AddRecord(userID.(string), userName.(string), req.ServerName, req.TestURL, isAdmin)
+	id, err := service.AddRecord(userID.(int64), userName.(string), req.ServerName, req.TestURL)
 	if err != nil {
-		if _, ok := err.(*service.RecordLimitError); ok {
+		var recordLimitError *service.RecordLimitError
+		if errors.As(err, &recordLimitError) {
 			ctx.JSON(http.StatusForbidden, common.Error(common.ForbiddenCode, "Looking glass record limit reached"))
 			return
 		}
@@ -80,19 +80,13 @@ func UpdateRecord(ctx *gin.Context) {
 		return
 	}
 
-	userID, exists := ctx.Get("user_login")
+	userID, exists := ctx.Get("user_id")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 		return
 	}
 
-	isAdmin := false
-	cfg := config.Get()
-	if userID.(string) == cfg.AdminID {
-		isAdmin = true
-	}
-
-	err = service.UpdateRecord(userID.(string), id, req.ServerName, req.TestURL, isAdmin)
+	err = service.UpdateRecord(userID.(int64), id, req.ServerName, req.TestURL)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
@@ -121,19 +115,13 @@ func RemoveRecord(ctx *gin.Context) {
 		return
 	}
 
-	userID, exists := ctx.Get("user_login")
+	userID, exists := ctx.Get("user_id")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 		return
 	}
 
-	isAdmin := false
-	cfg := config.Get()
-	if userID.(string) == cfg.AdminID {
-		isAdmin = true
-	}
-
-	err = service.RemoveRecord(userID.(string), id, isAdmin)
+	err = service.RemoveRecord(userID.(int64), id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return
@@ -154,19 +142,13 @@ func RemoveRecord(ctx *gin.Context) {
 // @Failure 500 {object} common.APIResponse[any]
 // @Router /lookingglass/records [get]
 func ListRecords(ctx *gin.Context) {
-	userID, exists := ctx.Get("user_login")
+	userID, exists := ctx.Get("user_id")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 		return
 	}
 
-	isAdmin := false
-	cfg := config.Get()
-	if userID.(string) == cfg.AdminID {
-		isAdmin = true
-	}
-
-	records, err := service.ListRecords(userID.(string), isAdmin)
+	records, err := service.ListRecords(userID.(int64))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
 		return

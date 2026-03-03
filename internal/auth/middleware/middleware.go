@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"VPSBenchmarkBackend/internal/auth/util"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
 	"net/http"
@@ -57,8 +58,8 @@ func JWTAuth() gin.HandlerFunc {
 			if name, ok := claims["name"].(string); ok {
 				c.Set("user_name", name)
 			}
-			if login, ok := claims["login"].(string); ok {
-				c.Set("user_login", login)
+			if id, ok := claims["id"].(string); ok {
+				c.Set("user_id", id)
 			}
 			if avatarURL, ok := claims["avatar_url"].(string); ok {
 				c.Set("user_avatar_url", avatarURL)
@@ -71,14 +72,13 @@ func JWTAuth() gin.HandlerFunc {
 
 func CheckAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userLogin, exists := c.Get("user_login")
+		id, exists := c.Get("user_id")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 			c.Abort()
 			return
 		}
-		cfg := config.Get()
-		if userLogin.(string) != cfg.AdminID {
+		if !util.IsAdmin(id.(int64)) {
 			c.JSON(http.StatusForbidden, common.Error(common.ForbiddenCode, "User is not an admin"))
 			c.Abort()
 			return

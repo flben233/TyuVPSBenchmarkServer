@@ -1,7 +1,7 @@
 package service
 
 import (
-	"VPSBenchmarkBackend/internal/config"
+	authUtil "VPSBenchmarkBackend/internal/auth/util"
 	"VPSBenchmarkBackend/internal/monitor/model"
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/internal/monitor/store"
@@ -15,32 +15,31 @@ func (e *HostLimitError) Error() string {
 	return "Host limit reached"
 }
 
-func AddHost(userID, username, target, name string, isAdmin bool) (int64, error) {
-	if !isAdmin {
+func AddHost(userID int64, username, target, name string) (int64, error) {
+	if authUtil.IsAdmin(userID) {
 		cnt, err := store.CountUserHosts(userID)
 		if err != nil {
 			return 0, err
 		}
-		limit := config.Get().MaxHostsPerUser
-		if cnt >= int64(limit) {
+		if authUtil.CheckHostQuota(userID, cnt) {
 			return 0, &HostLimitError{}
 		}
 	}
 	return store.AddHost(target, name, username, userID)
 }
 
-func RemoveHost(userID string, id int64, isAdmin bool) error {
-	if isAdmin {
+func RemoveHost(userID int64, id int64) error {
+	if authUtil.IsAdmin(userID) {
 		return store.RemoveHostAsAdmin(id)
 	}
 	return store.RemoveHost(id, userID)
 }
 
-func ListHosts(userID string, isAdmin bool) ([]response.HostResponse, error) {
+func ListHosts(userID int64) ([]response.HostResponse, error) {
 	var hosts []model.MonitorHost
 	var err error
 
-	if isAdmin {
+	if authUtil.IsAdmin(userID) {
 		hosts, err = store.ListAllHosts()
 	} else {
 		hosts, err = store.ListHostsByUploader(userID)

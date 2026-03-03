@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Table name for monitor hosts
+// MonitorTableName Table name for monitor hosts
 const MonitorTableName = "monitor_hosts"
 
 // MonitorHost represents a monitor host record in the database
@@ -16,7 +16,7 @@ type monitorHost struct {
 	Id           int64  `gorm:"primaryKey"`
 	Target       string `gorm:"index"`
 	Name         string
-	Uploader     string
+	Uploader     int64
 	UploaderName string
 	History      common.JSONField[[]float32]
 	ReviewStatus common.ReviewStatus `gorm:"default:0;index"`
@@ -44,7 +44,7 @@ func InitMonitorStore(dbPath string) error {
 	return nil
 }
 
-func CountUserHosts(userID string) (int64, error) {
+func CountUserHosts(userID int64) (int64, error) {
 	cnt, err := monitorHosts.Where("user_id = ?", userID).Count(context.Background(), "*")
 	if err != nil {
 		return 0, err
@@ -65,7 +65,7 @@ func toMonitorHost(host monitorHost) model.MonitorHost {
 }
 
 // AddHost adds a new monitor host
-func AddHost(target, name, username, userID string) (int64, error) {
+func AddHost(target, name, username string, userID int64) (int64, error) {
 	host := monitorHost{
 		Target:       target,
 		Name:         name,
@@ -82,7 +82,7 @@ func AddHost(target, name, username, userID string) (int64, error) {
 }
 
 // RemoveHost removes a monitor host by ID
-func RemoveHost(id int64, uploader string) error {
+func RemoveHost(id int64, uploader int64) error {
 	affected, err := monitorHosts.Where("id = ? AND uploader = ?", id, uploader).Delete(context.Background())
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func RemoveHostAsAdmin(id int64) error {
 }
 
 // ListHostsByUploader lists all hosts uploaded by a specific user
-func ListHostsByUploader(uploader string) ([]model.MonitorHost, error) {
+func ListHostsByUploader(uploader int64) ([]model.MonitorHost, error) {
 	hosts, err := monitorHosts.Where("uploader = ?", uploader).Find(context.Background())
 	hostModels := make([]model.MonitorHost, len(hosts))
 	for i, host := range hosts {
@@ -148,13 +148,6 @@ func UpdateHostHistory(id int64, history []float32) error {
 		return gorm.ErrRecordNotFound
 	}
 	return nil
-}
-
-// GetAllTargets returns all approved target addresses for monitoring
-func GetAllTargets() ([]string, error) {
-	var targets []string
-	err := db.Model(&monitorHost{}).Where("review_status = ?", common.ReviewStatusApproved).Pluck("target", &targets).Error
-	return targets, err
 }
 
 // ListPendingHosts lists all hosts awaiting review
