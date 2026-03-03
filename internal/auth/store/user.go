@@ -1,10 +1,9 @@
 package store
 
 import (
-	"context"
-
 	"VPSBenchmarkBackend/internal/auth/model"
 	"VPSBenchmarkBackend/internal/common"
+	"context"
 	"gorm.io/gorm"
 )
 
@@ -82,11 +81,6 @@ func CreateUser(user *model.User) error {
 	return users.Create(ctx, user)
 }
 
-func UserExists(id int64) (bool, error) {
-	count, err := users.Where("id = ?", id).Count(ctx, "*")
-	return count > 0, err
-}
-
 func GetUserByID(id int64) (model.User, error) {
 	return users.Where("id = ?", id).First(ctx)
 }
@@ -113,8 +107,10 @@ func GetUserGroupByID(id uint32) (model.UserGroup, error) {
 	return userGroups.Where("id = ?", id).First(ctx)
 }
 
-func UpdateUserGroup(group model.UserGroup) (int, error) {
-	return userGroups.Where("id = ?", group.ID).Updates(ctx, group)
+func UpdateUserGroup(group model.UserGroup) error {
+	// 这里有个坑，直接用Updates零值字段不更新，于是false的字段没法更新到数据库
+	db.Save(&group)
+	return nil
 }
 
 func DeleteUserGroup(id uint32) (int, error) {
