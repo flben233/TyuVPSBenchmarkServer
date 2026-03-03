@@ -53,7 +53,7 @@ func AddRecord(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, common.Success(response.LookingGlassIDResponse{Id: id}))
 }
 
-// UpdateRecord handles POST /lookingglass/records/:id - updates a looking glass record
+// UpdateRecord handles POST /lookingglass/records/delete/:id - updates a looking glass record
 // @Summary Update Looking Glass Record
 // @Description Update a looking glass record by ID. Requires authentication.
 // @Tags lookingglass
@@ -95,7 +95,7 @@ func UpdateRecord(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, common.Success[any](nil))
 }
 
-// RemoveRecord handles POST /lookingglass/records/:id - removes a looking glass record
+// RemoveRecord handles POST /lookingglass/records/delete/:id - removes a looking glass record
 // @Summary Remove Looking Glass Record
 // @Description Remove a looking glass record by ID. Requires authentication.
 // @Tags lookingglass
