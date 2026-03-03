@@ -13,9 +13,9 @@ const MonitorTableName = "monitor_hosts"
 
 // MonitorHost represents a monitor host record in the database
 type monitorHost struct {
-	Id           int64  `gorm:"primaryKey"`
-	Target       string `gorm:"index"`
-	Name         string
+	Id           int64 `gorm:"primaryKey"`
+	Target       string
+	Name         string `gorm:"index:,sort:asc"`
 	Uploader     int64
 	UploaderName string
 	History      common.JSONField[[]float32]
