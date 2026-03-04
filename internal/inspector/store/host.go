@@ -28,7 +28,15 @@ func CreateHost(host *model.InspectHost) error {
 	return hosts.Create(context.Background(), host)
 }
 
-func UpdateHost(host model.InspectHost) {
+func GetHostByID(id int64) (*model.InspectHost, error) {
+	host, err := hosts.Where("id = ?", id).First(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return &host, nil
+}
+
+func UpdateHost(host *model.InspectHost) {
 	db.Save(host)
 }
 

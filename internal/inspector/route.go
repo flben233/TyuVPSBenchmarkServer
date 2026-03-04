@@ -1,0 +1,29 @@
+package inspector
+
+import (
+	"VPSBenchmarkBackend/internal/auth"
+	"VPSBenchmarkBackend/internal/common"
+	"VPSBenchmarkBackend/internal/inspector/handler"
+
+	"github.com/gin-gonic/gin"
+)
+
+func init() {
+	common.RegisterRoutes(RegisterRoute)
+}
+
+func RegisterRoute(base string, r *gin.Engine) {
+	base += "/inspector"
+
+	protectedAPI := r.Group(base)
+	protectedAPI.Use(auth.GetJWTMiddleware())
+	{
+		protectedAPI.GET("/hosts", handler.ListHosts)
+		protectedAPI.POST("/hosts/create", handler.CreateHost)
+		protectedAPI.POST("/hosts/update/:id", handler.UpdateHost)
+		protectedAPI.POST("/hosts/delete/:id", handler.DeleteHost)
+
+		protectedAPI.POST("/data/put", handler.PutData)
+		protectedAPI.GET("/data", handler.QueryData)
+	}
+}
