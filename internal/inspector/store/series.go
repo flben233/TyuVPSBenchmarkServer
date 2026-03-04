@@ -55,14 +55,28 @@ func SavePingPoints(points []model.PingPoint) error {
 	return client.WriteData(ctx, pArr)
 }
 
-func QueryTrafficPoints(hostID int64, start, end int64, interval string) ([]model.TrafficPoint, error) {
-	return queryPoints(TrafficMeasurement, hostID, start, end, interval, func(v map[string]interface{}) model.TrafficPoint {
-		return model.TrafficPoint{
-			HostID:      hostID,
-			Consumption: v["mean"].(float32),
-			Time:        v["time"].(int64),
-		}
-	})
+func QueryTrafficSum(hostID int64, start, end int64, interval string) (float32, float32, error) {
+	query := fmt.Sprintf("SELECT SUM(recv) AS recv_sum, SUM(sent) AS sent_sum FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end", TrafficMeasurement)
+	params := influxdb3.QueryParameters{
+		"host_id":  hostID,
+		"start":    start,
+		"end":      end,
+		"interval": interval,
+	}
+	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
+	if err != nil {
+		return 0, 0, err
+	}
+	var recvSum, sentSum float32
+	for iter.Next() {
+		value := iter.Value()
+		recvSum += value["recv_sum"].(float32)
+		sentSum += value["sent_sum"].(float32)
+	}
+	if iter.Err() != nil {
+		return 0, 0, iter.Err()
+	}
+	return recvSum, sentSum, nil
 }
 
 func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
