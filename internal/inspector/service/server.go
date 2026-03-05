@@ -9,7 +9,9 @@ import (
 	"VPSBenchmarkBackend/internal/inspector/store"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"gorm.io/gorm"
 	"io"
 	"log"
 	"net/http"
@@ -195,4 +197,38 @@ func queryHost(target string) (float32, error) {
 		return 0, err
 	}
 	return data[target], nil
+}
+
+func GetUserSettings(userID int64) *response.SettingData {
+	setting, err := store.GetSettingByUserID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			setting = &model.InspectorSetting{
+				UserID: userID,
+			}
+			if err := store.UpsertSetting(setting); err != nil {
+				log.Printf("Failed to create default setting for user %d: %v", userID, err)
+			}
+		} else {
+			log.Printf("Failed to get setting for user %d: %v", userID, err)
+			setting = &model.InspectorSetting{UserID: userID}
+		}
+	}
+	return &response.SettingData{
+		NotifyURL: setting.NotifyURL,
+		BgURL:     setting.BgURL,
+	}
+}
+
+func UpdateUserSettings(userID int64, notifyURL, bgURL *string) error {
+	setting, err := store.GetSettingByUserID(userID)
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		setting = &model.InspectorSetting{UserID: userID}
+	}
+	setting.BgURL = bgURL
+	setting.NotifyURL = notifyURL
+	return store.UpsertSetting(setting)
 }

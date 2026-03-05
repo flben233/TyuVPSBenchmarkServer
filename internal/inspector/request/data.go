@@ -29,3 +29,8 @@ type QueryDataRequest struct {
 	End      int64  `form:"end" binding:"required"`
 	Interval string `form:"interval" binding:"required"`
 }
+
+type UpdateInspectorSettingRequest struct {
+	NotifyURL *string `json:"notify_url"`
+	BgURL     *string `json:"bg_url"`
+}
