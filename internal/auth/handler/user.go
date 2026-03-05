@@ -29,7 +29,7 @@ func GetUser(c *gin.Context) {
 	}
 	user, err := service.GetUser(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, common.Success(user))
@@ -47,7 +47,7 @@ func GetUser(c *gin.Context) {
 func ListUsers(c *gin.Context) {
 	users, err := service.ListUsers()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, common.Success(users))
@@ -72,7 +72,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 	if err := service.UpdateUser(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, common.SuccessWithMessage[any]("user updated", nil))
@@ -99,7 +99,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	if err := service.DeleteUser(req.ID); err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, common.SuccessWithMessage[any]("user deleted", nil))
@@ -124,7 +124,7 @@ func CreateUserGroup(c *gin.Context) {
 		return
 	}
 	if err := service.CreateUserGroup(group); err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, common.SuccessWithMessage[any]("group created", nil))
@@ -142,7 +142,7 @@ func CreateUserGroup(c *gin.Context) {
 func ListUserGroups(c *gin.Context) {
 	groups, err := service.ListUserGroups()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, common.Success(groups))
@@ -167,7 +167,7 @@ func UpdateUserGroup(c *gin.Context) {
 		return
 	}
 	if err := service.UpdateUserGroup(&group); err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, common.SuccessWithMessage[any]("group updated", nil))
@@ -194,7 +194,7 @@ func DeleteUserGroup(c *gin.Context) {
 		return
 	}
 	if err := service.DeleteUserGroup(req.ID); err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, common.SuccessWithMessage[any]("group deleted", nil))

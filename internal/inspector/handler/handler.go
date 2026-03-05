@@ -33,9 +33,9 @@ func CreateHost(ctx *gin.Context) {
 		return
 	}
 
-	id, err := service.CreateHost(userID.(int64), req.Target, req.Name, req.Tags)
+	id, err := service.CreateHost(userID.(int64), req.Target, req.Name, req.Tags, req.Notify)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -74,7 +74,7 @@ func UpdateHost(ctx *gin.Context) {
 
 	err = service.UpdateHost(userID.(int64), hostID, req.Name, req.Tags, req.Target)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -106,7 +106,7 @@ func DeleteHost(ctx *gin.Context) {
 
 	err = service.DeleteHost(userID.(int64), hostID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -131,7 +131,7 @@ func ListHosts(ctx *gin.Context) {
 
 	hosts, err := service.ListHosts(userID.(int64))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -163,7 +163,7 @@ func PutData(ctx *gin.Context) {
 
 	err := service.PutData(userID.(int64), req.Traffic, req.HostInfo, req.HostID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -197,7 +197,7 @@ func QueryData(ctx *gin.Context) {
 
 	data, err := service.QueryData(userID.(int64), req.Start, req.End, req.Interval)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 

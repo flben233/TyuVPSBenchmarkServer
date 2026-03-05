@@ -45,7 +45,7 @@ func AddReport(ctx *gin.Context) {
 
 	reportID, err := service.AddReport(req.HTML, req.MonitorID, req.OtherInfo)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -77,7 +77,7 @@ func DeleteReport(ctx *gin.Context) {
 	}
 
 	if err := service.DeleteReport(req.ID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -110,7 +110,7 @@ func UpdateReport(ctx *gin.Context) {
 	}
 
 	if err := service.UpdateReport(req.ID, req.MonitorID, req.OtherInfo); err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 

@@ -5,7 +5,6 @@ import (
 	"VPSBenchmarkBackend/internal/lookingglass/request"
 	"VPSBenchmarkBackend/internal/lookingglass/response"
 	"VPSBenchmarkBackend/internal/lookingglass/service"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -41,12 +40,7 @@ func AddRecord(ctx *gin.Context) {
 	}
 	id, err := service.AddRecord(userID.(int64), userName.(string), req.ServerName, req.TestURL)
 	if err != nil {
-		var recordLimitError *service.RecordLimitError
-		if errors.As(err, &recordLimitError) {
-			ctx.JSON(http.StatusForbidden, common.Error(common.ForbiddenCode, "Looking glass record limit reached"))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -88,7 +82,7 @@ func UpdateRecord(ctx *gin.Context) {
 
 	err = service.UpdateRecord(userID.(int64), id, req.ServerName, req.TestURL)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -123,7 +117,7 @@ func RemoveRecord(ctx *gin.Context) {
 
 	err = service.RemoveRecord(userID.(int64), id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -150,7 +144,7 @@ func ListRecords(ctx *gin.Context) {
 
 	records, err := service.ListRecords(userID.(int64))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -169,7 +163,7 @@ func ListRecords(ctx *gin.Context) {
 func ListAllRecords(ctx *gin.Context) {
 	records, err := service.ListAllRecords()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 

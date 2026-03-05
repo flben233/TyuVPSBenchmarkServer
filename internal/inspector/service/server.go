@@ -1,6 +1,7 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/auth/util"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
 	"VPSBenchmarkBackend/internal/inspector/model"
@@ -22,12 +23,20 @@ const (
 	putMaxLength = 1
 )
 
-func CreateHost(userID int64, target, name, tags string) (int64, error) {
+func CreateHost(userID int64, target, name, tags string, notify bool) (int64, error) {
+	hosts, err := store.CountUserHosts(userID)
+	if err != nil {
+		return 0, err
+	}
+	if !util.CheckInspectorQuota(userID, hosts) {
+		return 0, &common.LimitExceededError{Message: fmt.Sprintf("Host limit reached: %d hosts", hosts)}
+	}
 	host := &model.InspectHost{
 		UserID: userID,
 		Target: target,
 		Name:   name,
 		Tags:   tags,
+		Notify: notify,
 	}
 	if err := store.CreateHost(host); err != nil {
 		return 0, err
@@ -46,7 +55,7 @@ func UpdateHost(userID int64, hostID int64, name, tags, target string) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("host %d not found or not owned by user", hostID)
+		return &common.InvalidParamError{Message: fmt.Sprintf("host %d not found or not owned by user", hostID)}
 	}
 
 	host, err := store.GetHostByID(hostID)
@@ -55,6 +64,7 @@ func UpdateHost(userID int64, hostID int64, name, tags, target string) error {
 	}
 	host.Name = name
 	host.Tags = tags
+	host.Target = target
 
 	store.UpdateHost(host)
 	return nil
@@ -71,7 +81,7 @@ func DeleteHost(userID int64, hostID int64) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("host %d not found or not owned by user", hostID)
+		return &common.InvalidParamError{Message: fmt.Sprintf("host %d not found or not owned by user", hostID)}
 	}
 	return store.DeleteHost(hostID)
 }
@@ -89,14 +99,14 @@ func PutData(userID int64, trafficData []model.TrafficPoint, hostInfo common.Ser
 	}
 	for _, point := range trafficData {
 		if _, ok := idSet[point.HostID]; !ok {
-			return fmt.Errorf("invalid host ID %d in traffic data", point.HostID)
+			return &common.InvalidParamError{Message: fmt.Sprintf("host %d not found or not owned by user", point.HostID)}
 		}
 	}
 	if len(trafficData) > putMaxLength {
-		return fmt.Errorf("too many traffic points, max length is %d", putMaxLength)
+		return &common.InvalidParamError{Message: fmt.Sprintf("too many data points, max length is %d", putMaxLength)}
 	}
 	if lastPut, ok := putRecord[hostID]; ok && time.Since(lastPut) < putInterval {
-		return fmt.Errorf("put data too frequently, please wait for %v", putInterval-time.Since(lastPut))
+		return &common.RateLimitExceededError{Message: fmt.Sprintf("put data too frequently, please wait %d seconds", int(putInterval.Seconds()))}
 	}
 	putRecord[hostID] = time.Now()
 

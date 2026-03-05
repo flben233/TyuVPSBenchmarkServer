@@ -2,15 +2,10 @@ package service
 
 import (
 	authUtil "VPSBenchmarkBackend/internal/auth/util"
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/lookingglass/response"
 	"VPSBenchmarkBackend/internal/lookingglass/store"
 )
-
-type RecordLimitError struct{}
-
-func (e *RecordLimitError) Error() string {
-	return "Looking glass record limit reached"
-}
 
 func AddRecord(userID int64, username, serverName, testURL string) (int64, error) {
 	if authUtil.IsAdmin(userID) {
@@ -19,7 +14,7 @@ func AddRecord(userID int64, username, serverName, testURL string) (int64, error
 			return 0, err
 		}
 		if authUtil.CheckHostQuota(userID, cnt) {
-			return 0, &RecordLimitError{}
+			return 0, &common.LimitExceededError{Message: "Looking glass record limit reached"}
 		}
 	}
 	return store.AddRecord(serverName, testURL, username, userID)

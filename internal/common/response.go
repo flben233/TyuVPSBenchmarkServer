@@ -1,10 +1,13 @@
 package common
 
 const (
-	SuccessCode       = 0
-	InternalErrorCode = -1
-	BadRequestCode    = -2
-	ForbiddenCode     = -3
+	SuccessCode           = 0
+	InternalErrorCode     = -1
+	BadRequestCode        = -2
+	ForbiddenCode         = -3
+	LimitExceededCode     = -4
+	InvalidParamCode      = -5
+	RateLimitExceededCode = -6
 )
 
 // APIResponse is the unified response structure for all API endpoints

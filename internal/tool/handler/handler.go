@@ -48,7 +48,7 @@ func Traceroute(ctx *gin.Context) {
 
 	outputErr, output := service.Traceroute(&req)
 	if outputErr != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, outputErr.Error()))
+		common.DefaultErrorHandler(ctx, outputErr)
 		return
 	}
 	ctx.JSON(http.StatusOK, common.Success(output))
