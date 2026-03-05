@@ -8,3 +8,8 @@ type HostData struct {
 	Ping []model.PingPoint `json:"ping"`
 	model.InspectHost
 }
+
+type SettingData struct {
+	NotifyURL *string `json:"notify_url"`
+	BgURL     *string `json:"bg_url"`
+}
