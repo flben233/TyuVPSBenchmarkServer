@@ -23,7 +23,7 @@ import (
 func ListPendingRecords(ctx *gin.Context) {
 	records, err := service.ListPendingRecords()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -52,7 +52,7 @@ func ApproveRecord(ctx *gin.Context) {
 
 	err = service.ApproveRecord(id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -81,7 +81,7 @@ func RejectRecord(ctx *gin.Context) {
 
 	err = service.RejectRecord(id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 

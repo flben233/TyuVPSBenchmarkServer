@@ -8,5 +8,6 @@ type InspectHost struct {
 	Target string `json:"target"`
 	Name   string `json:"name"`
 	Tags   string `json:"tags"` // json array of strings
+	Notify bool   `json:"notify"`
 	common.ServerStatus
 }

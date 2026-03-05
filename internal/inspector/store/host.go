@@ -28,6 +28,15 @@ func CreateHost(host *model.InspectHost) error {
 	return hosts.Create(context.Background(), host)
 }
 
+func CountUserHosts(userID int64) (int64, error) {
+	count, err := hosts.Where("user_id = ?", userID).Count(context.Background(), "*")
+	return count, err
+}
+
+func ListAllHosts() ([]model.InspectHost, error) {
+	return hosts.Find(context.Background())
+}
+
 func GetHostByID(id int64) (*model.InspectHost, error) {
 	host, err := hosts.Where("id = ?", id).First(context.Background())
 	if err != nil {

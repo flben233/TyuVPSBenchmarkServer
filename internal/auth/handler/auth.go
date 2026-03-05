@@ -31,7 +31,7 @@ func GithubLogin(c *gin.Context) {
 
 	token, err := service.GithubLogin(code)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, "Failed to login with GitHub: "+err.Error()))
+		common.DefaultErrorHandler(c, err)
 		return
 	}
 	query := url.Values{}

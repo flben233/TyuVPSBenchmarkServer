@@ -23,7 +23,7 @@ import (
 func ListPendingHosts(ctx *gin.Context) {
 	hosts, err := service.ListPendingHosts()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -52,7 +52,7 @@ func ApproveHost(ctx *gin.Context) {
 
 	err = service.ApproveHost(id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -81,7 +81,7 @@ func RejectHost(ctx *gin.Context) {
 
 	err = service.RejectHost(id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 

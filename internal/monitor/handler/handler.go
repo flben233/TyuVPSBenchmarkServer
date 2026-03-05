@@ -5,7 +5,6 @@ import (
 	"VPSBenchmarkBackend/internal/monitor/request"
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/internal/monitor/service"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -42,12 +41,7 @@ func AddHost(ctx *gin.Context) {
 	}
 	id, err := service.AddHost(userID.(int64), userName.(string), req.Target, req.Name)
 	if err != nil {
-		var hostLimitError *service.HostLimitError
-		if errors.As(err, &hostLimitError) {
-			ctx.JSON(http.StatusForbidden, common.Error(common.ForbiddenCode, "Host limit reached"))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -83,7 +77,7 @@ func RemoveHost(ctx *gin.Context) {
 
 	err = service.RemoveHost(userID.(int64), id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -111,7 +105,7 @@ func ListHosts(ctx *gin.Context) {
 
 	hosts, err := service.ListHosts(userID.(int64))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -131,7 +125,7 @@ func GetStatistics(ctx *gin.Context) {
 	id := ctx.Query("id")
 	stats, err := service.GetStatistics(id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -150,7 +144,7 @@ func GetStatistics(ctx *gin.Context) {
 func GetServerStatus(ctx *gin.Context) {
 	status, err := service.GetServerStatus()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 

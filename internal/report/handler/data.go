@@ -27,7 +27,7 @@ func ListReports(ctx *gin.Context) {
 
 	reports, total, err := service.ListReports(page, pageSize)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -90,7 +90,7 @@ func SearchReports(ctx *gin.Context) {
 
 	reports, total, err := service.SearchReports(&searchReq, page, pageSize)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -109,7 +109,7 @@ func SearchReports(ctx *gin.Context) {
 func GetAllMediaNames(ctx *gin.Context) {
 	mediaNames, err := service.GetAllMediaNames()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -128,7 +128,7 @@ func GetAllMediaNames(ctx *gin.Context) {
 func GetAllVirtualizations(ctx *gin.Context) {
 	virtualizations, err := service.GetAllVirtualizations()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
@@ -147,7 +147,7 @@ func GetAllVirtualizations(ctx *gin.Context) {
 func GetAllBackRouteTypes(ctx *gin.Context) {
 	routeTypes, err := service.GetAllBackRouteTypes()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, common.Error(common.InternalErrorCode, err.Error()))
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
