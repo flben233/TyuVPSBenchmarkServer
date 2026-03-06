@@ -45,7 +45,7 @@ func InitMonitorStore(dbPath string) error {
 }
 
 func CountUserHosts(userID int64) (int64, error) {
-	cnt, err := monitorHosts.Where("user_id = ?", userID).Count(context.Background(), "*")
+	cnt, err := monitorHosts.Where("uploader = ?", userID).Count(context.Background(), "*")
 	if err != nil {
 		return 0, err
 	}
