@@ -54,6 +54,10 @@ func ListHostsByUser(userID int64) ([]model.InspectHost, error) {
 	return hosts.Where("user_id = ?", userID).Find(context.Background())
 }
 
+func ListAllHost() ([]model.InspectHost, error) {
+	return hosts.Find(context.Background())
+}
+
 func GetHostIDByUser(userID int64) []int64 {
 	var ids []int64
 	db.Model(&model.InspectHost{}).Where("user_id = ?", userID).Pluck("id", &ids)
