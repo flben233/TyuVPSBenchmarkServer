@@ -5,7 +5,7 @@ import (
 	_ "VPSBenchmarkBackend/internal/auth"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
-	_ "VPSBenchmarkBackend/internal/inspector"
+	//_ "VPSBenchmarkBackend/internal/inspector"
 	_ "VPSBenchmarkBackend/internal/lookingglass"
 	_ "VPSBenchmarkBackend/internal/monitor"
 	_ "VPSBenchmarkBackend/internal/report"
