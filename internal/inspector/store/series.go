@@ -79,6 +79,26 @@ func QueryTrafficSum(hostID int64, start, end int64, interval string) (float32, 
 	return recvSum, sentSum, nil
 }
 
+func QueryLatestPing(hostID int64) (float32, error) {
+	query := fmt.Sprintf("SELECT LAST(latency) AS latency FROM %s WHERE host_id = $host_id", PingMeasurement)
+	params := influxdb3.QueryParameters{
+		"host_id": hostID,
+	}
+	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
+	if err != nil {
+		return 0, err
+	}
+	var latency float32
+	if iter.Next() {
+		value := iter.Value()
+		latency = value["latency"].(float32)
+	}
+	if iter.Err() != nil {
+		return 0, iter.Err()
+	}
+	return latency, nil
+}
+
 func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
 	return queryPoints(PingMeasurement, hostID, start, end, interval, func(v map[string]interface{}) model.PingPoint {
 		return model.PingPoint{

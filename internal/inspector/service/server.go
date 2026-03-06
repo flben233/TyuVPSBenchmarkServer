@@ -2,27 +2,32 @@ package service
 
 import (
 	"VPSBenchmarkBackend/internal/auth/util"
+	"VPSBenchmarkBackend/internal/cache"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
 	"VPSBenchmarkBackend/internal/inspector/model"
 	"VPSBenchmarkBackend/internal/inspector/response"
 	"VPSBenchmarkBackend/internal/inspector/store"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 var putRecord = make(map[int64]time.Time)
 
 const (
-	putInterval  = 30 * time.Second
-	putMaxLength = 1
+	putInterval    = 30 * time.Second
+	putMaxLength   = 1
+	notifyInterval = 5 * time.Minute
 )
 
 func CreateHost(userID int64, target, name, tags string, notify bool) (int64, error) {
@@ -125,6 +130,17 @@ func PutData(userID int64, trafficData []model.TrafficPoint, hostInfo common.Ser
 		Latency: lat,
 		Time:    trafficData[0].Time,
 	}}
+
+	if lat == 0 && host.Notify {
+		tryNotify(userID, host, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
+	} else if lat > 0 {
+		ping, err := store.QueryLatestPing(hostID)
+		if err != nil {
+			log.Printf("Failed to query latest ping for host %d: %v", hostID, err)
+		} else if ping == 0 && host.Notify {
+			tryNotify(userID, host, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
+		}
+	}
 
 	host = &model.InspectHost{
 		ID:           host.ID,
@@ -231,4 +247,43 @@ func UpdateUserSettings(userID int64, notifyURL, bgURL *string) error {
 	setting.BgURL = bgURL
 	setting.NotifyURL = notifyURL
 	return store.UpsertSetting(setting)
+}
+
+func tryNotify(userID int64, host *model.InspectHost, message string) {
+	setting, err := store.GetSettingByUserID(userID)
+	if err != nil {
+		log.Printf("Failed to get setting for user %d: %v", userID, err)
+	}
+	if setting.NotifyURL == nil {
+		return
+	}
+	hostID := host.ID
+	err = cache.GetClient().Get(context.Background(), strconv.FormatInt(hostID, 10)).Err()
+	if errors.Is(err, redis.Nil) {
+		// 发送通知
+		go func() {
+			notifyReq := map[string]interface{}{
+				"urls":  setting.NotifyURL,
+				"body":  message,
+				"title": "Lolicon Monitor 通知",
+			}
+			reqBytes, err := json.Marshal(notifyReq)
+			if err != nil {
+				log.Printf("Failed to marshal notify request for host %d: %v", hostID, err)
+				return
+			}
+			resp, err := http.Post(config.Get().AppriseURL, "application/json", bytes.NewReader(reqBytes))
+			if err != nil {
+				log.Printf("Failed to send notify request for host %d: %v", hostID, err)
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				bodyBytes, _ := io.ReadAll(resp.Body)
+				log.Printf("Failed to send notify request for host %d, status: %d, response: %s", hostID, resp.StatusCode, string(bodyBytes))
+			}
+		}()
+		// 设置Redis键，过期时间为通知间隔，防止频繁通知
+		cache.GetClient().Set(context.Background(), strconv.FormatInt(hostID, 10), setting.NotifyURL, notifyInterval)
+	}
 }
