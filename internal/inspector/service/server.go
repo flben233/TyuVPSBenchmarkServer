@@ -25,10 +25,49 @@ import (
 var putRecord = make(map[int64]time.Time)
 
 const (
+	pingInterval   = 1 * time.Minute
 	putInterval    = 30 * time.Second
 	putMaxLength   = 1
 	notifyInterval = 5 * time.Minute
 )
+
+func init() {
+	common.RegisterCronJob(pingInterval, pingHosts)
+}
+
+func pingHosts() {
+	hosts, err := store.ListAllHost()
+	if err != nil {
+		log.Printf("Failed to list all hosts for pinging: %v", err)
+		return
+	}
+	for _, host := range hosts {
+		lat, err := queryHost(host.Target)
+		if err != nil {
+			log.Printf("failed to query host %s: %s", host.Target, err.Error())
+		}
+		pingData := []model.PingPoint{{
+			HostID:  host.ID,
+			Latency: lat,
+			Time:    time.Now().Unix(),
+		}}
+
+		if lat == 0 && host.Notify {
+			tryNotify(host.UserID, &host, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
+		} else if lat > 0 {
+			ping, err := store.QueryLatestPing(host.ID)
+			if err != nil {
+				log.Printf("Failed to query latest ping for host %d: %v", host.ID, err)
+			} else if ping == 0 && host.Notify {
+				tryNotify(host.UserID, &host, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
+			}
+		}
+
+		if err := store.SavePingPoints(pingData); err != nil {
+			log.Printf("Failed to save ping points for host %d: %v", host.ID, err)
+		}
+	}
+}
 
 func CreateHost(userID int64, target, name, tags string, notify bool) (int64, error) {
 	hosts, err := store.CountUserHosts(userID)
@@ -121,26 +160,6 @@ func PutData(userID int64, trafficData []model.TrafficPoint, hostInfo common.Ser
 	if err != nil {
 		return fmt.Errorf("failed to get host by ID %d: %w", hostID, err)
 	}
-	lat, err := queryHost(host.Target)
-	if err != nil {
-		return fmt.Errorf("failed to query host %s: %w", host.Target, err)
-	}
-	pingData := []model.PingPoint{{
-		HostID:  hostID,
-		Latency: lat,
-		Time:    trafficData[0].Time,
-	}}
-
-	if lat == 0 && host.Notify {
-		tryNotify(userID, host, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
-	} else if lat > 0 {
-		ping, err := store.QueryLatestPing(hostID)
-		if err != nil {
-			log.Printf("Failed to query latest ping for host %d: %v", hostID, err)
-		} else if ping == 0 && host.Notify {
-			tryNotify(userID, host, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
-		}
-	}
 
 	host = &model.InspectHost{
 		ID:           host.ID,
@@ -155,9 +174,6 @@ func PutData(userID int64, trafficData []model.TrafficPoint, hostInfo common.Ser
 
 	// 保存数据
 	if err := store.SaveTrafficPoints(trafficData); err != nil {
-		return err
-	}
-	if err := store.SavePingPoints(pingData); err != nil {
 		return err
 	}
 	return nil
@@ -186,33 +202,6 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 		}
 	}
 	return data, nil
-}
-
-func queryHost(target string) (float32, error) {
-	req, err := json.Marshal([]string{target})
-	if err != nil {
-		log.Printf("Failed to marshal targets: %v", err)
-		return 0, err
-	}
-	resp, err := http.Post(config.Get().ExporterURL+"/monitor", "application/json", bytes.NewReader(req))
-	if err != nil {
-		log.Printf("Failed to get exporter data: %v", err)
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Failed to read exporter response body: %v", err)
-		return 0, err
-	}
-	var data map[string]float32
-	err = json.Unmarshal(bodyBytes, &data)
-	if err != nil {
-		log.Printf("Failed to unmarshal exporter response: %v", err)
-		return 0, err
-	}
-	return data[target], nil
 }
 
 func GetUserSettings(userID int64) *response.SettingData {
@@ -247,6 +236,33 @@ func UpdateUserSettings(userID int64, notifyURL, bgURL *string) error {
 	setting.BgURL = bgURL
 	setting.NotifyURL = notifyURL
 	return store.UpsertSetting(setting)
+}
+
+func queryHost(target string) (float32, error) {
+	req, err := json.Marshal([]string{target})
+	if err != nil {
+		log.Printf("Failed to marshal targets: %v", err)
+		return 0, err
+	}
+	resp, err := http.Post(config.Get().ExporterURL+"/monitor", "application/json", bytes.NewReader(req))
+	if err != nil {
+		log.Printf("Failed to get exporter data: %v", err)
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Failed to read exporter response body: %v", err)
+		return 0, err
+	}
+	var data map[string]float32
+	err = json.Unmarshal(bodyBytes, &data)
+	if err != nil {
+		log.Printf("Failed to unmarshal exporter response: %v", err)
+		return 0, err
+	}
+	return data[target], nil
 }
 
 func tryNotify(userID int64, host *model.InspectHost, message string) {
