@@ -5,9 +5,10 @@
 	"clientSecret": "",
 	"jwtSecret": "",
 	"jwtExpiry": 86400,
-	"adminId": "",
-	"maxHostsPerUser": 5,
+	"adminId": 0,
 	"frontendUrl": "http://localhost:3000",
 	"githubHttpsProxy": "http://127.0.0.1:10808",
-	"exporterUrl": "http://127.0.0.1:20831/exporter"
+	"exporterUrl": "",
+    "redisHost": "",
+    "redisPasswd": ""
 }
