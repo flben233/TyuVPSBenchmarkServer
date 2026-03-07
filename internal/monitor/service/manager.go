@@ -11,14 +11,12 @@ import (
 // 这边的方法需要区分是否为管理员，管理员可以操作所有用户的数据，普通用户只能操作自己的数据
 
 func AddHost(userID int64, username, target, name string) (int64, error) {
-	if autill.IsAdmin(userID) {
-		cnt, err := store.CountUserHosts(userID)
-		if err != nil {
-			return 0, err
-		}
-		if autill.CheckHostQuota(userID, cnt) {
-			return 0, &common.LimitExceededError{Message: "Host limit reached"}
-		}
+	cnt, err := store.CountUserHosts(userID)
+	if err != nil {
+		return 0, err
+	}
+	if !autill.CheckHostQuota(userID, cnt) {
+		return 0, &common.LimitExceededError{Message: "Host limit reached"}
 	}
 	return store.AddHost(target, name, username, userID)
 }

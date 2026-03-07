@@ -54,6 +54,10 @@ func GithubLogin(code string) (string, error) {
 		return "", err
 	}
 
+	name := userInfo.Name
+	if name == "" {
+		name = userInfo.Login
+	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		gid := store.DefaultUserGroupId
 		if cfg.AdminID == userInfo.ID {
@@ -61,7 +65,7 @@ func GithubLogin(code string) (string, error) {
 		}
 		user := model.User{
 			ID:      userInfo.ID,
-			Name:    userInfo.Name,
+			Name:    name,
 			Login:   userInfo.Login,
 			GroupID: gid, // Default group ID, can be updated later by admin
 		}
@@ -72,7 +76,7 @@ func GithubLogin(code string) (string, error) {
 	} else {
 		userRecord = model.User{
 			ID:      userRecord.ID,
-			Name:    userInfo.Name,
+			Name:    name,
 			Login:   userInfo.Login,
 			GroupID: userRecord.GroupID, // Keep existing group ID
 		}
