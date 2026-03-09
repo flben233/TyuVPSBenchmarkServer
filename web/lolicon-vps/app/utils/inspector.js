@@ -61,6 +61,23 @@ const EMPTY_SETTINGS = {
   bgUrl: "",
 };
 
+export const INSPECTOR_INTERVAL_OPTIONS = [
+  { label: "5 分钟", value: "5m" },
+  { label: "15 分钟", value: "15m" },
+  { label: "30 分钟", value: "30m" },
+  { label: "1 小时", value: "1h" },
+  { label: "6 小时", value: "6h" },
+  { label: "12 小时", value: "12h" },
+  { label: "1 天", value: "1d" },
+];
+
+const INTERVAL_UNIT_TO_MS = {
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+};
+
 function toNumber(value, fallback = 0) {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : fallback;
@@ -79,6 +96,26 @@ export function getDefaultInspectorQuery() {
     end,
     interval: "1h",
   };
+}
+
+export function parseIntervalToMs(interval) {
+  const matched = String(interval || "").trim().match(/^(\d+)([smhd])$/);
+  if (!matched) {
+    return 0;
+  }
+
+  const value = Number(matched[1]);
+  const unitMs = INTERVAL_UNIT_TO_MS[matched[2]] || 0;
+  return value > 0 && unitMs > 0 ? value * unitMs : 0;
+}
+
+export function exceedsInspectorPointLimit(startMs, endMs, interval, maxPoints = 120) {
+  const intervalMs = parseIntervalToMs(interval);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs >= endMs || intervalMs <= 0) {
+    return false;
+  }
+
+  return Math.ceil((endMs - startMs) / intervalMs) > maxPoints;
 }
 
 export function parseTagList(rawTags) {
@@ -144,6 +181,7 @@ export function normalizeHost(host = {}) {
     tags: parseTagList(host.tags),
     rawTags: host.tags || "",
     notify: Boolean(host.notify),
+    latestPing: toNumber(host.latest_ping),
     uptimeSeconds: toNumber(host.uptime_seconds),
     cpuUsagePercent: toNumber(host.cpu_usage_percent),
     memoryTotalBytes: toNumber(host.memory_total_bytes),
@@ -189,6 +227,7 @@ export function mergeHostData(hosts = [], queryData = []) {
         ...normalizedHost,
         sent: 0,
         recv: 0,
+        latestPing: normalizedHost.latestPing,
         ping: [],
       };
     }
@@ -198,6 +237,7 @@ export function mergeHostData(hosts = [], queryData = []) {
       ...normalizedHost,
       sent: metrics.sent,
       recv: metrics.recv,
+      latestPing: metrics.latestPing,
       ping: metrics.ping,
     };
   });
@@ -247,6 +287,19 @@ export function formatNetworkSpeed(valueInMbps) {
   return `${value.toFixed(value >= 100 ? 0 : 1)} Mbps`;
 }
 
+export function formatLatency(value) {
+  if (value === undefined || value === null || value === "") {
+    return "暂无数据";
+  }
+
+  const latency = toNumber(value, NaN);
+  if (!Number.isFinite(latency)) {
+    return "暂无数据";
+  }
+
+  return latency > 0 ? `${latency.toFixed(1)} ms` : "超时";
+}
+
 export function formatUptime(seconds) {
   const totalSeconds = Math.max(0, Math.floor(toNumber(seconds)));
   if (!totalSeconds) {
@@ -269,27 +322,26 @@ export function formatUptime(seconds) {
 }
 
 export function formatTimestamp(timestamp) {
-  // const value = toNumber(timestamp);
   if (!timestamp) {
     return "-";
   }
 
   return new Date(timestamp).toLocaleString("zh-CN", {
-    // month: "2-digit",
-    // day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
-export function getLatestPingValue(points = []) {
+export function getLatestPingValue(points = [], latestPing = null) {
+  if (latestPing !== null && latestPing !== undefined && latestPing !== "") {
+    return formatLatency(latestPing);
+  }
+
   if (!Array.isArray(points) || points.length === 0) {
     return "暂无数据";
   }
 
-  const latest = points[points.length - 1];
-  const latency = toNumber(latest?.latency);
-  return latency > 0 ? `${latency.toFixed(1)} ms` : "超时";
+  return formatLatency(points[points.length - 1]?.latency);
 }
 
 function buildQueryString(query = {}) {

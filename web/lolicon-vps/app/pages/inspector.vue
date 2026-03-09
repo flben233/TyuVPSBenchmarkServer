@@ -1,7 +1,15 @@
 <script setup>
 import { ArrowLeft, Plus, RefreshRight, Setting } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { getEmptyInspectorSettings } from "~/utils/inspector";
+import {
+  exceedsInspectorPointLimit,
+  getDefaultInspectorQuery,
+  getEmptyInspectorSettings,
+  INSPECTOR_INTERVAL_OPTIONS,
+  formatBytes,
+  formatPercent,
+  formatTrafficAmount,
+} from "~/utils/inspector";
 
 useHead({
   title: "Lolicon Monitor",
@@ -13,8 +21,11 @@ useHead({
 
 const GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m";
 const REFRESH_INTERVAL_MS = 60 * 1000;
+const DEFAULT_RANGE_MS = 24 * 60 * 60 * 1000;
+const MAX_QUERY_POINTS = 120;
 
 const { token } = useAuth();
+const router = useRouter();
 const {
   loadDashboard,
   createHost,
@@ -36,17 +47,95 @@ const editDialogVisible = ref(false);
 const settingsDialogVisible = ref(false);
 const selectedHost = ref(null);
 const refreshTimer = ref(null);
+const defaultQuery = getDefaultInspectorQuery();
+const queryRange = ref([
+  new Date(defaultQuery.start / 1_000_000),
+  new Date(defaultQuery.end / 1_000_000),
+]);
+const queryInterval = ref(defaultQuery.interval);
+const activeQuery = ref(defaultQuery);
+const selectedTags = ref([]);
 
+const intervalOptions = INSPECTOR_INTERVAL_OPTIONS;
 const isLoggedIn = computed(() => Boolean(token.value));
 
-const pageBackgroundStyle = computed(() => {
+const pageBackgroundStyle = computed(() => ({
+  backgroundImage: `url('${settings.value.bgUrl.replace(/'/g, "\\'")}')`,
+  backgroundSize: settings.value.bgUrl ? "cover" : "auto",
+  backgroundPosition: "center",
+  backgroundAttachment: "fixed",
+}));
+
+const availableTags = computed(() => {
+  const tags = new Set();
+  hosts.value.forEach((host) => {
+    (host.tags || []).forEach((tag) => tags.add(tag));
+  });
+  return Array.from(tags).sort((left, right) => left.localeCompare(right, "zh-CN"));
+});
+
+const filteredHosts = computed(() => {
+  if (selectedTags.value.length === 0) {
+    return hosts.value;
+  }
+
+  return hosts.value.filter((host) =>
+    selectedTags.value.some((tag) => (host.tags || []).includes(tag)),
+  );
+});
+
+const dashboardStats = computed(() => {
+  const visibleHosts = filteredHosts.value;
+  const activeHosts = visibleHosts.filter((host) => Number(host.latestPing) > 0);
+  const totalTraffic = visibleHosts.reduce(
+    (sum, host) => sum + Number(host.recv || 0) + Number(host.sent || 0),
+    0,
+  );
+  const totalMemoryUsed = activeHosts.reduce((sum, host) => sum + Number(host.memoryUsedBytes || 0), 0);
+  const totalMemory = activeHosts.reduce((sum, host) => sum + Number(host.memoryTotalBytes || 0), 0);
+  const storagePercent = totalMemory > 0 ? (totalMemoryUsed / totalMemory) * 100 : 0;
+  const averageCpu = activeHosts.length > 0
+    ? activeHosts.reduce((sum, host) => sum + Number(host.cpuUsagePercent || 0), 0) / activeHosts.length
+    : 0;
+  const averageMemory = activeHosts.length > 0
+    ? activeHosts.reduce((sum, host) => sum + Number(host.memoryUsagePercent || 0), 0) / activeHosts.length
+    : 0;
+
   return {
-    backgroundImage: `url('${settings.value.bgUrl.replace(/'/g, "\\'")}')`,
-    backgroundSize: settings.value.bgUrl ? "cover" : "auto",
-    backgroundPosition: "center",
-    backgroundAttachment: "fixed",
+    hostCountText: `${visibleHosts.length} / ${hosts.value.length}`,
+    onlineCountText: `${activeHosts.length} 台`,
+    totalTrafficText: formatTrafficAmount(totalTraffic),
+    storageUsageText: formatPercent(storagePercent),
+    storageUsageDetail: `${formatBytes(totalMemoryUsed)} / ${formatBytes(totalMemory)}`,
+    averageCpuText: formatPercent(averageCpu),
+    averageMemoryText: formatPercent(averageMemory),
   };
 });
+
+const childTheme = computed(() => {
+
+  if (settings.value.bgUrl || settings.value.bgUrl !== "") {
+    console.log(settings.value)
+    return "theme-bg";
+  }
+  return "theme-default";
+});
+
+function buildQueryFromState(range = queryRange.value, interval = queryInterval.value) {
+  const [startTime, endTime] = Array.isArray(range) ? range : [];
+  const start = new Date(startTime).getTime();
+  const end = new Date(endTime).getTime();
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
+    return null;
+  }
+
+  return {
+    start: start * 1_000_000,
+    end: end * 1_000_000,
+    interval,
+  };
+}
 
 function startGithubLogin() {
   window.location.href = GITHUB_OAUTH_URL;
@@ -65,7 +154,7 @@ async function loadInspectorData({ silent = false } = {}) {
   }
 
   const [dashboardResult, settingsResult] = await Promise.allSettled([
-    loadDashboard(token.value),
+    loadDashboard(token.value, activeQuery.value),
     getSettings(token.value),
   ]);
 
@@ -98,6 +187,61 @@ async function loadInspectorData({ silent = false } = {}) {
 
   loading.value = false;
   refreshing.value = false;
+}
+
+async function applyQuery({ silent = false } = {}) {
+  const nextQuery = buildQueryFromState();
+  if (!nextQuery) {
+    ElMessage.warning("请选择有效的时间范围");
+    return;
+  }
+
+  const startMs = Number(nextQuery.start) / 1_000_000;
+  const endMs = Number(nextQuery.end) / 1_000_000;
+  if (exceedsInspectorPointLimit(startMs, endMs, nextQuery.interval, MAX_QUERY_POINTS)) {
+    ElMessage.warning(`当前时间范围和粒度会超过 ${MAX_QUERY_POINTS} 个数据点，请增大时间粒度或缩短时间范围`);
+    return;
+  }
+
+  activeQuery.value = nextQuery;
+  await loadInspectorData({ silent });
+}
+
+async function resetQuery() {
+  const end = new Date();
+  queryRange.value = [new Date(end.getTime() - DEFAULT_RANGE_MS), end];
+  queryInterval.value = defaultQuery.interval;
+  selectedTags.value = [];
+  await applyQuery();
+}
+
+function applyPresetRange(preset) {
+  const end = new Date();
+  let start = new Date(end.getTime() - DEFAULT_RANGE_MS);
+
+  if (preset === "6h") {
+    start = new Date(end.getTime() - 6 * 60 * 60 * 1000);
+    queryInterval.value = "15m";
+  } else if (preset === "7d") {
+    start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+    queryInterval.value = "6h";
+  } else {
+    queryInterval.value = defaultQuery.interval;
+  }
+
+  queryRange.value = [start, end];
+}
+
+function updateQueryRange(value) {
+  queryRange.value = value;
+}
+
+function updateQueryInterval(value) {
+  queryInterval.value = value;
+}
+
+function updateSelectedTags(value) {
+  selectedTags.value = value;
 }
 
 function startAutoRefresh() {
@@ -149,6 +293,7 @@ async function handleUpdateHost(payload) {
     name: payload.name,
     target: payload.target,
     tags: payload.tags,
+    notify: payload.notify,
   });
   submittingHost.value = false;
 
@@ -217,6 +362,10 @@ watch(
   { immediate: true },
 );
 
+watch(availableTags, (tags) => {
+  selectedTags.value = selectedTags.value.filter((tag) => tags.includes(tag));
+});
+
 onUnmounted(() => {
   stopAutoRefresh();
 });
@@ -230,7 +379,7 @@ onUnmounted(() => {
           <h1 class="page-title">Lolicon Monitor</h1>
         </div>
         <div class="toolbar">
-          <el-button class="tool-btn" link :icon="ArrowLeft" @click="useRouter().back()"/>
+          <el-button class="tool-btn" link :icon="ArrowLeft" @click="router.back()"/>
           <el-button class="tool-btn" link :icon="RefreshRight" :loading="refreshing" @click="loadInspectorData({ silent: true })"/>
           <el-button class="tool-btn" link :icon="Setting" @click="settingsDialogVisible = true" :disabled="!isLoggedIn"/>
           <el-button class="tool-btn" link type="primary" :icon="Plus" @click="addDialogVisible = true" :disabled="!isLoggedIn"/>
@@ -264,19 +413,47 @@ onUnmounted(() => {
           description=" "
         />
 
-        <div v-else class="host-grid">
-          <InspectorHostCard
-            v-for="host in hosts"
-            :key="host.id"
-            :host="host"
-            @edit="openEditDialog"
-            @delete="handleDeleteHost"
+        <div v-else class="inspector-layout">
+          <InspectorSidebar
+            :class="childTheme"
+            :stats="dashboardStats"
+            :range="queryRange"
+            :interval="queryInterval"
+            :interval-options="intervalOptions"
+            :tags="availableTags"
+            :selected-tags="selectedTags"
+            :loading="loading || refreshing"
+            @update:range="updateQueryRange"
+            @update:interval="updateQueryInterval"
+            @update:selected-tags="updateSelectedTags"
+            @apply="applyQuery"
+            @reset="resetQuery"
+            @preset="applyPresetRange"
           />
+
+          <div class="content-column">
+            <el-empty
+              v-if="filteredHosts.length === 0"
+              description="当前筛选条件下暂无主机"
+            />
+
+            <div v-else class="host-grid">
+              <InspectorHostCard
+                :class="childTheme"
+                v-for="host in filteredHosts"
+                :key="host.id"
+                :host="host"
+                @edit="openEditDialog"
+                @delete="handleDeleteHost"
+              />
+            </div>
+          </div>
         </div>
       </template>
     </div>
 
     <InspectorHostDialog
+      :class="childTheme"
       v-model="addDialogVisible"
       mode="create"
       :submitting="submittingHost"
@@ -284,6 +461,7 @@ onUnmounted(() => {
     />
 
     <InspectorHostDialog
+      :class="childTheme"
       v-model="editDialogVisible"
       mode="edit"
       :host="selectedHost"
@@ -292,6 +470,7 @@ onUnmounted(() => {
     />
 
     <InspectorSettingsDialog
+      :class="childTheme"
       v-model="settingsDialogVisible"
       :settings="settings"
       :submitting="submittingSettings"
@@ -301,6 +480,14 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.theme-default {
+  --border: 1px solid #e4e7ed;
+}
+
+.theme-bg {
+  --border: 1px solid rgba(255, 255, 255, 0.62);
+}
+
 .inspector-page {
   flex: 1;
   min-width: 0;
@@ -352,10 +539,21 @@ onUnmounted(() => {
   justify-content: center;
 }
 
+.inspector-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.content-column {
+  min-width: 0;
+}
+
 .host-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .skeleton-grid {
@@ -365,7 +563,8 @@ onUnmounted(() => {
 }
 
 .skeleton-card {
-  border-radius: 20px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.5);
 }
 
 @media screen and (max-width: 768px) {
@@ -377,8 +576,11 @@ onUnmounted(() => {
     flex-direction: column;
   }
 
+  .inspector-layout {
+    grid-template-columns: 1fr;
+  }
+
   .toolbar {
-    width: 100%;
     justify-content: stretch;
   }
 
