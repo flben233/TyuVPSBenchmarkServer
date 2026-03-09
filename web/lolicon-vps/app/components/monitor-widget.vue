@@ -149,11 +149,7 @@ function createPath(points) {
   </el-card>
 </template>
 
-<style>
-.monitor-card {
-  margin-bottom: 16px;
-}
-
+<style scoped>
 .host-container {
   display: flex;
   align-items: center;

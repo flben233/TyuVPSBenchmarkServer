@@ -9,8 +9,7 @@ const props = defineProps({
   },
 });
 
-const { listUserGroups, createUserGroup, updateUserGroup, deleteUserGroup } =
-  useAdmin();
+const { listUserGroups, createUserGroup, updateUserGroup, deleteUserGroup } = useAdmin();
 
 const loading = ref(false);
 const groups = ref([]);
