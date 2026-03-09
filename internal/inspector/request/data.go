@@ -9,13 +9,14 @@ type CreateHostRequest struct {
 	Target string `json:"target" binding:"required"`
 	Name   string `json:"name" binding:"required"`
 	Tags   string `json:"tags"`
-	Notify bool   `json:"notify" binding:"required"`
+	Notify bool   `json:"notify"`
 }
 
 type UpdateHostRequest struct {
 	Name   string `json:"name"`
 	Tags   string `json:"tags"`
 	Target string `json:"target"`
+	Notify bool   `json:"notify"`
 }
 
 type PutDataRequest struct {

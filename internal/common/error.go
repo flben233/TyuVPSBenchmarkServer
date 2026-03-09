@@ -3,6 +3,7 @@ package common
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 )
 
@@ -43,6 +44,7 @@ func DefaultErrorHandler(ctx *gin.Context, err error) {
 	case errors.As(err, &rateLimitErr):
 		ctx.JSON(http.StatusOK, Error(RateLimitExceededCode, rateLimitErr.Error()))
 	default:
+		log.Printf("Internal server error: %v", err)
 		ctx.JSON(http.StatusInternalServerError, Error(InternalErrorCode, err.Error()))
 	}
 }
