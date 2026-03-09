@@ -3,10 +3,10 @@ import VChart from "vue-echarts";
 import { use } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { LineChart } from "echarts/charts";
-import { GridComponent, TooltipComponent } from "echarts/components";
+import { GridComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import { formatTimestamp } from "~/utils/inspector";
 
-use([CanvasRenderer, LineChart, GridComponent, TooltipComponent]);
+use([CanvasRenderer, LineChart, GridComponent, MarkLineComponent, TooltipComponent]);
 
 const props = defineProps({
   points: {
@@ -19,7 +19,13 @@ const hasData = computed(() => Array.isArray(props.points) && props.points.lengt
 
 const chartOption = computed(() => {
   const xAxisData = props.points.map((point) => formatTimestamp(point.time));
-  const seriesData = props.points.map((point) => Number(point.latency || 0));
+  const rawLatencies = props.points.map((point) => Number(point.latency || 0));
+  const seriesData = rawLatencies.map((latency) => (latency > 0 ? latency : null));
+  const positiveLatencies = rawLatencies.filter((latency) => latency > 0);
+  const chartMax = positiveLatencies.length > 0 ? Math.max(...positiveLatencies) : 10;
+  const lossMarkerIndexes = rawLatencies
+    .map((latency, index) => (latency === 0 ? index : -1))
+    .filter((index) => index >= 0);
 
   return {
     animation: true,
@@ -31,7 +37,20 @@ const chartOption = computed(() => {
     },
     tooltip: {
       trigger: "axis",
-      valueFormatter: (value) => `${Number(value || 0).toFixed(1)} ms`,
+      formatter: (params) => {
+        const dataIndex = Number(params?.[0]?.dataIndex ?? -1);
+        const latency = rawLatencies[dataIndex];
+        const label = xAxisData[dataIndex] || "-";
+        if (latency === undefined) {
+          return `${label}<br/>暂无数据`;
+        }
+
+        if (latency <= 0) {
+          return `${label}<br/>丢包`;
+        }
+
+        return `${label}<br/>延迟 ${latency.toFixed(1)} ms`;
+      },
     },
     xAxis: {
       type: "category",
@@ -48,6 +67,7 @@ const chartOption = computed(() => {
     yAxis: {
       type: "value",
       min: 0,
+      max: Math.max(10, Math.ceil(chartMax * 1.15)),
       splitNumber: 3,
       axisLabel: {
         color: "#909399",
@@ -63,6 +83,7 @@ const chartOption = computed(() => {
         type: "line",
         smooth: true,
         showSymbol: false,
+        connectNulls: true,
         symbolSize: 6,
         lineStyle: {
           color: "#39c5bb",
@@ -72,6 +93,20 @@ const chartOption = computed(() => {
           color: "rgba(57, 197, 187, 0.15)",
         },
         data: seriesData,
+        markLine: lossMarkerIndexes.length > 0 ? {
+          symbol: ["none", "none"],
+          animation: false,
+          silent: true,
+          label: {
+            show: false,
+          },
+          lineStyle: {
+            color: "#f56c6c",
+            type: "solid",
+            width: 1,
+          },
+          data: lossMarkerIndexes.map((index) => ({ xAxis: index })),
+        } : undefined,
       },
     ],
   };

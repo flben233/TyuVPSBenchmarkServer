@@ -34,6 +34,7 @@
     border-bottom: 1px var(--el-border-color) solid;
     padding: 1px 8px;
     transition: var(--el-transition-border);
+    background: transparent;
   }
   .el-input__wrapper:hover {
     box-shadow: none;

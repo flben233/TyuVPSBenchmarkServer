@@ -70,9 +70,9 @@ const chartOption = computed(() => ({
 <style scoped>
 .inspector-chart-panel {
   background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 16px;
-  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 6px;
+  padding: 12px;
   box-sizing: border-box;
 }
 
@@ -86,7 +86,7 @@ const chartOption = computed(() => ({
 .chart-wrapper,
 .chart {
   width: 100%;
-  height: 220px;
+  height: 180px;
 }
 
 .traffic-summary {
@@ -98,7 +98,7 @@ const chartOption = computed(() => ({
 }
 
 .empty-chart {
-  min-height: 220px;
+  min-height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;

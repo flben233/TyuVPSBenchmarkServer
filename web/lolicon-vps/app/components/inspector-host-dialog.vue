@@ -90,17 +90,10 @@ function handleSubmit() {
           maxlength="256"
         />
       </el-form-item>
-      <el-form-item v-if="!isEditMode" label="离线通知">
+      <el-form-item label="离线通知">
         <el-switch v-model="form.notify" />
         <div class="field-tip">开启后，目标离线/恢复时将按当前用户设置发送通知。</div>
       </el-form-item>
-      <el-alert
-        v-else
-        type="info"
-        show-icon
-        :closable="false"
-        title="当前后端更新接口仅支持修改名称、目标地址与标签，通知开关会保持原值。"
-      />
     </el-form>
     <template #footer>
       <el-button @click="dialogVisible = false">取消</el-button>
