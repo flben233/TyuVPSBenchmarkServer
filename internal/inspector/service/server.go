@@ -26,7 +26,7 @@ import (
 var putRecord = make(map[int64]time.Time)
 
 const (
-	pingInterval   = 10 * time.Second
+	pingInterval   = 120 * time.Second
 	putInterval    = 30 * time.Second
 	putMaxLength   = 1
 	notifyInterval = 5 * time.Minute
