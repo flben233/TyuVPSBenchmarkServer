@@ -1,0 +1,6 @@
+services:
+  exporter:
+    image: ghcr.io/flben233/lolicon-vps/exporter:latest
+    restart: unless-stopped
+    ports:
+      - "20831:20831"

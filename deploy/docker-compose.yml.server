@@ -25,12 +25,24 @@ services:
       - --plugin-dir=/var/lib/influxdb3/plugins
     volumes:
       - type: bind
-        source: ~/.influxdb3/core/data
+        source: ./influxdb3/data
         target: /var/lib/influxdb3/data
       - type: bind
-        source: ~/.influxdb3/core/plugins
+        source: ./influxdb3/plugins
         target: /var/lib/influxdb3/plugins
-  
+
+  redis:
+    image: "redis:7.2.4-alpine3.19"
+    restart: unless-stopped
+    hostname: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/redis.conf:/etc/redis/redis.conf
+      - ./redis/data/redis:/data
+    command: redis-server /etc/redis/redis.conf
+    privileged: true
+
   frontend:
     image: ghcr.io/flben233/lolicon-vps/frontend:latest
     restart: unless-stopped
