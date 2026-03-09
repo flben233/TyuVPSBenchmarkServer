@@ -37,7 +37,7 @@ watch(userInfo, (newVal) => {
 
 onMounted(async () => {
   handleWidthChange();
-  window.addEventListener('resize', handleWidthChange);
+  window.addEventListener("resize", handleWidthChange);
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
   console.log("OAuth Token from URL:", token);
@@ -45,20 +45,25 @@ onMounted(async () => {
     await login(token);
     console.log("User Info after login:", userInfo.value);
     avatarUrl.value = userInfo.value.avatarUrl;
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
   }
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleWidthChange);
+  window.removeEventListener("resize", handleWidthChange);
 });
 
 const avatarNav = (command) => {
   if (command === "login") {
-    window.location.href = "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m";
+    const { clientId } = useAppConfig();
+    window.location.href = "https://github.com/login/oauth/authorize?client_id=" + clientId;
   } else if (command === "logout") {
     logout();
   } else if (command === "center") {
     useRouter().push("/center");
+  } else if (command === "inspector") {
+    useRouter().push("/inspector");
   }
 };
 </script>
@@ -77,13 +82,14 @@ const avatarNav = (command) => {
         <el-avatar v-else :icon="UserFilled" />
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item v-if="!userInfo" command="login"
-              >使用Github登录</el-dropdown-item
-            >
-            <div v-else>
+            <el-dropdown-item v-if="!userInfo" command="login">
+              使用 GitHub 登录
+            </el-dropdown-item>
+            <template v-else>
               <el-dropdown-item command="center">个人中心</el-dropdown-item>
+              <el-dropdown-item command="inspector">Loli 探针</el-dropdown-item>
               <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-            </div>
+            </template>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -122,7 +128,7 @@ const avatarNav = (command) => {
         路由追踪
       </el-menu-item>
       <el-menu-item index="/tools/whois" class="menu-item">
-        whois查询
+        Whois查询
       </el-menu-item>
     </el-sub-menu>
   </el-menu>
@@ -133,6 +139,7 @@ const avatarNav = (command) => {
   #m-root {
     width: 100% !important;
   }
+
   .m-avatar-dropdown {
     margin: auto;
     padding: 6px;
@@ -146,11 +153,13 @@ const avatarNav = (command) => {
   box-sizing: border-box;
   margin: auto;
 }
+
 .menu-item {
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .menu-icon {
   margin: 0;
 }

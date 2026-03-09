@@ -42,6 +42,7 @@ export default defineNuxtConfig({
   routeRules: {
     "/report/**": { cache: { maxAge: 300 } },
     "/slide/**": { cache: { maxAge: 300 } },
+    "/inspector": { ssr: false },
     "/tools/**": { prerender: true },
     "/center": { prerender: true },
     "/index": { cache: { maxAge: 300 } },

@@ -2,7 +2,7 @@
   const activePath = computed(() => {
     return useRoute().path;
   });
-  const excludePaths = ["/slide/"];
+  const excludePaths = ["/slide/", "/inspector"];
 </script>
 
 <template>
