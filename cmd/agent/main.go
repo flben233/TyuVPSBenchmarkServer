@@ -18,7 +18,7 @@ import (
 var lastIOCounter psnet.IOCountersStat
 
 const (
-	UploadInterval        = 10 * time.Second
+	UploadInterval        = 120 * time.Second
 	UploadTrafficInterval = 30 * time.Minute
 )
 
@@ -96,6 +96,7 @@ func main() {
 	if err != nil {
 		return
 	}
+	UploadServerStatus(hostID, serverURL, iface)
 	for range time.Tick(UploadInterval) {
 		UploadServerStatus(hostID, serverURL, iface)
 		log.Println("Uploaded server status")

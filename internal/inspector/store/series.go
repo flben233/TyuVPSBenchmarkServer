@@ -7,6 +7,7 @@ import (
 	"github.com/InfluxCommunity/influxdb3-go/v2/influxdb3"
 	"github.com/apache/arrow-go/v18/arrow"
 	"regexp"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -110,21 +111,27 @@ func QueryLatestPing(hostID int64) (float32, error) {
 }
 
 func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
-	return queryPoints(PingMeasurement, hostID, start, end, interval, func(v map[string]interface{}) model.PingPoint {
-		return model.PingPoint{
-			HostID:  hostID,
-			Latency: float32(v["mean"].(float64)),
-			Time:    time.Unix(0, int64(v["time"].(arrow.Timestamp))), // 从没见过这么丑陋的框架，插入的时候允许time.Time，取出又变成了arrow.Timestamp
-		}
-	})
-}
-
-func queryPoints[T any](measurement string, hostID int64, start, end int64, interval string, handler func(v map[string]interface{}) T) ([]T, error) {
 	match := validIntervalRegex.Match([]byte(interval))
 	if !match {
 		return nil, fmt.Errorf("invalid interval format: %s", interval)
 	}
-	query := fmt.Sprintf("SELECT MEAN(latency) FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end GROUP BY time(%s) LIMIT 120", measurement, interval)
+	latencyPoints, err := queryLatencyPoints(hostID, start, end, interval)
+	if err != nil {
+		return nil, err
+	}
+	lossPoints, err := queryLossPoints(hostID, start, end)
+	if err != nil {
+		return nil, err
+	}
+	points := append(latencyPoints, lossPoints...)
+	sort.Slice(points, func(i, j int) bool {
+		return points[i].Time.Before(points[j].Time)
+	})
+	return points, nil
+}
+
+func queryLossPoints(hostID int64, start, end int64) ([]model.PingPoint, error) {
+	query := fmt.Sprintf("SELECT * FROM %s WHERE host_id = $host_id AND latency = 0 AND time >= $start AND time <= $end", PingMeasurement)
 	params := influxdb3.QueryParameters{
 		"host_id": strconv.FormatInt(hostID, 10),
 		"start":   time.Unix(0, start),
@@ -134,11 +141,41 @@ func queryPoints[T any](measurement string, hostID int64, start, end int64, inte
 	if err != nil {
 		return nil, err
 	}
-	var points []T
+	var points []model.PingPoint
 	for iter.Next() {
-		value := iter.Value()
-		if value["mean"] != nil {
-			points = append(points, handler(value))
+		v := iter.Value()
+		points = append(points, model.PingPoint{
+			HostID:  hostID,
+			Latency: 0,
+			Time:    v["time"].(time.Time),
+		})
+	}
+	if iter.Err() != nil {
+		return nil, iter.Err()
+	}
+	return points, nil
+}
+
+func queryLatencyPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
+	query := fmt.Sprintf("SELECT MEAN(latency) FROM %s WHERE host_id = $host_id AND latency > 0 AND time >= $start AND time <= $end GROUP BY time(%s) LIMIT 120", PingMeasurement, interval)
+	params := influxdb3.QueryParameters{
+		"host_id": strconv.FormatInt(hostID, 10),
+		"start":   time.Unix(0, start),
+		"end":     time.Unix(0, end),
+	}
+	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
+	if err != nil {
+		return nil, err
+	}
+	var points []model.PingPoint
+	for iter.Next() {
+		v := iter.Value()
+		if v["mean"] != nil {
+			points = append(points, model.PingPoint{
+				HostID:  hostID,
+				Latency: float32(v["mean"].(float64)),
+				Time:    time.Unix(0, int64(v["time"].(arrow.Timestamp))), // 从没见过这么丑陋的框架，插入的时候允许time.Time，取出又变成了arrow.Timestamp
+			})
 		}
 	}
 	if iter.Err() != nil {
