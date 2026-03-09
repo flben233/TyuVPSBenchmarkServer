@@ -51,3 +51,11 @@ jobs:
         file: ./Dockerfile.exporter
         push: true
         tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}/exporter:latest
+
+    - name: Build and push agent
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./Dockerfile.agent
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.SCOPE }}/agent:latest
