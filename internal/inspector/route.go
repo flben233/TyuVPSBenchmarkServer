@@ -23,10 +23,13 @@ func RegisterRoute(base string, r *gin.Engine) {
 		protectedAPI.POST("/hosts/update/:id", handler.UpdateHost)
 		protectedAPI.POST("/hosts/delete/:id", handler.DeleteHost)
 
-		protectedAPI.POST("/data/put", handler.PutData)
 		protectedAPI.GET("/data", handler.QueryData)
-
 		protectedAPI.GET("/settings", handler.GetUserSettings)
 		protectedAPI.POST("/settings/update", handler.UpdateUserSettings)
+	}
+
+	publicAPI := r.Group(base)
+	{
+		publicAPI.POST("/data/put", handler.PutData)
 	}
 }

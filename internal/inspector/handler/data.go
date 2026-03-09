@@ -72,7 +72,7 @@ func UpdateHost(ctx *gin.Context) {
 		return
 	}
 
-	err = service.UpdateHost(userID.(int64), hostID, req.Name, req.Tags, req.Target)
+	err = service.UpdateHost(userID.(int64), hostID, req.Name, req.Tags, req.Target, req.Notify)
 	if err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return
@@ -144,7 +144,7 @@ func ListHosts(ctx *gin.Context) {
 // @Tags inspector
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security None
 // @Param request body request.PutDataRequest true "Traffic and ping data"
 // @Success 200 {object} common.APIResponse[any]
 // @Router /inspector/data/put [post]
@@ -155,13 +155,7 @@ func PutData(ctx *gin.Context) {
 		return
 	}
 
-	userID, exists := ctx.Get("user_id")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
-		return
-	}
-
-	err := service.PutData(userID.(int64), req.Traffic, req.HostInfo, req.HostID)
+	err := service.PutData(req.Traffic, req.HostInfo, req.HostID)
 	if err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return

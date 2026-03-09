@@ -17,6 +17,7 @@ import (
 	"gorm.io/gorm"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,7 +26,7 @@ import (
 var putRecord = make(map[int64]time.Time)
 
 const (
-	pingInterval   = 1 * time.Minute
+	pingInterval   = 10 * time.Second
 	putInterval    = 30 * time.Second
 	putMaxLength   = 1
 	notifyInterval = 5 * time.Minute
@@ -49,7 +50,7 @@ func pingHosts() {
 		pingData := []model.PingPoint{{
 			HostID:  host.ID,
 			Latency: lat,
-			Time:    time.Now().Unix(),
+			Time:    time.Now(),
 		}}
 
 		if lat == 0 && host.Notify {
@@ -77,7 +78,15 @@ func CreateHost(userID int64, target, name, tags string, notify bool) (int64, er
 	if !util.CheckInspectorQuota(userID, hosts) {
 		return 0, &common.LimitExceededError{Message: fmt.Sprintf("Host limit reached: %d hosts", hosts)}
 	}
+	id := rand.Int63()
+	for _, err = store.GetHostByID(id); !errors.Is(err, gorm.ErrRecordNotFound); _, err = store.GetHostByID(id) {
+		if err != nil {
+			return 0, fmt.Errorf("failed to check host ID %d: %w", id, err)
+		}
+		id = rand.Int63()
+	}
 	host := &model.InspectHost{
+		ID:     id,
 		UserID: userID,
 		Target: target,
 		Name:   name,
@@ -90,7 +99,7 @@ func CreateHost(userID int64, target, name, tags string, notify bool) (int64, er
 	return host.ID, nil
 }
 
-func UpdateHost(userID int64, hostID int64, name, tags, target string) error {
+func UpdateHost(userID int64, hostID int64, name, tags, target string, notify bool) error {
 	// 校验主机属于当前用户
 	ids := store.GetHostIDByUser(userID)
 	found := false
@@ -111,6 +120,7 @@ func UpdateHost(userID int64, hostID int64, name, tags, target string) error {
 	host.Name = name
 	host.Tags = tags
 	host.Target = target
+	host.Notify = notify
 
 	store.UpdateHost(host)
 	return nil
@@ -132,20 +142,35 @@ func DeleteHost(userID int64, hostID int64) error {
 	return store.DeleteHost(hostID)
 }
 
-func ListHosts(userID int64) ([]model.InspectHost, error) {
-	return store.ListHostsByUser(userID)
+func ListHosts(userID int64) ([]response.HostListResponse, error) {
+	hosts, err := store.ListHostsByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	inspectHosts := make([]response.HostListResponse, len(hosts))
+	for i, host := range hosts {
+		inspectHosts[i] = response.HostListResponse{
+			ID:           strconv.FormatInt(host.ID, 10),
+			UserID:       host.UserID,
+			Target:       host.Target,
+			Name:         host.Name,
+			Tags:         host.Tags,
+			Notify:       host.Notify,
+			ServerStatus: host.ServerStatus,
+		}
+	}
+	return inspectHosts, nil
 }
 
-func PutData(userID int64, trafficData []model.TrafficPoint, hostInfo common.ServerStatus, hostID int64) error {
+func PutData(trafficData []model.TrafficPoint, hostInfo common.ServerStatus, hostID int64) error {
 	// 校验数据，理论上ID都是一样的
-	ids := store.GetHostIDByUser(userID)
-	idSet := make(map[int64]struct{})
-	for _, id := range ids {
-		idSet[id] = struct{}{}
+	_, err := store.GetHostByID(hostID)
+	if err != nil {
+		return &common.InvalidParamError{Message: fmt.Sprintf("host %d not found", hostID)}
 	}
 	for _, point := range trafficData {
-		if _, ok := idSet[point.HostID]; !ok {
-			return &common.InvalidParamError{Message: fmt.Sprintf("host %d not found or not owned by user", point.HostID)}
+		if point.HostID != hostID {
+			return &common.InvalidParamError{Message: fmt.Sprintf("all data points must have the same host ID %d", hostID)}
 		}
 	}
 	if len(trafficData) > putMaxLength {
@@ -194,11 +219,21 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 		if err != nil {
 			return nil, err
 		}
+		latestPing, err := store.QueryLatestPing(host.ID)
+		if err != nil {
+			return nil, err
+		}
 		data[i] = &response.HostData{
-			Ping:        pingPoints,
-			Sent:        sent,
-			Recv:        recv,
-			InspectHost: host,
+			Ping:         pingPoints,
+			Sent:         sent,
+			Recv:         recv,
+			ID:           strconv.FormatInt(host.ID, 10),
+			Target:       host.Target,
+			Name:         host.Name,
+			Tags:         host.Tags,
+			Notify:       host.Notify,
+			LatestPing:   latestPing,
+			ServerStatus: host.ServerStatus,
 		}
 	}
 	return data, nil

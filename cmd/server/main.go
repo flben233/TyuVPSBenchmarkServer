@@ -3,9 +3,10 @@ package main
 import (
 	"VPSBenchmarkBackend/internal/auth"
 	_ "VPSBenchmarkBackend/internal/auth"
+	"VPSBenchmarkBackend/internal/cache"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
-	//_ "VPSBenchmarkBackend/internal/inspector"
+	_ "VPSBenchmarkBackend/internal/inspector"
 	_ "VPSBenchmarkBackend/internal/lookingglass"
 	_ "VPSBenchmarkBackend/internal/monitor"
 	_ "VPSBenchmarkBackend/internal/report"
@@ -36,11 +37,11 @@ func main() {
 	log.Println("Database initialized successfully at", dbPath)
 
 	// Initialize redis
-	//cfg := config.Get()
-	//if err := cache.InitRedis(cfg.RedisHost, cfg.RedisPasswd, 0); err != nil {
-	//	log.Fatalf("Failed to initialize Redis: %v", err)
-	//}
-	//log.Println("Redis initialized successfully at", cfg.RedisHost)
+	cfg := config.Get()
+	if err := cache.InitRedis(cfg.RedisHost, cfg.RedisPasswd, 0); err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	log.Println("Redis initialized successfully at", cfg.RedisHost)
 
 	// Start background cron jobs
 	common.RunCronJobs()
