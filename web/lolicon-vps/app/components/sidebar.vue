@@ -9,7 +9,7 @@ import {
 } from "@element-plus/icons-vue";
 
 const mode = ref("vertical");
-const { userInfo, login, logout } = useAuth();
+const { userInfo, logout } = useAuth();
 const avatarUrl = ref(null);
 const activePath = computed(() => {
   return useRoute().path;
@@ -38,16 +38,6 @@ watch(userInfo, (newVal) => {
 onMounted(async () => {
   handleWidthChange();
   window.addEventListener("resize", handleWidthChange);
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get("token");
-  console.log("OAuth Token from URL:", token);
-  if (token) {
-    await login(token);
-    console.log("User Info after login:", userInfo.value);
-    avatarUrl.value = userInfo.value.avatarUrl;
-    const cleanUrl = window.location.origin + window.location.pathname;
-    window.history.replaceState({}, document.title, cleanUrl);
-  }
 });
 
 onUnmounted(() => {

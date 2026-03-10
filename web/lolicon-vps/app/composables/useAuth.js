@@ -1,6 +1,47 @@
 let userInfo = ref(null);
 let token = ref(null);
 let isAdmin = ref(false);
+let refreshingToken = false;
+const failQueue = [];
+
+async function doRequest(url, method, options = {}) {
+  const { backendUrl } = useAppConfig();
+
+  if (!token.value) {
+    let err =  new Error("No auth token found. Please log in.");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token.value}`,
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+  return $fetch(`${backendUrl}${url}`, {
+    method,
+    headers,
+    ...options,
+  });
+}
+
+export async function requestWithAuth(url, method, options = {}) {
+  try {
+    return await doRequest(url, method, options);
+  } catch (error) {
+    if (error.statusCode === 401) {
+      if (refreshingToken) {
+        return new Promise((resolve, reject) => {
+          failQueue.push({ resolve, reject });
+        }).then(() => doRequest(url, method, options));
+      }
+      const { refreshToken } = useAuth();
+      await refreshToken();
+      console.log("Token refreshed, retrying request...");
+      return await doRequest(url, options);
+    }
+  }
+}
 
 export function useAuth() {
   const { backendUrl } = useAppConfig();
@@ -15,26 +56,42 @@ export function useAuth() {
     }
   }
 
-  async function login(t) {
-    token.value = t;
-    if (token.value) {
+  async function login(code) {
+    let resp = await $fetch(`${backendUrl}/auth/github/login`, {
+      method: "GET",
+      query: { code },
+    });
+    if (resp && resp.code === 0) {
+      token.value = resp.data.token;
       await fetchUserInfo();
       await checkAdmin();
       sessionStorage.setItem("auth_token", token.value);
     }
   }
 
-  async function fetchUserInfo() {
-    if (!token.value) {
-      throw new Error("No token available");
+  async function refreshToken() {
+    refreshingToken = true;
+    try {
+      let resp = await $fetch(`${backendUrl}/auth/refresh`, { method: "POST" });
+      if (resp && resp.code === 0) {
+        token.value = resp.data.token;
+        await fetchUserInfo();
+        await checkAdmin();
+        sessionStorage.setItem("auth_token", token.value);
+      } else {
+        await logout();
+      }
+    } catch (ignored) {
+      await logout();
+    } finally {
+      refreshingToken = false;
+      failQueue.forEach(p => p.resolve());
+      failQueue.length = 0;
     }
-    let resp = await $fetch(`${backendUrl}/auth/user`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-      },
-    });
-    console.log(resp);
+  }
+
+  async function fetchUserInfo() {
+    let resp = await requestWithAuth(`/auth/user`, "GET");
     
     if (resp && resp.code === 0) {
       userInfo.value = {
@@ -50,17 +107,11 @@ export function useAuth() {
     userInfo.value = null;
     isAdmin.value = false;
     sessionStorage.removeItem("auth_token");
-    location.reload();
   }
 
   async function checkAdmin() {
     try {
-      let resp = await $fetch(`${backendUrl}/auth/admin`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-        },
-      });
+      let resp = await requestWithAuth(`/auth/admin`, "GET");
       console.log("Admin check response:", resp);
       if (resp && resp.code === 0) {
         isAdmin.value = true;
@@ -77,5 +128,6 @@ export function useAuth() {
     fetchUserInfo,
     logout,
     isAdmin,
+    refreshToken
   };
 }

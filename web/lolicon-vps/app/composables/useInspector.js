@@ -3,17 +3,16 @@ import {
   mergeHostData,
   normalizeInspectorSettings,
 } from "~/utils/inspector";
+import {requestWithAuth} from "~/composables/useAuth.js";
 
 export function useInspector() {
-  const { backendUrl } = useAppConfig();
-
   function resolveErrorMessage(error, fallbackMessage) {
     return error?.data?.message || error?.message || fallbackMessage;
   }
 
-  async function request(path, options = {}, fallbackMessage = "请求失败") {
+  async function request(path, method, fallbackMessage = "请求失败", options = {}) {
     try {
-      const response = await $fetch(`${backendUrl}${path}`, options);
+      const response = await requestWithAuth(path, method, options);
 
       if (response?.code === 0) {
         return {
@@ -37,20 +36,10 @@ export function useInspector() {
     }
   }
 
-  function withAuth(token, options = {}) {
-    return {
-      ...options,
-      headers: {
-        ...(options.headers || {}),
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  }
-
   async function listHosts(token) {
     return request(
       "/inspector/hosts",
-      withAuth(token, { method: "GET" }),
+      "GET",
       "获取服务器列表失败",
     );
   }
@@ -58,8 +47,9 @@ export function useInspector() {
   async function queryData(token, query = getDefaultInspectorQuery()) {
     return request(
       "/inspector/data",
-      withAuth(token, { method: "GET", query }),
+      "GET",
       "获取探针数据失败",
+      { query }
     );
   }
 
@@ -83,37 +73,33 @@ export function useInspector() {
   async function createHost(token, payload) {
     return request(
       "/inspector/hosts/create",
-      withAuth(token, {
-        method: "POST",
-        body: payload,
-      }),
+        "POST",
       "创建服务器失败",
+      { body: payload }
     );
   }
 
   async function updateHost(token, id, payload) {
     return request(
       `/inspector/hosts/update/${id}`,
-      withAuth(token, {
-        method: "POST",
-        body: payload,
-      }),
+"POST",
       "更新服务器失败",
+      { body: payload }
     );
   }
 
   async function deleteHost(token, id) {
     return request(
       `/inspector/hosts/delete/${id}`,
-      withAuth(token, { method: "POST" }),
-      "删除服务器失败",
+      "POST",
+      "删除服务器失败"
     );
   }
 
   async function getSettings(token) {
     const result = await request(
       "/inspector/settings",
-      withAuth(token, { method: "GET" }),
+      "GET",
       "获取设置失败",
     );
 
@@ -131,14 +117,14 @@ export function useInspector() {
   async function updateSettings(token, payload) {
     const result = await request(
       "/inspector/settings/update",
-      withAuth(token, {
-        method: "POST",
-        body: {
-          notify_url: payload.notifyUrl || null,
-          bg_url: payload.bgUrl || null,
-        },
-      }),
+      "POST",
       "保存设置失败",
+      {
+          body: {
+            notify_url: payload.notifyUrl || null,
+            bg_url: payload.bgUrl || null,
+          },
+        }
     );
 
     if (!result.success) {

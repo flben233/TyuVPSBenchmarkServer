@@ -19,7 +19,8 @@ useHead({
   ],
 });
 
-const GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize?client_id=Ov23limxDDoGO9of9P4m";
+const { clientId } = useAppConfig();
+const GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize?client_id=" + clientId;
 const REFRESH_INTERVAL_MS = 60 * 1000;
 const DEFAULT_RANGE_MS = 24 * 60 * 60 * 1000;
 const MAX_QUERY_POINTS = 120;

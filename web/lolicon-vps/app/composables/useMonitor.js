@@ -1,3 +1,5 @@
+import {requestWithAuth} from "~/composables/useAuth.js";
+
 export function useMonitor() {
   const { backendUrl } = useAppConfig();
 
@@ -36,12 +38,7 @@ export function useMonitor() {
 
   async function listHosts(token) {
     try {
-      const resp = await $fetch(`${backendUrl}/monitor/hosts`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/monitor/hosts`, "GET");
 
       if (resp && resp.code === 0) {
         return resp.data || [];
@@ -55,13 +52,8 @@ export function useMonitor() {
 
   async function addHost(token, name, target) {
     try {
-      const resp = await $fetch(`${backendUrl}/monitor/hosts`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, target }),
+      const resp = await requestWithAuth(`/monitor/hosts/add`, "POST", {
+        body: JSON.stringify({ name, target })
       });
 
       if (resp && resp.code === 0) {
@@ -76,12 +68,7 @@ export function useMonitor() {
 
   async function removeHost(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/monitor/hosts/${id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/monitor/hosts/delete/${id}`, "POST");
 
       if (resp && resp.code === 0) {
         return { success: true };
@@ -98,12 +85,7 @@ export function useMonitor() {
 
   async function listPendingHosts(token) {
     try {
-      const resp = await $fetch(`${backendUrl}/monitor/admin/pending`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/monitor/admin/pending`, "GET");
 
       if (resp && resp.code === 0) {
         return resp.data || [];
@@ -117,12 +99,7 @@ export function useMonitor() {
 
   async function approveHost(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/monitor/admin/approve/${id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/monitor/admin/approve/${id}`, "POST");
 
       if (resp && resp.code === 0) {
         return { success: true };
@@ -139,12 +116,7 @@ export function useMonitor() {
 
   async function rejectHost(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/monitor/admin/reject/${id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/monitor/admin/reject/${id}`, "POST");
 
       if (resp && resp.code === 0) {
         return { success: true };

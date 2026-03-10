@@ -3,6 +3,22 @@
     return useRoute().path;
   });
   const excludePaths = ["/slide/", "/inspector"];
+
+  const { userInfo, login, refreshToken } = useAuth();
+
+  onMounted(async () => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    console.log("OAuth code from URL:", code);
+    if (code) {
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      await login(code);
+      console.log("User Info after login:", userInfo.value);
+    } else if (!userInfo.value) {
+      await refreshToken();
+    }
+  });
 </script>
 
 <template>

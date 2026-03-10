@@ -3,9 +3,15 @@ package service
 import (
 	"VPSBenchmarkBackend/internal/auth/model"
 	"VPSBenchmarkBackend/internal/auth/store"
+	"VPSBenchmarkBackend/internal/cache"
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"io"
 	"net/http"
@@ -17,7 +23,7 @@ import (
 
 // GithubTokenResponse represents the response from GitHub OAuth token endpoint
 type GithubTokenResponse struct {
-	AccessToken string `json:"access_token"`
+	AccessToken string `json:"access_token"` // Ignore the refresh token because we only use the token to fetch user info once
 	TokenType   string `json:"token_type"`
 	Scope       string `json:"scope"`
 	Error       string `json:"error"`
@@ -33,25 +39,30 @@ type GithubUserInfo struct {
 	Email     string `json:"email"`
 }
 
+type AuthToken struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 // GithubLogin exchanges a GitHub OAuth code for a JWT token
-func GithubLogin(code string) (string, error) {
+func GithubLogin(code string) (*AuthToken, error) {
 	cfg := config.Get()
 
 	// Exchange code for access token
 	accessToken, err := exchangeCodeForToken(code, cfg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Get user info from GitHub
 	userInfo, err := getGithubUserInfo(accessToken)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	userRecord, err := store.GetUserByID(userInfo.ID)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return "", err
+		return nil, err
 	}
 
 	name := userInfo.Name
@@ -71,7 +82,7 @@ func GithubLogin(code string) (string, error) {
 		}
 		// Create user in database if not exists
 		if err = store.CreateUser(&user); err != nil {
-			return "", err
+			return nil, err
 		}
 	} else {
 		userRecord = model.User{
@@ -82,12 +93,51 @@ func GithubLogin(code string) (string, error) {
 		}
 		// Update user info in database if exists
 		if _, err = store.UpdateUser(userRecord); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
-	// Generate JWT token
-	return generateJWTToken(userInfo, cfg)
+	// Generate token
+	return generateToken(userInfo, cfg)
+}
+
+func RefreshToken(userID int64, refreshToken string) (*AuthToken, error) {
+	key := fmt.Sprintf("token:%d:%s", userID, refreshToken)
+	client := cache.GetClient()
+	result, err := client.Get(context.Background(), key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			cursor := uint64(0)
+			var keys []string
+			pattern := fmt.Sprintf("token:%d:*", userID)
+			for {
+				keys, cursor, err = client.Scan(context.Background(), 0, pattern, 100).Result()
+				if err != nil {
+					return nil, err
+				}
+				if cursor == 0 || len(keys) == 0 {
+					break
+				}
+				if len(keys) > 0 {
+					client.Unlink(context.Background(), keys...)
+				}
+			}
+			return nil, &common.InvalidParamError{Message: "Invalid refresh token"}
+		} else {
+			return nil, err
+		}
+	}
+	// Delete the old refresh token
+	if err = client.Del(context.Background(), key).Err(); err != nil {
+		return nil, err
+	}
+
+	// Generate new token
+	userInfo := &GithubUserInfo{}
+	if err = json.Unmarshal([]byte(result), userInfo); err != nil {
+		return nil, err
+	}
+	return generateToken(userInfo, config.Get())
 }
 
 // exchangeCodeForToken exchanges the OAuth code for an access token
@@ -180,8 +230,8 @@ func getHttpClient() *http.Client {
 	}
 }
 
-// generateJWTToken generates a JWT token for the user
-func generateJWTToken(userInfo *GithubUserInfo, cfg *config.Config) (string, error) {
+// generateToken generates a token for the user
+func generateToken(userInfo *GithubUserInfo, cfg *config.Config) (*AuthToken, error) {
 	// Use login name if display name is empty
 	name := userInfo.Name
 	if name == "" {
@@ -194,9 +244,46 @@ func generateJWTToken(userInfo *GithubUserInfo, cfg *config.Config) (string, err
 		"github_id":  userInfo.ID,
 		"login":      userInfo.Login,
 		"iat":        time.Now().Unix(),
-		"exp":        time.Now().Add(time.Second * time.Duration(cfg.JwtExpiry)).Unix(), // Token expires in configured Seconds
+		"exp":        time.Now().Add(time.Second * time.Duration(cfg.AccessTokenExp)).Unix(), // Token expires in configured Seconds
+	}
+	claims.GetExpirationTime()
+
+	accessJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	randID, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	randIDStr := randID.String()
+
+	accessToken, err := accessJWT.SignedString([]byte(cfg.JwtSecret))
+	if err != nil {
+		return nil, err
+	}
+	refreshExp := time.Duration(cfg.RefreshTokenExp) * time.Second
+	refreshClaims := jwt.MapClaims{
+		"rand_id":   randIDStr,
+		"github_id": userInfo.ID,
+		"iat":       time.Now().Unix(),
+		"exp":       time.Now().Add(refreshExp - 120*time.Second).Unix(), // Refresh token expires in configured Seconds, but we set the JWT exp to be 2 minutes earlier to allow some buffer for token refresh before it actually expires
+	}
+	refreshJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+	refreshToken, err := refreshJWT.SignedString([]byte(cfg.JwtSecret))
+	if err != nil {
+		return nil, err
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(cfg.JwtSecret))
+	key := fmt.Sprintf("token:%d:%s", userInfo.ID, randIDStr)
+	infoJson, err := json.Marshal(userInfo)
+	if err != nil {
+		return nil, err
+	}
+	err = cache.GetClient().Set(context.Background(), key, string(infoJson), refreshExp).Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthToken{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }

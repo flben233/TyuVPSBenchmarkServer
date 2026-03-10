@@ -19,6 +19,7 @@ func RegisterRoute(base string, r *gin.Engine) {
 	{
 		// Public routes (no authentication required)
 		authGroup.GET("/github/login", handler.GithubLogin)
+		authGroup.POST("/refresh", handler.RefreshToken)
 
 		// Protected routes (authentication required)
 		protected := authGroup.Group("")

@@ -1,5 +1,3 @@
-import { da } from "element-plus/es/locale/index.mjs";
-
 export function useTool() {
   const { backendUrl } = useAppConfig();
   const dataSourceOptions = [

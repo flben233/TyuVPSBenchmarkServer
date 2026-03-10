@@ -27,8 +27,8 @@ func RegisterRoute(base string, r *gin.Engine) {
 		protectedAPI.Use(auth.GetJWTMiddleware())
 		{
 			protectedAPI.GET("/hosts", handler.ListHosts)
-			protectedAPI.POST("/hosts", handler.AddHost)
-			protectedAPI.POST("/hosts/:id", handler.RemoveHost)
+			protectedAPI.POST("/hosts/add", handler.AddHost)
+			protectedAPI.POST("/hosts/delete/:id", handler.RemoveHost)
 		}
 	}
 	{
