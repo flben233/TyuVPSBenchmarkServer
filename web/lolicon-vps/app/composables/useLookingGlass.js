@@ -1,28 +1,17 @@
+import {requestWithAuth} from "~/composables/useAuth.js";
+
 export function useLookingGlass() {
   const { backendUrl } = useAppConfig();
 
   async function listPublicLookingGlass() {
-    try {
-      const resp = await useFetch(`${backendUrl}/lookingglass/list`, {
-        method: "GET",
-      });
-      if (resp.data.value && resp.data.value.code === 0) {
-        return resp.data.value.data || [];
-      }
-    } catch (error) {
-      console.error("Failed to list public looking glass:", error);
-    }
-    return [];
+    return useFetch(`${backendUrl}/lookingglass/list`, {
+      method: "GET",
+    });
   }
 
   async function listRecords(token) {
     try {
-      const resp = await $fetch(`${backendUrl}/lookingglass/records`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/lookingglass/records`, "GET");
 
       if (resp && resp.code === 0) {
         return resp.data || [];
@@ -36,12 +25,7 @@ export function useLookingGlass() {
 
   async function addRecord(token, serverName, testUrl) {
     try {
-      const resp = await $fetch(`${backendUrl}/lookingglass/records`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const resp = await requestWithAuth(`/lookingglass/records`, "POST", {
         body: JSON.stringify({ server_name: serverName, test_url: testUrl }),
       });
 
@@ -57,12 +41,7 @@ export function useLookingGlass() {
 
   async function removeRecord(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/lookingglass/records/delete/${id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/lookingglass/records/delete/${id}`, "POST");
 
       if (resp && resp.code === 0) {
         return { success: true };
@@ -76,12 +55,7 @@ export function useLookingGlass() {
 
   async function listPendingRecords(token) {
     try {
-      const resp = await $fetch(`${backendUrl}/lookingglass/admin/pending`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/lookingglass/admin/pending`, "GET");
 
       if (resp && resp.code === 0) {
         return resp.data || [];
@@ -95,12 +69,7 @@ export function useLookingGlass() {
 
   async function approveRecord(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/lookingglass/admin/approve/${id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/lookingglass/admin/approve/${id}`, "POST");
 
       if (resp && resp.code === 0) {
         return { success: true };
@@ -114,12 +83,7 @@ export function useLookingGlass() {
 
   async function rejectRecord(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/lookingglass/admin/reject/${id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/lookingglass/admin/reject/${id}`, "POST");
 
       if (resp && resp.code === 0) {
         return { success: true };

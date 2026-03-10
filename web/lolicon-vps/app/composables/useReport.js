@@ -1,3 +1,5 @@
+import {requestWithAuth} from "~/composables/useAuth.js";
+
 export function useReport() {
   const { backendUrl } = useAppConfig();
 
@@ -17,12 +19,7 @@ export function useReport() {
 
   async function addReport(token, html, monitor_id, other_info) {
     try {
-      const resp = await $fetch(`${backendUrl}/report/admin/add`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const resp = await requestWithAuth(`/report/admin/add`, "POST", {
         body: JSON.stringify({
           html: html,
           monitor_id: monitor_id,
@@ -42,13 +39,8 @@ export function useReport() {
 
   async function deleteReport(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/report/admin/delete`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id }),
+      const resp = await requestWithAuth(`${backendUrl}/report/admin/delete`, "POST", {
+        body: JSON.stringify({ id })
       });
 
       if (resp && resp.code === 0) {
@@ -63,13 +55,8 @@ export function useReport() {
 
   async function updateReport(token, id, monitorId, otherInfo) {
     try {
-      const resp = await $fetch(`${backendUrl}/report/admin/update`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id, monitor_id: monitorId, other_info: otherInfo || "" }),
+      const resp = await $fetch(`${backendUrl}/report/admin/update`, "POST", {
+        body: JSON.stringify({ id, monitor_id: monitorId, other_info: otherInfo || "" })
       });
 
       if (resp && resp.code === 0) {

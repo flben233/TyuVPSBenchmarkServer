@@ -24,7 +24,7 @@ import (
 // @Failure 401 {object} common.APIResponse[any]
 // @Failure 403 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
-// @Router /monitor/hosts [post]
+// @Router /monitor/hosts/add [post]
 func AddHost(ctx *gin.Context) {
 	var req request.HostRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -60,7 +60,7 @@ func AddHost(ctx *gin.Context) {
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 401 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
-// @Router /monitor/hosts/{id} [post]
+// @Router /monitor/hosts/delete/{id} [post]
 func RemoveHost(ctx *gin.Context) {
 	id, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	if err != nil {

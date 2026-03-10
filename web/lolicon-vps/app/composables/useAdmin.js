@@ -1,15 +1,9 @@
-export function useAdmin() {
-  const { backendUrl } = useAppConfig();
+import {requestWithAuth} from "~/composables/useAuth.js";
 
+export function useAdmin() {
   async function listUsers(token) {
     try {
-      const resp = await $fetch(`${backendUrl}/auth/admin/users`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const resp = await requestWithAuth(`/auth/admin/users`, "GET");
       if (resp && resp.code === 0) {
         return resp.data || [];
       }
@@ -22,12 +16,7 @@ export function useAdmin() {
 
   async function updateUser(token, user) {
     try {
-      const resp = await $fetch(`${backendUrl}/auth/admin/user/update`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const resp = await requestWithAuth(`/auth/admin/user/update`, "POST",{
         body: JSON.stringify(user),
       });
 
@@ -43,12 +32,7 @@ export function useAdmin() {
 
   async function deleteUser(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/auth/admin/user/delete`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const resp = await requestWithAuth(`/auth/admin/user/delete`, "POST", {
         body: JSON.stringify({ id }),
       });
 
@@ -64,12 +48,7 @@ export function useAdmin() {
 
   async function listUserGroups(token) {
     try {
-      const resp = await $fetch(`${backendUrl}/auth/admin/groups`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const resp = await requestWithAuth(`/auth/admin/groups`, "GET");
 
       if (resp && resp.code === 0) {
         return resp.data || [];
@@ -83,12 +62,7 @@ export function useAdmin() {
 
   async function createUserGroup(token, group) {
     try {
-      const resp = await $fetch(`${backendUrl}/auth/admin/group/create`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const resp = await requestWithAuth(`/auth/admin/group/create`, "POST", {
         body: JSON.stringify(group),
       });
 
@@ -104,12 +78,7 @@ export function useAdmin() {
 
   async function updateUserGroup(token, group) {
     try {
-      const resp = await $fetch(`${backendUrl}/auth/admin/group/update`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const resp = await requestWithAuth(`/auth/admin/group/update`, "POST", {
         body: JSON.stringify(group),
       });
 
@@ -125,12 +94,7 @@ export function useAdmin() {
 
   async function deleteUserGroup(token, id) {
     try {
-      const resp = await $fetch(`${backendUrl}/auth/admin/group/delete`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const resp = await requestWithAuth(`/auth/admin/group/delete`, "POST", {
         body: JSON.stringify({ id }),
       });
 

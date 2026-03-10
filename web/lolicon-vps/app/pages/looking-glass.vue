@@ -12,8 +12,10 @@ useHead({
 
 const lgData = ref([]);
 const { listPublicLookingGlass } = useLookingGlass();
-const data = await listPublicLookingGlass();
-lgData.value = data;
+const resp = await listPublicLookingGlass();
+if (resp.data.value && resp.data.value.code === 0) {
+  lgData.value = resp.data.value.data;
+}
 </script>
 
 <template>

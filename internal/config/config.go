@@ -11,7 +11,8 @@ type Config struct {
 	ClientID        string `json:"clientId"`
 	ClientSecret    string `json:"clientSecret"`
 	JwtSecret       string `json:"jwtSecret"`
-	JwtExpiry       int    `json:"jwtExpiry"` // in seconds
+	AccessTokenExp  int    `json:"accessTokenExp"`  // in seconds
+	RefreshTokenExp int    `json:"refreshTokenExp"` // in seconds
 	AdminID         int64  `json:"adminId"`
 	FrontendURL     string `json:"frontendUrl"`
 	GithubHttpProxy string `json:"githubHttpsProxy"`
