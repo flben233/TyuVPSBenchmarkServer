@@ -1,5 +1,4 @@
 <script setup>
-import { ElMessage } from "element-plus";
 import { buildAppriseUrl, NOTIFY_PRESET_FIELDS } from "~/utils/inspector";
 
 const props = defineProps({
@@ -14,6 +13,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue", "apply"]);
+const { warn, err } = useMessage()
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -40,13 +40,13 @@ function handleBuild() {
   const fields = presetConfig.value?.fields || [];
   const missingField = fields.find((field) => field.required && !String(form.value[field.key] || "").trim());
   if (missingField) {
-    ElMessage.warning(`请填写${missingField.label}`);
+    warn(`请填写${missingField.label}`);
     return;
   }
 
   const url = buildAppriseUrl(props.preset, form.value);
   if (!url) {
-    ElMessage.error("生成通知 URL 失败，请检查填写内容");
+    err("生成通知 URL 失败，请检查填写内容");
     return;
   }
 

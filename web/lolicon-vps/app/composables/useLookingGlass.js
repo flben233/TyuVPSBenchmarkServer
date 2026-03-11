@@ -9,7 +9,7 @@ export function useLookingGlass() {
     });
   }
 
-  async function listRecords(token) {
+  async function listRecords() {
     try {
       const resp = await requestWithAuth(`/lookingglass/records`, "GET");
 
@@ -23,7 +23,7 @@ export function useLookingGlass() {
     }
   }
 
-  async function addRecord(token, serverName, testUrl) {
+  async function addRecord(serverName, testUrl) {
     try {
       const resp = await requestWithAuth(`/lookingglass/records`, "POST", {
         body: JSON.stringify({ server_name: serverName, test_url: testUrl }),
@@ -39,7 +39,7 @@ export function useLookingGlass() {
     }
   }
 
-  async function removeRecord(token, id) {
+  async function removeRecord(id) {
     try {
       const resp = await requestWithAuth(`/lookingglass/records/delete/${id}`, "POST");
 
@@ -53,7 +53,7 @@ export function useLookingGlass() {
     }
   }
 
-  async function listPendingRecords(token) {
+  async function listPendingRecords() {
     try {
       const resp = await requestWithAuth(`/lookingglass/admin/pending`, "GET");
 
@@ -67,7 +67,7 @@ export function useLookingGlass() {
     }
   }
 
-  async function approveRecord(token, id) {
+  async function approveRecord(id) {
     try {
       const resp = await requestWithAuth(`/lookingglass/admin/approve/${id}`, "POST");
 
@@ -81,7 +81,7 @@ export function useLookingGlass() {
     }
   }
 
-  async function rejectRecord(token, id) {
+  async function rejectRecord(id) {
     try {
       const resp = await requestWithAuth(`/lookingglass/admin/reject/${id}`, "POST");
 

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
 
 const props = defineProps({
   token: {
@@ -22,6 +22,8 @@ const {
   rejectRecord,
 } = useLookingGlass();
 
+const { warn, err, success } = useMessage()
+
 const loading = ref(false);
 const records = ref([]);
 const pendingRecords = ref([]);
@@ -39,12 +41,12 @@ async function loadData() {
   if (!props.token) return;
   loading.value = true;
   try {
-    records.value = await listRecords(props.token);
+    records.value = await listRecords();
     if (props.isAdmin) {
-      pendingRecords.value = await listPendingRecords(props.token);
+      pendingRecords.value = await listPendingRecords();
     }
   } catch (error) {
-    ElMessage.error("加载 Looking Glass 数据失败");
+    err("加载 Looking Glass 数据失败");
   } finally {
     loading.value = false;
   }
@@ -52,27 +54,26 @@ async function loadData() {
 
 async function handleAddRecord() {
   if (!addRecordForm.value.serverName || !addRecordForm.value.testUrl) {
-    ElMessage.warning("请填写所有字段");
+    warn("请填写所有字段");
     return;
   }
 
   loading.value = true;
   try {
     const result = await addRecord(
-      props.token,
       addRecordForm.value.serverName,
       addRecordForm.value.testUrl
     );
     if (result.success) {
-      ElMessage.success("记录添加成功");
+      success("记录添加成功");
       addRecordDialogVisible.value = false;
       addRecordForm.value = { serverName: "", testUrl: "" };
       await loadData();
     } else {
-      ElMessage.error(result.message || "添加记录失败");
+      err(result.message || "添加记录失败");
     }
   } catch (error) {
-    ElMessage.error("添加记录失败");
+    err("添加记录失败");
   } finally {
     loading.value = false;
   }
@@ -87,16 +88,16 @@ async function handleRemoveRecord(id) {
     });
 
     loading.value = true;
-    const result = await removeRecord(props.token, id);
+    const result = await removeRecord(id);
     if (result.success) {
-      ElMessage.success("记录删除成功");
+      success("记录删除成功");
       await loadData();
     } else {
-      ElMessage.error(result.message || "删除记录失败");
+      err(result.message || "删除记录失败");
     }
   } catch (error) {
     if (error !== "cancel") {
-      ElMessage.error("删除记录失败");
+      err("删除记录失败");
     }
   } finally {
     loading.value = false;
@@ -106,15 +107,15 @@ async function handleRemoveRecord(id) {
 async function handleApproveRecord(id) {
   loading.value = true;
   try {
-    const result = await approveRecord(props.token, id);
+    const result = await approveRecord(id);
     if (result.success) {
-      ElMessage.success("记录审核通过");
+      success("记录审核通过");
       await loadData();
     } else {
-      ElMessage.error(result.message || "审核记录失败");
+      err(result.message || "审核记录失败");
     }
   } catch (error) {
-    ElMessage.error("审核记录失败");
+    err("审核记录失败");
   } finally {
     loading.value = false;
   }
@@ -123,15 +124,15 @@ async function handleApproveRecord(id) {
 async function handleRejectRecord(id) {
   loading.value = true;
   try {
-    const result = await rejectRecord(props.token, id);
+    const result = await rejectRecord(id);
     if (result.success) {
-      ElMessage.success("记录已拒绝");
+      success("记录已拒绝");
       await loadData();
     } else {
-      ElMessage.error(result.message || "拒绝记录失败");
+      err(result.message || "拒绝记录失败");
     }
   } catch (error) {
-    ElMessage.error("拒绝记录失败");
+    err("拒绝记录失败");
   } finally {
     loading.value = false;
   }

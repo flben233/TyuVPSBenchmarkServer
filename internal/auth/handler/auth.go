@@ -76,7 +76,12 @@ func RefreshToken(c *gin.Context) {
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
-	newToken, err := service.RefreshToken(int64(claims["github_id"].(float64)), claims["rand_id"].(string))
+	// validate claims
+	if claims["github_id"] == nil || claims["family"] == nil || claims["rand_id"] == nil {
+		c.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "Invalid refresh token claims"))
+		return
+	}
+	newToken, err := service.RefreshToken(int64(claims["github_id"].(float64)), claims["family"].(string), claims["rand_id"].(string))
 	if err != nil {
 		common.DefaultErrorHandler(c, err)
 		return

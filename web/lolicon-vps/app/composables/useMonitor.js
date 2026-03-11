@@ -36,7 +36,7 @@ export function useMonitor() {
     }
   }
 
-  async function listHosts(token) {
+  async function listHosts() {
     try {
       const resp = await requestWithAuth(`/monitor/hosts`, "GET");
 
@@ -50,7 +50,7 @@ export function useMonitor() {
     }
   }
 
-  async function addHost(token, name, target) {
+  async function addHost(name, target) {
     try {
       const resp = await requestWithAuth(`/monitor/hosts/add`, "POST", {
         body: JSON.stringify({ name, target })
@@ -66,7 +66,7 @@ export function useMonitor() {
     }
   }
 
-  async function removeHost(token, id) {
+  async function removeHost(id) {
     try {
       const resp = await requestWithAuth(`/monitor/hosts/delete/${id}`, "POST");
 
@@ -83,7 +83,7 @@ export function useMonitor() {
     }
   }
 
-  async function listPendingHosts(token) {
+  async function listPendingHosts() {
     try {
       const resp = await requestWithAuth(`/monitor/admin/pending`, "GET");
 
@@ -97,7 +97,7 @@ export function useMonitor() {
     }
   }
 
-  async function approveHost(token, id) {
+  async function approveHost(id) {
     try {
       const resp = await requestWithAuth(`/monitor/admin/approve/${id}`, "POST");
 
@@ -114,7 +114,7 @@ export function useMonitor() {
     }
   }
 
-  async function rejectHost(token, id) {
+  async function rejectHost(id) {
     try {
       const resp = await requestWithAuth(`/monitor/admin/reject/${id}`, "POST");
 

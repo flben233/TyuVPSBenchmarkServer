@@ -17,7 +17,7 @@ export function useReport() {
       });
   }
 
-  async function addReport(token, html, monitor_id, other_info) {
+  async function addReport(html, monitor_id, other_info) {
     try {
       const resp = await requestWithAuth(`/report/admin/add`, "POST", {
         body: JSON.stringify({
@@ -37,7 +37,7 @@ export function useReport() {
     }
   }
 
-  async function deleteReport(token, id) {
+  async function deleteReport(id) {
     try {
       const resp = await requestWithAuth(`${backendUrl}/report/admin/delete`, "POST", {
         body: JSON.stringify({ id })
@@ -53,7 +53,7 @@ export function useReport() {
     }
   }
 
-  async function updateReport(token, id, monitorId, otherInfo) {
+  async function updateReport(id, monitorId, otherInfo) {
     try {
       const resp = await $fetch(`${backendUrl}/report/admin/update`, "POST", {
         body: JSON.stringify({ id, monitor_id: monitorId, other_info: otherInfo || "" })

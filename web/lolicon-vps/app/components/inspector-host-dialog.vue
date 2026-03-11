@@ -1,5 +1,4 @@
 <script setup>
-import { ElMessage } from "element-plus";
 import { stringifyTagList } from "~/utils/inspector";
 
 const props = defineProps({
@@ -22,6 +21,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue", "submit"]);
+const { warn } = useMessage()
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -56,7 +56,7 @@ watch(
 
 function handleSubmit() {
   if (!form.value.name.trim() || !form.value.target.trim()) {
-    ElMessage.warning("请填写服务器名称和目标地址");
+    warn("请填写服务器名称和目标地址");
     return;
   }
 
