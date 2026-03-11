@@ -150,9 +150,9 @@ const goBack = () => {
             商家链接
           </el-link>
         </div>
-        <div v-if="report.other_info" class="report-other-info">
-          <el-tag type="info" effect="plain">{{ report.other_info }}</el-tag>
-        </div>
+        <pre v-if="report.other_info" class="report-other-info">
+          {{ report.other_info }}
+        </pre>
       </div>
 
       <monitor-widget
@@ -733,7 +733,15 @@ const goBack = () => {
 }
 
 .report-other-info {
-  margin-top: 12px;
+  font-size: 12px;
+  white-space: pre-line;
+  font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
+  color: #606266;
+  background: #f3f3f3;
+  border-radius: 4px;
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px solid #e4e7ed;
 }
 
 .section-card {
