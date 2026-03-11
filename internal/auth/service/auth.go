@@ -98,18 +98,19 @@ func GithubLogin(code string) (*AuthToken, error) {
 	}
 
 	// Generate token
-	return generateToken(userInfo, cfg)
+	return generateToken(userInfo, cfg, common.RandomString(8))
 }
 
-func RefreshToken(userID int64, refreshToken string) (*AuthToken, error) {
-	key := fmt.Sprintf("token:%d:%s", userID, refreshToken)
+func RefreshToken(userID int64, family, refreshToken string) (*AuthToken, error) {
+	key := getRedisKey(userID, family, refreshToken)
 	client := cache.GetClient()
 	result, err := client.Get(context.Background(), key).Result()
 	if err != nil {
+		// Prevent token reuse by deleting all tokens in the same family if the token is invalid (e.g. already used or expired)
 		if errors.Is(err, redis.Nil) {
 			cursor := uint64(0)
 			var keys []string
-			pattern := fmt.Sprintf("token:%d:*", userID)
+			pattern := getRedisKey(userID, family, "*")
 			for {
 				keys, cursor, err = client.Scan(context.Background(), 0, pattern, 100).Result()
 				if err != nil {
@@ -137,7 +138,7 @@ func RefreshToken(userID int64, refreshToken string) (*AuthToken, error) {
 	if err = json.Unmarshal([]byte(result), userInfo); err != nil {
 		return nil, err
 	}
-	return generateToken(userInfo, config.Get())
+	return generateToken(userInfo, config.Get(), family)
 }
 
 // exchangeCodeForToken exchanges the OAuth code for an access token
@@ -231,7 +232,7 @@ func getHttpClient() *http.Client {
 }
 
 // generateToken generates a token for the user
-func generateToken(userInfo *GithubUserInfo, cfg *config.Config) (*AuthToken, error) {
+func generateToken(userInfo *GithubUserInfo, cfg *config.Config, family string) (*AuthToken, error) {
 	// Use login name if display name is empty
 	name := userInfo.Name
 	if name == "" {
@@ -246,7 +247,6 @@ func generateToken(userInfo *GithubUserInfo, cfg *config.Config) (*AuthToken, er
 		"iat":        time.Now().Unix(),
 		"exp":        time.Now().Add(time.Second * time.Duration(cfg.AccessTokenExp)).Unix(), // Token expires in configured Seconds
 	}
-	claims.GetExpirationTime()
 
 	accessJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	randID, err := uuid.NewRandom()
@@ -263,6 +263,7 @@ func generateToken(userInfo *GithubUserInfo, cfg *config.Config) (*AuthToken, er
 	refreshClaims := jwt.MapClaims{
 		"rand_id":   randIDStr,
 		"github_id": userInfo.ID,
+		"family":    family,
 		"iat":       time.Now().Unix(),
 		"exp":       time.Now().Add(refreshExp - 120*time.Second).Unix(), // Refresh token expires in configured Seconds, but we set the JWT exp to be 2 minutes earlier to allow some buffer for token refresh before it actually expires
 	}
@@ -272,7 +273,7 @@ func generateToken(userInfo *GithubUserInfo, cfg *config.Config) (*AuthToken, er
 		return nil, err
 	}
 
-	key := fmt.Sprintf("token:%d:%s", userInfo.ID, randIDStr)
+	key := getRedisKey(userInfo.ID, family, randIDStr)
 	infoJson, err := json.Marshal(userInfo)
 	if err != nil {
 		return nil, err
@@ -286,4 +287,8 @@ func generateToken(userInfo *GithubUserInfo, cfg *config.Config) (*AuthToken, er
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
+}
+
+func getRedisKey(userID int64, family string, randID string) string {
+	return fmt.Sprintf("token:%d:%s:%s", userID, family, randID)
 }

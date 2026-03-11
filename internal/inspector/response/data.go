@@ -3,6 +3,7 @@ package response
 import (
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/inspector/model"
+	"time"
 )
 
 type HostData struct {
@@ -15,6 +16,7 @@ type HostData struct {
 	Name       string            `json:"name"`
 	Tags       string            `json:"tags"` // json array of strings
 	Notify     bool              `json:"notify"`
+	LastUpdate time.Time         `json:"last_update"`
 	common.ServerStatus
 }
 

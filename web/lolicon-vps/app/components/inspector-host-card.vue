@@ -89,8 +89,8 @@ const detailItems = computed(() => {
             <el-tag size="small" :type="host.notify ? 'warning' : 'info'" effect="dark">
               {{ host.notify ? "通知已开启" : "通知未开启" }}
             </el-tag>
-            <el-tag size="small" :type="isAgentActive ? 'success' : 'info'" effect="dark">
-              {{ isAgentActive ? "Agent 已连接" : "未接入 Agent" }}
+            <el-tag size="small" type="info" effect="dark">
+              {{ host.last_update ? `上次上报 ${formatUptime((Date.now() - new Date(host.last_update).getTime()) / 1000)}` : "未上报" }}
             </el-tag>
             <el-tag v-for="tag in host.tags" :key="tag" size="small" effect="dark">{{ tag }}</el-tag>
           </div>

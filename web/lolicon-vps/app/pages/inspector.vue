@@ -1,6 +1,6 @@
 <script setup>
 import { ArrowLeft, Plus, RefreshRight, Setting } from "@element-plus/icons-vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
 import {
   exceedsInspectorPointLimit,
   getDefaultInspectorQuery,
@@ -19,6 +19,7 @@ useHead({
   ],
 });
 
+const { warn, err, success } = useMessage()
 const { clientId } = useAppConfig();
 const GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize?client_id=" + clientId;
 const REFRESH_INTERVAL_MS = 60 * 1000;
@@ -155,8 +156,8 @@ async function loadInspectorData({ silent = false } = {}) {
   }
 
   const [dashboardResult, settingsResult] = await Promise.allSettled([
-    loadDashboard(token.value, activeQuery.value),
-    getSettings(token.value),
+    loadDashboard(activeQuery.value),
+    getSettings(),
   ]);
 
   const errors = [];
@@ -166,9 +167,11 @@ async function loadInspectorData({ silent = false } = {}) {
       hosts.value = dashboardResult.value.data || [];
     } else {
       errors.push(dashboardResult.value.message);
+      console.log("加载服务器数据失败:", dashboardResult.value.message);
     }
   } else {
     errors.push(dashboardResult.reason?.message || "加载服务器数据失败");
+      console.log("加载服务器数据失败:", dashboardResult.reason);
   }
 
   if (settingsResult.status === "fulfilled") {
@@ -176,14 +179,16 @@ async function loadInspectorData({ silent = false } = {}) {
       settings.value = settingsResult.value.data || getEmptyInspectorSettings();
     } else {
       errors.push(settingsResult.value.message);
+        console.log("加载设置数据失败:", settingsResult.value.message);
     }
   } else {
     errors.push(settingsResult.reason?.message || "加载设置失败");
+      console.log("加载设置数据失败:", settingsResult.reason);
   }
 
   errorMessage.value = errors.join("；");
   if (errorMessage.value && !silent) {
-    ElMessage.error(errorMessage.value);
+    err(errorMessage.value);
   }
 
   loading.value = false;
@@ -193,14 +198,14 @@ async function loadInspectorData({ silent = false } = {}) {
 async function applyQuery({ silent = false } = {}) {
   const nextQuery = buildQueryFromState();
   if (!nextQuery) {
-    ElMessage.warning("请选择有效的时间范围");
+    warn("请选择有效的时间范围");
     return;
   }
 
   const startMs = Number(nextQuery.start) / 1_000_000;
   const endMs = Number(nextQuery.end) / 1_000_000;
   if (exceedsInspectorPointLimit(startMs, endMs, nextQuery.interval, MAX_QUERY_POINTS)) {
-    ElMessage.warning(`当前时间范围和粒度会超过 ${MAX_QUERY_POINTS} 个数据点，请增大时间粒度或缩短时间范围`);
+    warn(`当前时间范围和粒度会超过 ${MAX_QUERY_POINTS} 个数据点，请增大时间粒度或缩短时间范围`);
     return;
   }
 
@@ -271,16 +276,16 @@ function openEditDialog(host) {
 
 async function handleCreateHost(payload) {
   submittingHost.value = true;
-  const result = await createHost(token.value, payload);
+  const result = await createHost(payload);
   submittingHost.value = false;
 
   if (!result.success) {
-    ElMessage.error(result.message || "创建服务器失败");
+    err(result.message || "创建服务器失败");
     return;
   }
 
   addDialogVisible.value = false;
-  ElMessage.success("服务器已创建");
+  success("服务器已创建");
   await loadInspectorData({ silent: true });
 }
 
@@ -290,7 +295,7 @@ async function handleUpdateHost(payload) {
   }
 
   submittingHost.value = true;
-  const result = await updateHost(token.value, selectedHost.value.id, {
+  const result = await updateHost(selectedHost.value.id, {
     name: payload.name,
     target: payload.target,
     tags: payload.tags,
@@ -299,13 +304,13 @@ async function handleUpdateHost(payload) {
   submittingHost.value = false;
 
   if (!result.success) {
-    ElMessage.error(result.message || "更新服务器失败");
+    err(result.message || "更新服务器失败");
     return;
   }
 
   editDialogVisible.value = false;
   selectedHost.value = null;
-  ElMessage.success("服务器信息已更新");
+  success("服务器信息已更新");
   await loadInspectorData({ silent: true });
 }
 
@@ -320,29 +325,29 @@ async function handleDeleteHost(host) {
     return;
   }
 
-  const result = await deleteHost(token.value, host.id);
+  const result = await deleteHost(host.id);
   if (!result.success) {
-    ElMessage.error(result.message || "删除服务器失败");
+    err(result.message || "删除服务器失败");
     return;
   }
 
-  ElMessage.success("服务器已删除");
+  success("服务器已删除");
   await loadInspectorData({ silent: true });
 }
 
 async function handleSaveSettings(payload) {
   submittingSettings.value = true;
-  const result = await updateSettings(token.value, payload);
+  const result = await updateSettings(payload);
   submittingSettings.value = false;
 
   if (!result.success) {
-    ElMessage.error(result.message || "保存设置失败");
+    err(result.message || "保存设置失败");
     return;
   }
 
   settings.value = result.data || getEmptyInspectorSettings();
   settingsDialogVisible.value = false;
-  ElMessage.success("设置已保存");
+  success("设置已保存");
 }
 
 watch(
@@ -403,18 +408,7 @@ onUnmounted(() => {
       </div>
 
       <template v-else>
-        <div v-if="loading" class="skeleton-grid">
-          <el-card v-for="index in 3" :key="index" shadow="never" class="skeleton-card">
-            <el-skeleton :rows="8" animated />
-          </el-card>
-        </div>
-
-        <el-empty
-          v-else-if="hosts.length === 0"
-          description=" "
-        />
-
-        <div v-else class="inspector-layout">
+        <div class="inspector-layout">
           <InspectorSidebar
             :class="childTheme"
             :stats="dashboardStats"
@@ -555,17 +549,6 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
-}
-
-.skeleton-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-}
-
-.skeleton-card {
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.5);
 }
 
 @media screen and (max-width: 768px) {

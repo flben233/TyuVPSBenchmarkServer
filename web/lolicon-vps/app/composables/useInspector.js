@@ -28,6 +28,7 @@ export function useInspector() {
         message: response?.message || fallbackMessage,
       };
     } catch (error) {
+      console.error(error)
       return {
         success: false,
         data: null,
@@ -36,7 +37,7 @@ export function useInspector() {
     }
   }
 
-  async function listHosts(token) {
+  async function listHosts() {
     return request(
       "/inspector/hosts",
       "GET",
@@ -44,7 +45,7 @@ export function useInspector() {
     );
   }
 
-  async function queryData(token, query = getDefaultInspectorQuery()) {
+  async function queryData(query = getDefaultInspectorQuery()) {
     return request(
       "/inspector/data",
       "GET",
@@ -53,8 +54,8 @@ export function useInspector() {
     );
   }
 
-  async function loadDashboard(token, query = getDefaultInspectorQuery()) {
-    const [hostsResult, dataResult] = await Promise.all([listHosts(token), queryData(token, query)]);
+  async function loadDashboard(query = getDefaultInspectorQuery()) {
+    const [hostsResult, dataResult] = await Promise.all([listHosts(), queryData(query)]);
     if (!hostsResult.success) {
       return hostsResult;
     }
@@ -70,7 +71,7 @@ export function useInspector() {
     };
   }
 
-  async function createHost(token, payload) {
+  async function createHost(payload) {
     return request(
       "/inspector/hosts/create",
         "POST",
@@ -79,7 +80,7 @@ export function useInspector() {
     );
   }
 
-  async function updateHost(token, id, payload) {
+  async function updateHost(id, payload) {
     return request(
       `/inspector/hosts/update/${id}`,
 "POST",
@@ -88,7 +89,7 @@ export function useInspector() {
     );
   }
 
-  async function deleteHost(token, id) {
+  async function deleteHost(id) {
     return request(
       `/inspector/hosts/delete/${id}`,
       "POST",
@@ -96,7 +97,7 @@ export function useInspector() {
     );
   }
 
-  async function getSettings(token) {
+  async function getSettings() {
     const result = await request(
       "/inspector/settings",
       "GET",
@@ -114,7 +115,7 @@ export function useInspector() {
     };
   }
 
-  async function updateSettings(token, payload) {
+  async function updateSettings(payload) {
     const result = await request(
       "/inspector/settings/update",
       "POST",

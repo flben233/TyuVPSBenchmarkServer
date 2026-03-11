@@ -1,3 +1,5 @@
+import {useMessage} from "~/composables/useMessage.js";
+
 let userInfo = ref(null);
 let token = ref(null);
 let isAdmin = ref(false);
@@ -38,7 +40,7 @@ export async function requestWithAuth(url, method, options = {}) {
       const { refreshToken } = useAuth();
       await refreshToken();
       console.log("Token refreshed, retrying request...");
-      return await doRequest(url, options);
+      return await doRequest(url, method, options);
     }
   }
 }
@@ -46,15 +48,15 @@ export async function requestWithAuth(url, method, options = {}) {
 export function useAuth() {
   const { backendUrl } = useAppConfig();
 
-  if (process.client) {
-    const storedToken = sessionStorage.getItem("auth_token");
-    if (storedToken) {
-      token.value = storedToken;
-      fetchUserInfo();
-      checkAdmin();
-      console.log("Restored token from sessionStorage:", token.value);
-    }
-  }
+  // if (process.client) {
+  //   const storedToken = sessionStorage.getItem("auth_token");
+  //   if (storedToken) {
+  //     token.value = storedToken;
+  //     fetchUserInfo();
+  //     checkAdmin();
+  //     console.log("Restored token from sessionStorage:", token.value);
+  //   }
+  // }
 
   async function login(code) {
     let resp = await $fetch(`${backendUrl}/auth/github/login`, {
@@ -65,7 +67,7 @@ export function useAuth() {
       token.value = resp.data.token;
       await fetchUserInfo();
       await checkAdmin();
-      sessionStorage.setItem("auth_token", token.value);
+      // sessionStorage.setItem("auth_token", token.value);
     }
   }
 
@@ -77,12 +79,13 @@ export function useAuth() {
         token.value = resp.data.token;
         await fetchUserInfo();
         await checkAdmin();
-        sessionStorage.setItem("auth_token", token.value);
+        // sessionStorage.setItem("auth_token", token.value);
       } else {
         await logout();
       }
     } catch (ignored) {
       await logout();
+      useMessage().err("会话已过期，请重新登录");
     } finally {
       refreshingToken = false;
       failQueue.forEach(p => p.resolve());
@@ -106,7 +109,7 @@ export function useAuth() {
     token.value = null;
     userInfo.value = null;
     isAdmin.value = false;
-    sessionStorage.removeItem("auth_token");
+    // sessionStorage.removeItem("auth_token");
   }
 
   async function checkAdmin() {

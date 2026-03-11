@@ -192,6 +192,7 @@ func PutData(trafficData []model.TrafficPoint, hostInfo common.ServerStatus, hos
 		Target:       host.Target,
 		Name:         host.Name,
 		Tags:         host.Tags,
+		LastUpdate:   time.Now(),
 		ServerStatus: hostInfo,
 	}
 
@@ -233,6 +234,7 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 			Tags:         host.Tags,
 			Notify:       host.Notify,
 			LatestPing:   latestPing,
+			LastUpdate:   host.LastUpdate,
 			ServerStatus: host.ServerStatus,
 		}
 	}

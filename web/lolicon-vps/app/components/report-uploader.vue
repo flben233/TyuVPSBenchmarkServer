@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
 
 const props = defineProps({
   token: {
@@ -14,6 +14,7 @@ const props = defineProps({
 });
 
 const { addReport, deleteReport, updateReport, getReportDetails } = useReport();
+const { warn, err, success } = useMessage()
 
 // Report data
 const fileInput = useTemplateRef("report-selector");
@@ -36,7 +37,7 @@ const fetchingReport = ref(false);
 
 async function fetchOriginalValues() {
   if (!updateReportId.value) {
-    ElMessage.warning("请先输入报告 ID");
+    warn("请先输入报告 ID");
     return;
   }
 
@@ -47,12 +48,12 @@ async function fetchOriginalValues() {
       const report = resp.data.value.data;
       updateMonitorId.value = report.monitor_id || null;
       updateOtherInfo.value = report.other_info || "";
-      ElMessage.success("已填充原值");
+      success("已填充原值");
     } else {
-      ElMessage.error("未找到该报告");
+      err("未找到该报告");
     }
   } catch (error) {
-    ElMessage.error("获取报告信息失败");
+    err("获取报告信息失败");
   } finally {
     fetchingReport.value = false;
   }
@@ -61,7 +62,7 @@ async function fetchOriginalValues() {
 // Report functions
 async function handleFileSelect(event) {
   if (!event.target.files.length) {
-    ElMessage.warning("请选择HTML文件");
+    warn("请选择HTML文件");
     return;
   }
 
@@ -92,7 +93,7 @@ async function handleFileSelect(event) {
 
 async function handleAddReport() {
   if (!reportFile.value && reportFiles.value.length === 0) {
-    ElMessage.warning("请选择HTML文件");
+    warn("请选择HTML文件");
     return;
   }
 
@@ -114,7 +115,6 @@ async function handleAddReport() {
           const monitorId = fileMonitorMapping.value[i].monitorId;
           const fileOtherInfo = fileMonitorMapping.value[i].otherInfo;
           const result = await addReport(
-            props.token,
             htmlContent,
             monitorId || undefined,
             fileOtherInfo || undefined
@@ -136,11 +136,11 @@ async function handleAddReport() {
       }
 
       if (successCount > 0) {
-        ElMessage.success(
+        success(
           `成功上传 ${successCount} 个报告${failedCount > 0 ? `，失败 ${failedCount} 个` : ""}`
         );
       } else {
-        ElMessage.error("所有报告上传失败");
+        err("所有报告上传失败");
       }
 
       addReportDialogVisible.value = false;
@@ -151,23 +151,22 @@ async function handleAddReport() {
       // Single file upload
       const htmlContent = await reportFile.value.text();
       const result = await addReport(
-        props.token,
         htmlContent,
         selectedMonitorId.value || undefined,
         otherInfo.value || undefined
       );
       if (result.success) {
-        ElMessage.success(`报告添加成功。ID: ${result.data.id}`);
+        success(`报告添加成功。ID: ${result.data.id}`);
         addReportDialogVisible.value = false;
         reportFile.value = null;
         selectedMonitorId.value = null;
         otherInfo.value = "";
       } else {
-        ElMessage.error(result.message || "添加报告失败");
+        err(result.message || "添加报告失败");
       }
     }
   } catch (error) {
-    ElMessage.error("添加报告失败");
+    err("添加报告失败");
   } finally {
     loading.value = false;
     uploadingBatch.value = false;
@@ -188,15 +187,15 @@ async function handleDeleteReport() {
     );
 
     loading.value = true;
-    const result = await deleteReport(props.token, reportId);
+    const result = await deleteReport(reportId);
     if (result.success) {
-      ElMessage.success("报告删除成功");
+      success("报告删除成功");
     } else {
-      ElMessage.error(result.message || "删除报告失败");
+      err(result.message || "删除报告失败");
     }
   } catch (error) {
     if (error !== "cancel") {
-      ElMessage.error("删除报告失败");
+      err("删除报告失败");
     }
   } finally {
     loading.value = false;
@@ -211,29 +210,28 @@ function showFileSelector() {
 
 async function handleUpdateMonitor() {
   if (!updateReportId.value) {
-    ElMessage.warning("请输入报告 ID");
+    warn("请输入报告 ID");
     return;
   }
 
   loading.value = true;
   try {
     const result = await updateReport(
-      props.token,
       updateReportId.value,
       updateMonitorId.value,
       updateOtherInfo.value || undefined
     );
     if (result.success) {
-      ElMessage.success("报告更新成功");
+      success("报告更新成功");
       updateMonitorDialogVisible.value = false;
       updateReportId.value = "";
       updateMonitorId.value = null;
       updateOtherInfo.value = "";
     } else {
-      ElMessage.error(result.message || "更新报告失败");
+      err(result.message || "更新报告失败");
     }
   } catch (error) {
-    ElMessage.error("更新报告失败");
+    err("更新报告失败");
   } finally {
     loading.value = false;
   }

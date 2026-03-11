@@ -21,6 +21,7 @@ const {
   approveHost,
   rejectHost,
 } = useMonitor();
+const { warn, err, success } = useMessage()
 
 const loading = ref(false);
 const hosts = ref([]);
@@ -41,12 +42,12 @@ async function loadData() {
   if (!props.token) return;
   loading.value = true;
   try {
-    hosts.value = await listHosts(props.token);
+    hosts.value = await listHosts();
     if (props.isAdmin) {
-      pendingHosts.value = await listPendingHosts(props.token);
+      pendingHosts.value = await listPendingHosts();
     }
   } catch (error) {
-    ElMessage.error("加载监控数据失败");
+    err("加载监控数据失败");
   } finally {
     loading.value = false;
   }
@@ -54,27 +55,26 @@ async function loadData() {
 
 async function handleAddHost() {
   if (!addHostForm.value.name || !addHostForm.value.target) {
-    ElMessage.warning("请填写所有字段");
+    warn("请填写所有字段");
     return;
   }
 
   loading.value = true;
   try {
     const result = await addHost(
-      props.token,
       addHostForm.value.name,
       addHostForm.value.target
     );
     if (result.success) {
-      ElMessage.success("主机添加成功");
+      success("主机添加成功");
       addHostDialogVisible.value = false;
       addHostForm.value = { name: "", target: "" };
       await loadData();
     } else {
-      ElMessage.error(result.message || "添加主机失败");
+      err(result.message || "添加主机失败");
     }
   } catch (error) {
-    ElMessage.error("添加主机失败");
+    err("添加主机失败");
   } finally {
     loading.value = false;
   }
@@ -89,16 +89,16 @@ async function handleRemoveHost(id) {
     });
 
     loading.value = true;
-    const result = await removeHost(props.token, id);
+    const result = await removeHost(id);
     if (result.success) {
-      ElMessage.success("主机删除成功");
+      success("主机删除成功");
       await loadData();
     } else {
-      ElMessage.error(result.message || "删除主机失败");
+      err(result.message || "删除主机失败");
     }
   } catch (error) {
     if (error !== "cancel") {
-      ElMessage.error("删除主机失败");
+      err("删除主机失败");
     }
   } finally {
     loading.value = false;
@@ -108,15 +108,15 @@ async function handleRemoveHost(id) {
 async function handleApproveHost(id) {
   loading.value = true;
   try {
-    const result = await approveHost(props.token, id);
+    const result = await approveHost(id);
     if (result.success) {
-      ElMessage.success("主机审核通过");
+      success("主机审核通过");
       await loadData();
     } else {
-      ElMessage.error(result.message || "审核主机失败");
+      err(result.message || "审核主机失败");
     }
   } catch (error) {
-    ElMessage.error("审核主机失败");
+    err("审核主机失败");
   } finally {
     loading.value = false;
   }
@@ -125,15 +125,15 @@ async function handleApproveHost(id) {
 async function handleRejectHost(id) {
   loading.value = true;
   try {
-    const result = await rejectHost(props.token, id);
+    const result = await rejectHost(id);
     if (result.success) {
-      ElMessage.success("主机已拒绝");
+      success("主机已拒绝");
       await loadData();
     } else {
-      ElMessage.error(result.message || "拒绝主机失败");
+      err(result.message || "拒绝主机失败");
     }
   } catch (error) {
-    ElMessage.error("拒绝主机失败");
+    err("拒绝主机失败");
   } finally {
     loading.value = false;
   }

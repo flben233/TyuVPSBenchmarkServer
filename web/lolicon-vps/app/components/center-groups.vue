@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
 
 const props = defineProps({
   token: {
@@ -10,6 +10,7 @@ const props = defineProps({
 });
 
 const { listUserGroups, createUserGroup, updateUserGroup, deleteUserGroup } = useAdmin();
+const { err, success, warn } = useMessage();
 
 const loading = ref(false);
 const groups = ref([]);
@@ -31,9 +32,9 @@ async function loadData() {
   if (!props.token) return;
   loading.value = true;
   try {
-    groups.value = await listUserGroups(props.token);
+    groups.value = await listUserGroups();
   } catch (error) {
-    ElMessage.error("加载用户组数据失败");
+    err("加载用户组数据失败");
   } finally {
     loading.value = false;
   }
@@ -65,7 +66,7 @@ function handleEdit(row) {
 
 async function handleSubmit() {
   if (!groupForm.value.name) {
-    ElMessage.warning("用户组名称不能为空");
+    warn("用户组名称不能为空");
     return;
   }
 
@@ -73,22 +74,22 @@ async function handleSubmit() {
   try {
     let result;
     if (isEditing.value) {
-      result = await updateUserGroup(props.token, groupForm.value);
+      result = await updateUserGroup(groupForm.value);
     } else {
-      result = await createUserGroup(props.token, groupForm.value);
+      result = await createUserGroup(groupForm.value);
     }
 
     if (result.success) {
-      ElMessage.success(isEditing.value ? "用户组更新成功" : "用户组创建成功");
+      success(isEditing.value ? "用户组更新成功" : "用户组创建成功");
       dialogVisible.value = false;
       await loadData();
     } else {
-      ElMessage.error(
+      err(
         result.message || (isEditing.value ? "更新用户组失败" : "创建用户组失败")
       );
     }
   } catch (error) {
-    ElMessage.error(isEditing.value ? "更新用户组失败" : "创建用户组失败");
+    err(isEditing.value ? "更新用户组失败" : "创建用户组失败");
   } finally {
     loading.value = false;
   }
@@ -107,16 +108,16 @@ async function handleDelete(row) {
     );
 
     loading.value = true;
-    const result = await deleteUserGroup(props.token, row.id);
+    const result = await deleteUserGroup(row.id);
     if (result.success) {
-      ElMessage.success("用户组删除成功");
+      success("用户组删除成功");
       await loadData();
     } else {
-      ElMessage.error(result.message || "删除用户组失败");
+      err(result.message || "删除用户组失败");
     }
   } catch (error) {
     if (error !== "cancel") {
-      ElMessage.error("删除用户组失败");
+      err("删除用户组失败");
     }
   } finally {
     loading.value = false;

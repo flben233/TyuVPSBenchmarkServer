@@ -1,7 +1,7 @@
 import {requestWithAuth} from "~/composables/useAuth.js";
 
 export function useAdmin() {
-  async function listUsers(token) {
+  async function listUsers() {
     try {
       const resp = await requestWithAuth(`/auth/admin/users`, "GET");
       if (resp && resp.code === 0) {
@@ -14,7 +14,7 @@ export function useAdmin() {
     }
   }
 
-  async function updateUser(token, user) {
+  async function updateUser(user) {
     try {
       const resp = await requestWithAuth(`/auth/admin/user/update`, "POST",{
         body: JSON.stringify(user),
@@ -30,7 +30,7 @@ export function useAdmin() {
     }
   }
 
-  async function deleteUser(token, id) {
+  async function deleteUser(id) {
     try {
       const resp = await requestWithAuth(`/auth/admin/user/delete`, "POST", {
         body: JSON.stringify({ id }),
@@ -46,7 +46,7 @@ export function useAdmin() {
     }
   }
 
-  async function listUserGroups(token) {
+  async function listUserGroups() {
     try {
       const resp = await requestWithAuth(`/auth/admin/groups`, "GET");
 
@@ -60,7 +60,7 @@ export function useAdmin() {
     }
   }
 
-  async function createUserGroup(token, group) {
+  async function createUserGroup(group) {
     try {
       const resp = await requestWithAuth(`/auth/admin/group/create`, "POST", {
         body: JSON.stringify(group),
@@ -76,7 +76,7 @@ export function useAdmin() {
     }
   }
 
-  async function updateUserGroup(token, group) {
+  async function updateUserGroup(group) {
     try {
       const resp = await requestWithAuth(`/auth/admin/group/update`, "POST", {
         body: JSON.stringify(group),
@@ -92,7 +92,7 @@ export function useAdmin() {
     }
   }
 
-  async function deleteUserGroup(token, id) {
+  async function deleteUserGroup(id) {
     try {
       const resp = await requestWithAuth(`/auth/admin/group/delete`, "POST", {
         body: JSON.stringify({ id }),

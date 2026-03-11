@@ -10,6 +10,7 @@ const props = defineProps({
 });
 
 const { listUsers, updateUser, deleteUser, listUserGroups } = useAdmin();
+const { warn, err, success } = useMessage()
 
 const loading = ref(false);
 const users = ref([]);
@@ -31,13 +32,13 @@ async function loadData() {
   loading.value = true;
   try {
     const [userList, groupList] = await Promise.all([
-      listUsers(props.token),
-      listUserGroups(props.token),
+      listUsers(),
+      listUserGroups(),
     ]);
     users.value = userList;
     groups.value = groupList;
   } catch (error) {
-    ElMessage.error("加载用户数据失败");
+    err("加载用户数据失败");
   } finally {
     loading.value = false;
   }
@@ -60,22 +61,22 @@ function handleEdit(row) {
 
 async function handleUpdateUser() {
   if (!editForm.value.name) {
-    ElMessage.warning("用户名称不能为空");
+    warn("用户名称不能为空");
     return;
   }
 
   loading.value = true;
   try {
-    const result = await updateUser(props.token, editForm.value);
+    const result = await updateUser(editForm.value);
     if (result.success) {
-      ElMessage.success("用户更新成功");
+      success("用户更新成功");
       editDialogVisible.value = false;
       await loadData();
     } else {
-      ElMessage.error(result.message || "更新用户失败");
+      err(result.message || "更新用户失败");
     }
   } catch (error) {
-    ElMessage.error("更新用户失败");
+    err("更新用户失败");
   } finally {
     loading.value = false;
   }
@@ -94,16 +95,16 @@ async function handleDeleteUser(row) {
     );
 
     loading.value = true;
-    const result = await deleteUser(props.token, row.id);
+    const result = await deleteUser(row.id);
     if (result.success) {
-      ElMessage.success("用户删除成功");
+      success("用户删除成功");
       await loadData();
     } else {
-      ElMessage.error(result.message || "删除用户失败");
+      err(result.message || "删除用户失败");
     }
   } catch (error) {
     if (error !== "cancel") {
-      ElMessage.error("删除用户失败");
+      err("删除用户失败");
     }
   } finally {
     loading.value = false;
