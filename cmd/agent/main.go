@@ -27,7 +27,7 @@ var counter time.Duration = 0
 
 func uploadServerStatus(hostID int64, serverURL string, iface *string) {
 	// 收集和上传数据
-	status, err := perfmon.CollectServerStatus()
+	status, err := perfmon.CollectServerStatus(iface)
 	if err != nil {
 		return
 	}
@@ -62,8 +62,8 @@ func uploadServerStatus(hostID int64, serverURL string, iface *string) {
 }
 
 func collectNetworkTraffic(iface *string) (uint64, uint64) {
-	current := findIOCounter(iface)
-	if current == nil {
+	current, err := perfmon.FindNetIOCounter(iface)
+	if current == nil || err != nil {
 		return 0, 0
 	}
 	sent := current.BytesSent - lastIOCounter.BytesSent
@@ -71,19 +71,6 @@ func collectNetworkTraffic(iface *string) (uint64, uint64) {
 	lastIOCounter = current
 	log.Printf("Collected network traffic: iface=%s, curSent=%d, curRecv=%d, sent=%d, recv=%d", current.Name, current.BytesSent, current.BytesRecv, recv, sent)
 	return recv, sent
-}
-
-func findIOCounter(iface *string) *psnet.IOCountersStat {
-	counters, err := psnet.IOCounters(false)
-	if err != nil || len(counters) == 0 {
-		return nil
-	}
-	for i := 0; i < len(counters) && iface != nil; i++ {
-		if counters[i].Name == *iface {
-			return &counters[i]
-		}
-	}
-	return &counters[0]
 }
 
 func main() {
@@ -99,11 +86,16 @@ func main() {
 	if envIface == "" {
 		iface = nil
 	}
+	log.Printf("Using environment variables: INSPECTOR_HOST_ID=%s, INSPECTOR_SERVER_URL=%s, INSPECTOR_NETWORK_IFACE=%s", envHostID, serverURL, envIface)
 	hostID, err := strconv.ParseInt(envHostID, 10, 64)
 	if err != nil {
 		return
 	}
-	lastIOCounter = findIOCounter(iface)
+	lastIOCounter, err = perfmon.FindNetIOCounter(iface)
+	if err != nil {
+		log.Printf("Failed to find network interface %s: %v", envIface, err)
+		return
+	}
 	log.Printf("Starting inspector agent with host ID %d, server URL %s, network iface %s", hostID, serverURL, lastIOCounter.Name)
 
 	uploadServerStatus(hostID, serverURL, iface)
