@@ -6,11 +6,12 @@ services:
     network_mode: host
     environment:
       INSPECTOR_HOST_ID: "1"
-      INSPECTOR_SERVER_URL: "https://example.com"
+      INSPECTOR_SERVER_URL: "https://vps.lolicon.llc"
       INSPECTOR_NETWORK_IFACE: "eth0"
       HOST_PROC: /host/proc
       HOST_SYS: /host/sys
       HOST_ETC: /host/etc
+      TZ: "Asia/Shanghai"
     volumes:
       # gopsutil reads host metrics from these paths when HOST_* is set.
       - type: bind

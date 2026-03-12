@@ -9,6 +9,6 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/server .
 COPY config.json .
-RUN apk add whois
+RUN apk add --no-cache whois ca-certificates tzdata
 EXPOSE 12345
 CMD ["./server"]

@@ -4,7 +4,7 @@ import "github.com/gin-gonic/gin"
 
 var routes = make([]func(string, *gin.Engine), 0)
 
-// RegisterRoute registers a route initialization function
+// RegisterRoutes registers a route initialization function
 func RegisterRoutes(initFunc func(string, *gin.Engine)) {
 	routes = append(routes, initFunc)
 }
