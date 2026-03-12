@@ -49,12 +49,12 @@ export function useAuth() {
   const { backendUrl } = useAppConfig();
 
   if (process.client) {
-    const storedToken = sessionStorage.getItem("auth_token");
+    const storedToken = localStorage.getItem("auth_token");
     if (storedToken) {
       token.value = storedToken;
       fetchUserInfo();
       checkAdmin();
-      console.log("Restored token from sessionStorage:", token.value);
+      console.log("Restored token from localStorage:", token.value);
     }
   }
 
@@ -67,7 +67,7 @@ export function useAuth() {
       token.value = resp.data.token;
       await fetchUserInfo();
       await checkAdmin();
-      sessionStorage.setItem("auth_token", token.value);
+      localStorage.setItem("auth_token", token.value);
     }
   }
 
@@ -79,7 +79,7 @@ export function useAuth() {
         token.value = resp.data.token;
         await fetchUserInfo();
         await checkAdmin();
-        sessionStorage.setItem("auth_token", token.value);
+        localStorage.setItem("auth_token", token.value);
       } else {
         await logout();
       }
@@ -112,7 +112,7 @@ export function useAuth() {
     token.value = null;
     userInfo.value = null;
     isAdmin.value = false;
-    sessionStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_token");
   }
 
   async function checkAdmin() {

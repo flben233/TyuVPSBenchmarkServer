@@ -174,6 +174,10 @@ export function normalizeInspectorSettings(payload) {
 }
 
 export function normalizeHost(host = {}) {
+  let lastUpdate = host.last_update;
+  if (new Date(host.last_update).getTime() <= 0) {
+    lastUpdate = null;
+  }
   return {
     id: host.id,
     target: host.target || "",
@@ -183,7 +187,7 @@ export function normalizeHost(host = {}) {
     notify: Boolean(host.notify),
     latestPing: toNumber(host.latest_ping),
     uptimeSeconds: toNumber(host.uptime_seconds),
-    lastUpdate: host.last_update || null,
+    lastUpdate: lastUpdate,
     cpuUsagePercent: toNumber(host.cpu_usage_percent),
     memoryTotalBytes: toNumber(host.memory_total_bytes),
     memoryUsedBytes: toNumber(host.memory_used_bytes),

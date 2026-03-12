@@ -157,6 +157,7 @@ func ListHosts(userID int64) ([]response.HostListResponse, error) {
 			Name:         host.Name,
 			Tags:         host.Tags,
 			Notify:       host.Notify,
+			LastUpdate:   host.LastUpdate,
 			ServerStatus: host.ServerStatus,
 		}
 	}

@@ -90,7 +90,7 @@ const detailItems = computed(() => {
               {{ host.notify ? "通知已开启" : "通知未开启" }}
             </el-tag>
             <el-tag size="small" type="info" effect="dark">
-              {{ host.last_update ? `上次上报 ${formatUptime((Date.now() - new Date(host.lastUpdate).getTime()) / 1000)}` : "未上报" }}
+              {{ host.lastUpdate ? `上次上报 ${formatUptime((Date.now() - new Date(host.lastUpdate).getTime()) / 1000)} 前` : "未上报" }}
             </el-tag>
             <el-tag v-for="tag in host.tags" :key="tag" size="small" effect="dark">{{ tag }}</el-tag>
           </div>

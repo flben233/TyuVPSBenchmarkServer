@@ -70,7 +70,7 @@ const chartOption = computed(() => ({
 <style scoped>
 .inspector-chart-panel {
   background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.58);
+  border: var(--border);
   border-radius: 6px;
   padding: 12px;
   box-sizing: border-box;

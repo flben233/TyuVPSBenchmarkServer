@@ -21,12 +21,13 @@ type HostData struct {
 }
 
 type HostListResponse struct {
-	ID     string `json:"id"`
-	UserID int64  `json:"user_id"`
-	Target string `json:"target"`
-	Name   string `json:"name"`
-	Tags   string `json:"tags"` // json array of strings
-	Notify bool   `json:"notify"`
+	ID         string    `json:"id"`
+	UserID     int64     `json:"user_id"`
+	Target     string    `json:"target"`
+	Name       string    `json:"name"`
+	Tags       string    `json:"tags"` // json array of strings
+	Notify     bool      `json:"notify"`
+	LastUpdate time.Time `json:"last_update"`
 	perfmon.ServerStatus
 }
 
