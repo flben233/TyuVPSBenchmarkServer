@@ -4,7 +4,7 @@
   });
   const excludePaths = ["/slide/", "/inspector"];
 
-  const { userInfo, login, refreshToken } = useAuth();
+  const { userInfo, login, refreshToken, token } = useAuth();
 
   onMounted(async () => {
     const params = new URLSearchParams(window.location.search);
@@ -15,7 +15,7 @@
       window.history.replaceState({}, document.title, cleanUrl);
       await login(code);
       console.log("User Info after login:", userInfo.value);
-    } else if (!userInfo.value) {
+    } else if (!userInfo.value && token) {
       await refreshToken();
     }
   });

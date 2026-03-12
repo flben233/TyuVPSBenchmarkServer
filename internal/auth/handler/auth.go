@@ -59,7 +59,7 @@ func GithubLogin(c *gin.Context) {
 func RefreshToken(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "Refresh token is required"))
+		c.JSON(http.StatusBadRequest, common.Error(common.NoRefreshTokenCode, "Refresh token is required"))
 		return
 	}
 	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {

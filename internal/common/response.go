@@ -8,6 +8,7 @@ const (
 	LimitExceededCode     = -4
 	InvalidParamCode      = -5
 	RateLimitExceededCode = -6
+	NoRefreshTokenCode    = -7
 )
 
 // APIResponse is the unified response structure for all API endpoints
