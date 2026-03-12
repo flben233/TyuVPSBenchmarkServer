@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-var lastIOCounter psnet.IOCountersStat
+var lastIOCounter *psnet.IOCountersStat
 
 const (
 	UploadInterval        = 120 * time.Second
@@ -25,7 +25,7 @@ const (
 // 只有一个定时线程访问这个变量，是安全的
 var counter time.Duration = 0
 
-func UploadServerStatus(hostID int64, serverURL string, iface *string) {
+func uploadServerStatus(hostID int64, serverURL string, iface *string) {
 	// 收集和上传数据
 	status, err := perfmon.CollectServerStatus()
 	if err != nil {
@@ -62,21 +62,27 @@ func UploadServerStatus(hostID int64, serverURL string, iface *string) {
 }
 
 func collectNetworkTraffic(iface *string) (uint64, uint64) {
-	counters, err := psnet.IOCounters(false)
-	if err != nil || len(counters) == 0 {
+	current := findIOCounter(iface)
+	if current == nil {
 		return 0, 0
-	}
-	current := counters[0]
-	for i := 0; i < len(counters) && iface != nil; i++ {
-		if counters[i].Name == *iface {
-			current = counters[i]
-			break
-		}
 	}
 	sent := current.BytesSent - lastIOCounter.BytesSent
 	recv := current.BytesRecv - lastIOCounter.BytesRecv
 	lastIOCounter = current
 	return recv, sent
+}
+
+func findIOCounter(iface *string) *psnet.IOCountersStat {
+	counters, err := psnet.IOCounters(false)
+	if err != nil || len(counters) == 0 {
+		return nil
+	}
+	for i := 0; i < len(counters) && iface != nil; i++ {
+		if counters[i].Name == *iface {
+			return &counters[i]
+		}
+	}
+	return &counters[0]
 }
 
 func main() {
@@ -96,9 +102,11 @@ func main() {
 	if err != nil {
 		return
 	}
-	UploadServerStatus(hostID, serverURL, iface)
+	lastIOCounter = findIOCounter(iface)
+
+	uploadServerStatus(hostID, serverURL, iface)
 	for range time.Tick(UploadInterval) {
-		UploadServerStatus(hostID, serverURL, iface)
+		uploadServerStatus(hostID, serverURL, iface)
 		log.Println("Uploaded server status")
 	}
 }
