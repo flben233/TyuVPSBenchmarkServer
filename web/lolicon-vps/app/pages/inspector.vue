@@ -24,7 +24,7 @@ const { clientId } = useAppConfig();
 const GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize?client_id=" + clientId;
 const REFRESH_INTERVAL_MS = 60 * 1000;
 const DEFAULT_RANGE_MS = 24 * 60 * 60 * 1000;
-const MAX_QUERY_POINTS = 120;
+const MAX_QUERY_POINTS = 288;
 
 const { token } = useAuth();
 const router = useRouter();

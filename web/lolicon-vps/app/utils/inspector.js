@@ -94,7 +94,7 @@ export function getDefaultInspectorQuery() {
   return {
     start,
     end,
-    interval: "1h",
+    interval: "5m",
   };
 }
 
