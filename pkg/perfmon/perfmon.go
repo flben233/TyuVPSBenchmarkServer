@@ -27,7 +27,7 @@ type netSample struct {
 
 const serverStatusSampleInterval = 250 * time.Millisecond
 
-func CollectServerStatus() (ServerStatus, error) {
+func CollectServerStatus(iface *string) (ServerStatus, error) {
 	uptime, err := host.Uptime()
 	if err != nil {
 		return ServerStatus{}, err
@@ -68,7 +68,7 @@ func CollectServerStatus() (ServerStatus, error) {
 
 	netCh := make(chan netSample, 1)
 	go func() {
-		up, down, err := sampleNetMbps(interval)
+		up, down, err := sampleNetMbps(interval, iface)
 		netCh <- netSample{uploadMbps: up, downloadMbps: down, err: err}
 	}()
 
@@ -98,34 +98,41 @@ func CollectServerStatus() (ServerStatus, error) {
 	}, nil
 }
 
+func FindNetIOCounter(iface *string) (*net.IOCountersStat, error) {
+	counters, err := net.IOCounters(true)
+	if err != nil || len(counters) == 0 {
+		return nil, err
+	}
+	for i := 0; i < len(counters) && iface != nil; i++ {
+		if counters[i].Name == *iface {
+			return &counters[i], nil
+		}
+	}
+	return &counters[0], nil
+}
+
 // sampleNetMbps samples network upload/download speed in Mbps
-func sampleNetMbps(interval time.Duration) (uploadMbps float64, downloadMbps float64, err error) {
+func sampleNetMbps(interval time.Duration, iface *string) (uploadMbps float64, downloadMbps float64, err error) {
 	if interval <= 0 {
 		interval = serverStatusSampleInterval
 	}
 
-	counters1, err := net.IOCounters(false)
+	counter1, err := FindNetIOCounter(iface)
 	if err != nil {
 		return 0, 0, err
-	}
-	if len(counters1) == 0 {
-		return 0, 0, nil
 	}
 
 	time.Sleep(interval)
 
-	counters2, err := net.IOCounters(false)
+	counter2, err := FindNetIOCounter(iface)
 	if err != nil {
 		return 0, 0, err
 	}
-	if len(counters2) == 0 {
-		return 0, 0, nil
-	}
 
-	sent1 := counters1[0].BytesSent
-	recv1 := counters1[0].BytesRecv
-	sent2 := counters2[0].BytesSent
-	recv2 := counters2[0].BytesRecv
+	sent1 := counter1.BytesSent
+	recv1 := counter1.BytesRecv
+	sent2 := counter2.BytesSent
+	recv2 := counter2.BytesRecv
 
 	var sentDelta uint64
 	if sent2 >= sent1 {

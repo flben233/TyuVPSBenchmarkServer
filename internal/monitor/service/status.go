@@ -4,11 +4,13 @@ import (
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/pkg/perfmon"
+	"os"
 	"sync"
 	"time"
 )
 
 const serverStatusSampleInterval = 250 * time.Millisecond
+const serverStatusIfaceEnv = "SERVER_STATUS_IFACE"
 
 var (
 	cachedServerStatus response.ServerStatusResponse
@@ -22,7 +24,12 @@ func init() {
 
 // updateServerStatusCache collects server status and updates the cache
 func updateServerStatusCache() {
-	status, err := perfmon.CollectServerStatus()
+	env, ok := os.LookupEnv(serverStatusIfaceEnv)
+	var iface *string
+	if ok {
+		iface = &env
+	}
+	status, err := perfmon.CollectServerStatus(iface)
 	if err == nil {
 		statusMutex.Lock()
 		cachedServerStatus = response.ServerStatusResponse{
