@@ -1,10 +1,10 @@
-package common
+package perfmon
 
 import (
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
-	gnet "github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/net"
 	"time"
 )
 
@@ -104,7 +104,7 @@ func sampleNetMbps(interval time.Duration) (uploadMbps float64, downloadMbps flo
 		interval = serverStatusSampleInterval
 	}
 
-	counters1, err := gnet.IOCounters(false)
+	counters1, err := net.IOCounters(false)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -114,7 +114,7 @@ func sampleNetMbps(interval time.Duration) (uploadMbps float64, downloadMbps flo
 
 	time.Sleep(interval)
 
-	counters2, err := gnet.IOCounters(false)
+	counters2, err := net.IOCounters(false)
 	if err != nil {
 		return 0, 0, err
 	}

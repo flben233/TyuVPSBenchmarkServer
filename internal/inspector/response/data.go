@@ -1,8 +1,8 @@
 package response
 
 import (
-	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/inspector/model"
+	"VPSBenchmarkBackend/pkg/perfmon"
 	"time"
 )
 
@@ -17,7 +17,7 @@ type HostData struct {
 	Tags       string            `json:"tags"` // json array of strings
 	Notify     bool              `json:"notify"`
 	LastUpdate time.Time         `json:"last_update"`
-	common.ServerStatus
+	perfmon.ServerStatus
 }
 
 type HostListResponse struct {
@@ -27,7 +27,7 @@ type HostListResponse struct {
 	Name   string `json:"name"`
 	Tags   string `json:"tags"` // json array of strings
 	Notify bool   `json:"notify"`
-	common.ServerStatus
+	perfmon.ServerStatus
 }
 
 type SettingData struct {

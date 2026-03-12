@@ -8,6 +8,7 @@ import (
 	"VPSBenchmarkBackend/internal/inspector/model"
 	"VPSBenchmarkBackend/internal/inspector/response"
 	"VPSBenchmarkBackend/internal/inspector/store"
+	"VPSBenchmarkBackend/pkg/perfmon"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -162,7 +163,7 @@ func ListHosts(userID int64) ([]response.HostListResponse, error) {
 	return inspectHosts, nil
 }
 
-func PutData(trafficData []model.TrafficPoint, hostInfo common.ServerStatus, hostID int64) error {
+func PutData(trafficData []model.TrafficPoint, hostInfo perfmon.ServerStatus, hostID int64) error {
 	// 校验数据，理论上ID都是一样的
 	_, err := store.GetHostByID(hostID)
 	if err != nil {
