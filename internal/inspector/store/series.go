@@ -19,6 +19,7 @@ var validIntervalRegex = regexp.MustCompile(`^[1-9]\d*[smhd]$`)
 const (
 	TrafficMeasurement = "traffic"
 	PingMeasurement    = "ping"
+	PointsLimit        = 288
 )
 
 func init() {
@@ -157,7 +158,7 @@ func queryLossPoints(hostID int64, start, end int64) ([]model.PingPoint, error) 
 }
 
 func queryLatencyPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
-	query := fmt.Sprintf("SELECT MEAN(latency) FROM %s WHERE host_id = $host_id AND latency > 0 AND time >= $start AND time <= $end GROUP BY time(%s) LIMIT 120", PingMeasurement, interval)
+	query := fmt.Sprintf("SELECT MEAN(latency) FROM %s WHERE host_id = $host_id AND latency > 0 AND time >= $start AND time <= $end GROUP BY time(%s) LIMIT %d", PingMeasurement, interval, PointsLimit)
 	params := influxdb3.QueryParameters{
 		"host_id": strconv.FormatInt(hostID, 10),
 		"start":   time.Unix(0, start),
