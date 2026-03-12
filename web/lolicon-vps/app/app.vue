@@ -15,7 +15,7 @@
       window.history.replaceState({}, document.title, cleanUrl);
       await login(code);
       console.log("User Info after login:", userInfo.value);
-    } else if (!userInfo.value && token) {
+    } else if (!userInfo.value && token.value) {
       await refreshToken();
     }
   });
