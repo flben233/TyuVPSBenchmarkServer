@@ -94,7 +94,7 @@ func CollectServerStatus(iface *string) (ServerStatus, error) {
 		MemoryUsagePercent: memStats.UsedPercent,
 		UploadMbps:         netRes.uploadMbps,
 		DownloadMbps:       netRes.downloadMbps,
-		System:             info.Platform,
+		System:             info.Platform + " " + info.PlatformVersion,
 	}, nil
 }
 
