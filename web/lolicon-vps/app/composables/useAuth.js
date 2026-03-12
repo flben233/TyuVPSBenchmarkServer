@@ -48,15 +48,15 @@ export async function requestWithAuth(url, method, options = {}) {
 export function useAuth() {
   const { backendUrl } = useAppConfig();
 
-  // if (process.client) {
-  //   const storedToken = sessionStorage.getItem("auth_token");
-  //   if (storedToken) {
-  //     token.value = storedToken;
-  //     fetchUserInfo();
-  //     checkAdmin();
-  //     console.log("Restored token from sessionStorage:", token.value);
-  //   }
-  // }
+  if (process.client) {
+    const storedToken = sessionStorage.getItem("auth_token");
+    if (storedToken) {
+      token.value = storedToken;
+      fetchUserInfo();
+      checkAdmin();
+      console.log("Restored token from sessionStorage:", token.value);
+    }
+  }
 
   async function login(code) {
     let resp = await $fetch(`${backendUrl}/auth/github/login`, {
@@ -67,7 +67,7 @@ export function useAuth() {
       token.value = resp.data.token;
       await fetchUserInfo();
       await checkAdmin();
-      // sessionStorage.setItem("auth_token", token.value);
+      sessionStorage.setItem("auth_token", token.value);
     }
   }
 
@@ -79,11 +79,14 @@ export function useAuth() {
         token.value = resp.data.token;
         await fetchUserInfo();
         await checkAdmin();
-        // sessionStorage.setItem("auth_token", token.value);
+        sessionStorage.setItem("auth_token", token.value);
       } else {
         await logout();
       }
-    } catch (ignored) {
+    } catch (e) {
+      if (e.statusCode === 400 && e.data.code === -7) {
+        return
+      }
       await logout();
       useMessage().err("会话已过期，请重新登录");
     } finally {
@@ -109,7 +112,7 @@ export function useAuth() {
     token.value = null;
     userInfo.value = null;
     isAdmin.value = false;
-    // sessionStorage.removeItem("auth_token");
+    sessionStorage.removeItem("auth_token");
   }
 
   async function checkAdmin() {
