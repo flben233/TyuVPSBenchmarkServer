@@ -58,10 +58,6 @@ const chartOption = computed(() => ({
       <ClientOnly>
         <VChart :option="chartOption" autoresize class="chart" />
       </ClientOnly>
-      <div class="traffic-summary">
-        <span>入站 {{ formatTrafficAmount(recv) }}</span>
-        <span>出站 {{ formatTrafficAmount(sent) }}</span>
-      </div>
     </div>
     <div v-else class="empty-chart">暂无流量数据</div>
   </div>
@@ -87,14 +83,6 @@ const chartOption = computed(() => ({
 .chart {
   width: 100%;
   height: 180px;
-}
-
-.traffic-summary {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #606266;
-  font-size: 13px;
 }
 
 .empty-chart {

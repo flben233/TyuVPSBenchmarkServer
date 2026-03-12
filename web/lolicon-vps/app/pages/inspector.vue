@@ -25,6 +25,12 @@ const GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize?client_id=" +
 const REFRESH_INTERVAL_MS = 60 * 1000;
 const DEFAULT_RANGE_MS = 24 * 60 * 60 * 1000;
 const MAX_QUERY_POINTS = 288;
+const RELATIVE_RANGE_OPTIONS = [
+  { label: "过去 1 小时", value: 1 * 60 * 60 * 1000 },
+  { label: "过去 6 小时", value: 6 * 60 * 60 * 1000 },
+  { label: "过去 24 小时", value: 24 * 60 * 60 * 1000 },
+  { label: "过去 7 天", value: 7 * 24 * 60 * 60 * 1000 },
+];
 
 const { token } = useAuth();
 const router = useRouter();
@@ -54,11 +60,18 @@ const queryRange = ref([
   new Date(defaultQuery.start / 1_000_000),
   new Date(defaultQuery.end / 1_000_000),
 ]);
+const queryMode = ref("relative");
+const queryRelativeRange = ref(DEFAULT_RANGE_MS);
 const queryInterval = ref(defaultQuery.interval);
 const activeQuery = ref(defaultQuery);
+const activeQueryMeta = ref({
+  mode: "relative",
+  relativeRange: DEFAULT_RANGE_MS,
+});
 const selectedTags = ref([]);
 
 const intervalOptions = INSPECTOR_INTERVAL_OPTIONS;
+const relativeRangeOptions = RELATIVE_RANGE_OPTIONS;
 const isLoggedIn = computed(() => Boolean(token.value));
 
 const pageBackgroundStyle = computed(() => ({
@@ -123,7 +136,32 @@ const childTheme = computed(() => {
   return "theme-default";
 });
 
-function buildQueryFromState(range = queryRange.value, interval = queryInterval.value) {
+function buildQueryFromState({
+  mode = queryMode.value,
+  range = queryRange.value,
+  interval = queryInterval.value,
+  relativeRange = queryRelativeRange.value,
+} = {}) {
+  if (mode === "relative") {
+    const durationMs = Number(relativeRange);
+    if (!Number.isFinite(durationMs) || durationMs <= 0) {
+      return null;
+    }
+
+    const end = Date.now();
+    const start = end - durationMs;
+    return {
+      query: {
+        start: start * 1_000_000,
+        end: end * 1_000_000,
+        interval,
+      },
+      range: [new Date(start), new Date(end)],
+      mode,
+      relativeRange: durationMs,
+    };
+  }
+
   const [startTime, endTime] = Array.isArray(range) ? range : [];
   const start = new Date(startTime).getTime();
   const end = new Date(endTime).getTime();
@@ -133,10 +171,34 @@ function buildQueryFromState(range = queryRange.value, interval = queryInterval.
   }
 
   return {
-    start: start * 1_000_000,
-    end: end * 1_000_000,
-    interval,
+    query: {
+      start: start * 1_000_000,
+      end: end * 1_000_000,
+      interval,
+    },
+    range: [new Date(start), new Date(end)],
+    mode,
+    relativeRange: Number(relativeRange) || DEFAULT_RANGE_MS,
   };
+}
+
+function refreshActiveQueryForRelativeRange() {
+  if (activeQueryMeta.value.mode !== "relative") {
+    return;
+  }
+
+  const refreshed = buildQueryFromState({
+    mode: "relative",
+    interval: activeQuery.value.interval,
+    relativeRange: activeQueryMeta.value.relativeRange,
+  });
+
+  if (!refreshed) {
+    return;
+  }
+
+  activeQuery.value = refreshed.query;
+  queryRange.value = refreshed.range;
 }
 
 function startGithubLogin() {
@@ -154,6 +216,8 @@ async function loadInspectorData({ silent = false } = {}) {
   } else {
     refreshing.value = true;
   }
+
+  refreshActiveQueryForRelativeRange();
 
   const [dashboardResult, settingsResult] = await Promise.allSettled([
     loadDashboard(activeQuery.value),
@@ -196,25 +260,32 @@ async function loadInspectorData({ silent = false } = {}) {
 }
 
 async function applyQuery({ silent = false } = {}) {
-  const nextQuery = buildQueryFromState();
-  if (!nextQuery) {
+  const nextState = buildQueryFromState();
+  if (!nextState) {
     warn("请选择有效的时间范围");
     return;
   }
 
-  const startMs = Number(nextQuery.start) / 1_000_000;
-  const endMs = Number(nextQuery.end) / 1_000_000;
-  if (exceedsInspectorPointLimit(startMs, endMs, nextQuery.interval, MAX_QUERY_POINTS)) {
+  const startMs = Number(nextState.query.start) / 1_000_000;
+  const endMs = Number(nextState.query.end) / 1_000_000;
+  if (exceedsInspectorPointLimit(startMs, endMs, nextState.query.interval, MAX_QUERY_POINTS)) {
     warn(`当前时间范围和粒度会超过 ${MAX_QUERY_POINTS} 个数据点，请增大时间粒度或缩短时间范围`);
     return;
   }
 
-  activeQuery.value = nextQuery;
+  activeQuery.value = nextState.query;
+  activeQueryMeta.value = {
+    mode: nextState.mode,
+    relativeRange: nextState.relativeRange,
+  };
+  queryRange.value = nextState.range;
   await loadInspectorData({ silent });
 }
 
 async function resetQuery() {
   const end = new Date();
+  queryMode.value = "relative";
+  queryRelativeRange.value = DEFAULT_RANGE_MS;
   queryRange.value = [new Date(end.getTime() - DEFAULT_RANGE_MS), end];
   queryInterval.value = defaultQuery.interval;
   selectedTags.value = [];
@@ -222,24 +293,63 @@ async function resetQuery() {
 }
 
 function applyPresetRange(preset) {
-  const end = new Date();
-  let start = new Date(end.getTime() - DEFAULT_RANGE_MS);
-
+  queryMode.value = "relative";
   if (preset === "6h") {
-    start = new Date(end.getTime() - 6 * 60 * 60 * 1000);
+    queryRelativeRange.value = 6 * 60 * 60 * 1000;
     queryInterval.value = "15m";
   } else if (preset === "7d") {
-    start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+    queryRelativeRange.value = 7 * 24 * 60 * 60 * 1000;
     queryInterval.value = "6h";
   } else {
+    queryRelativeRange.value = DEFAULT_RANGE_MS;
     queryInterval.value = defaultQuery.interval;
   }
 
-  queryRange.value = [start, end];
+  const nextState = buildQueryFromState({
+    mode: queryMode.value,
+    relativeRange: queryRelativeRange.value,
+    interval: queryInterval.value,
+  });
+  if (nextState) {
+    queryRange.value = nextState.range;
+  }
 }
 
 function updateQueryRange(value) {
   queryRange.value = value;
+  queryMode.value = "absolute";
+}
+
+function updateQueryMode(value) {
+  queryMode.value = value;
+
+  if (value === "relative") {
+    const nextState = buildQueryFromState({
+      mode: value,
+      relativeRange: queryRelativeRange.value,
+      interval: queryInterval.value,
+    });
+    if (nextState) {
+      queryRange.value = nextState.range;
+    }
+  }
+}
+
+function updateQueryRelativeRange(value) {
+  queryRelativeRange.value = value;
+
+  if (queryMode.value !== "relative") {
+    return;
+  }
+
+  const nextState = buildQueryFromState({
+    mode: queryMode.value,
+    relativeRange: queryRelativeRange.value,
+    interval: queryInterval.value,
+  });
+  if (nextState) {
+    queryRange.value = nextState.range;
+  }
 }
 
 function updateQueryInterval(value) {
@@ -413,12 +523,17 @@ onUnmounted(() => {
             :class="childTheme"
             :stats="dashboardStats"
             :range="queryRange"
+            :range-mode="queryMode"
+            :relative-range="queryRelativeRange"
+            :relative-range-options="relativeRangeOptions"
             :interval="queryInterval"
             :interval-options="intervalOptions"
             :tags="availableTags"
             :selected-tags="selectedTags"
             :loading="loading || refreshing"
             @update:range="updateQueryRange"
+            @update:range-mode="updateQueryMode"
+            @update:relative-range="updateQueryRelativeRange"
             @update:interval="updateQueryInterval"
             @update:selected-tags="updateSelectedTags"
             @apply="applyQuery"

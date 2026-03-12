@@ -25,6 +25,18 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  rangeMode: {
+    type: String,
+    default: "absolute",
+  },
+  relativeRange: {
+    type: Number,
+    default: 24 * 60 * 60 * 1000,
+  },
+  relativeRangeOptions: {
+    type: Array,
+    default: () => [],
+  },
   interval: {
     type: String,
     default: "1h",
@@ -49,6 +61,8 @@ const props = defineProps({
 
 const emit = defineEmits([
   "update:range",
+  "update:rangeMode",
+  "update:relativeRange",
   "update:interval",
   "update:selectedTags",
   "apply",
@@ -64,6 +78,16 @@ const rangeModel = computed({
 const intervalModel = computed({
   get: () => props.interval,
   set: (value) => emit("update:interval", value),
+});
+
+const rangeModeModel = computed({
+  get: () => props.rangeMode,
+  set: (value) => emit("update:rangeMode", value),
+});
+
+const relativeRangeModel = computed({
+  get: () => props.relativeRange,
+  set: (value) => emit("update:relativeRange", value),
 });
 
 const selectedTagsModel = computed({
@@ -131,7 +155,25 @@ const overviewItems = computed(() => [
       </div>
 
       <el-form label-position="top">
-        <el-form-item label="查询时间段">
+        <el-form-item label="时间类型">
+          <el-radio-group v-model="rangeModeModel">
+            <el-radio-button label="absolute">绝对时间</el-radio-button>
+            <el-radio-button label="relative">相对时间</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item v-if="rangeModeModel === 'relative'" label="过去时间段">
+          <el-select v-model="relativeRangeModel" class="full-width">
+            <el-option
+              v-for="option in relativeRangeOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item v-else label="查询时间段">
           <el-date-picker
             v-model="rangeModel"
             type="datetimerange"
@@ -141,6 +183,7 @@ const overviewItems = computed(() => [
             end-placeholder="结束时间"
             format="YYYY-MM-DD HH:mm"
             class="full-width"
+            :disabled="rangeModeModel === 'relative'"
           />
         </el-form-item>
 
