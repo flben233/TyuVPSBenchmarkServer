@@ -1,7 +1,7 @@
 package model
 
 import (
-	"VPSBenchmarkBackend/internal/common"
+	"VPSBenchmarkBackend/pkg/perfmon"
 	"time"
 )
 
@@ -13,5 +13,5 @@ type InspectHost struct {
 	Tags       string    `json:"tags"` // json array of strings
 	Notify     bool      `json:"notify"`
 	LastUpdate time.Time `json:"last_update"`
-	common.ServerStatus
+	perfmon.ServerStatus
 }

@@ -1,8 +1,8 @@
-package common
+package random
 
 import "math/rand"
 
-func RandomString(n int) string {
+func String(n int) string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	b := make([]rune, n)
 	for i := range b {

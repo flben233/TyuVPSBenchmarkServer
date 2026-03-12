@@ -1,8 +1,8 @@
 package request
 
 import (
-	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/inspector/model"
+	"VPSBenchmarkBackend/pkg/perfmon"
 )
 
 type CreateHostRequest struct {
@@ -21,7 +21,7 @@ type UpdateHostRequest struct {
 
 type PutDataRequest struct {
 	HostID   int64 `json:"host_id" binding:"required"`
-	HostInfo common.ServerStatus
+	HostInfo perfmon.ServerStatus
 	Traffic  []model.TrafficPoint `json:"traffic"`
 }
 

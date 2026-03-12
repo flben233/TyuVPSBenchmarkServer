@@ -6,6 +6,7 @@ import (
 	"VPSBenchmarkBackend/internal/cache"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/pkg/random"
 	"context"
 	"encoding/json"
 	"errors"
@@ -98,7 +99,7 @@ func GithubLogin(code string) (*AuthToken, error) {
 	}
 
 	// Generate token
-	return generateToken(userInfo, cfg, common.RandomString(8))
+	return generateToken(userInfo, cfg, random.String(8))
 }
 
 func RefreshToken(userID int64, family, refreshToken string) (*AuthToken, error) {

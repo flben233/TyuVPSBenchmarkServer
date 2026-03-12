@@ -3,6 +3,7 @@ package service
 import (
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/monitor/response"
+	"VPSBenchmarkBackend/pkg/perfmon"
 	"sync"
 	"time"
 )
@@ -21,7 +22,7 @@ func init() {
 
 // updateServerStatusCache collects server status and updates the cache
 func updateServerStatusCache() {
-	status, err := common.CollectServerStatus()
+	status, err := perfmon.CollectServerStatus()
 	if err == nil {
 		statusMutex.Lock()
 		cachedServerStatus = response.ServerStatusResponse{

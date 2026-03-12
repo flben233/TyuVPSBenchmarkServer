@@ -1,9 +1,9 @@
 package main
 
 import (
-	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/inspector/model"
 	"VPSBenchmarkBackend/internal/inspector/request"
+	"VPSBenchmarkBackend/pkg/perfmon"
 	"bytes"
 	"encoding/json"
 	psnet "github.com/shirou/gopsutil/v4/net"
@@ -27,7 +27,7 @@ var counter time.Duration = 0
 
 func UploadServerStatus(hostID int64, serverURL string, iface *string) {
 	// 收集和上传数据
-	status, err := common.CollectServerStatus()
+	status, err := perfmon.CollectServerStatus()
 	if err != nil {
 		return
 	}
