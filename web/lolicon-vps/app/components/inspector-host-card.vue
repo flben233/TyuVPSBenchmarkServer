@@ -2,7 +2,6 @@
 import { ArrowDown, ArrowUp, Delete, EditPen } from "@element-plus/icons-vue";
 import {
   formatBytes,
-  formatLatency,
   formatNetworkSpeed,
   formatPercent,
   formatTrafficAmount,
@@ -23,6 +22,18 @@ const expanded = ref(false);
 const isAgentActive = computed(() => Number(props.host.uptimeSeconds) > 0);
 const isOnline = computed(() => props.host.latestPing > 0);
 const latestPingText = computed(() => getLatestPingValue(props.host.ping, props.host.latestPing));
+const packetLossRateText = computed(() => {
+  const points = Array.isArray(props.host.ping) ? props.host.ping : [];
+  if (points.length === 0) {
+    return "暂无数据";
+  }
+
+  const lostCount = points.reduce(
+    (count, point) => count + (Number(point?.latency) === 0 ? 1 : 0),
+    0,
+  );
+  return formatPercent((lostCount / points.length) * 100);
+});
 
 const compactMetrics = computed(() => {
   if (!isAgentActive.value) {
@@ -42,14 +53,14 @@ const compactMetrics = computed(() => {
 
 const detailItems = computed(() => {
   if (!isAgentActive.value) {
-    return [{ label: "最新延迟", value: formatLatency(props.host.latestPing) }];
+    return [{ label: "丢包率", value: packetLossRateText.value }];
   }
 
   return [
     { label: "目标地址", value: props.host.target || "-" },
     { label: "系统信息", value: props.host.system || "未知系统" },
     { label: "运行时间", value: formatUptime(props.host.uptimeSeconds) },
-    { label: "最新延迟", value: formatLatency(props.host.latestPing) },
+    { label: "丢包率", value: packetLossRateText.value },
   ];
 });
 </script>
@@ -121,8 +132,8 @@ const detailItems = computed(() => {
             <el-progress :stroke-width="18" :text-inside="true" :percentage="Number(host.memoryUsagePercent.toFixed(1))" />
             <div class="spacer"></div>
             <div class="traffic-values">
-              <span>入站 {{ formatTrafficAmount(host.recv) }}</span>
-              <span>出站 {{ formatTrafficAmount(host.sent) }}</span>
+              <span>上传 {{ host.uploadMbps.toFixed(2) }} Mbps</span>
+              <span>下载 {{ host.downloadMbps.toFixed(2) }} Mbps</span>
             </div>
           </div>
         </div>
