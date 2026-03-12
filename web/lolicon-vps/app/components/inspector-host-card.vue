@@ -4,7 +4,6 @@ import {
   formatBytes,
   formatNetworkSpeed,
   formatPercent,
-  formatTrafficAmount,
   formatUptime,
   getLatestPingValue,
 } from "~/utils/inspector";
@@ -53,7 +52,10 @@ const compactMetrics = computed(() => {
 
 const detailItems = computed(() => {
   if (!isAgentActive.value) {
-    return [{ label: "丢包率", value: packetLossRateText.value }];
+    return [
+      { label: "目标地址", value: props.host.target || "-" },
+      { label: "丢包率", value: packetLossRateText.value }
+    ];
   }
 
   return [
@@ -74,8 +76,6 @@ const detailItems = computed(() => {
           <div class="host-name">{{ host.name }}</div>
           <div class="host-subtitle">
             {{ isAgentActive ? "Agent 已连接" : "未接入 Agent" }}
-            <span class="host-subtitle-separator">/</span>
-            {{ host.target }}
           </div>
         </div>
       </div>
@@ -208,10 +208,6 @@ const detailItems = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.host-subtitle-separator {
-  padding: 0 6px;
 }
 
 .compact-metrics {
