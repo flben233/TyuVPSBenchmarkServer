@@ -69,6 +69,7 @@ func collectNetworkTraffic(iface *string) (uint64, uint64) {
 	sent := current.BytesSent - lastIOCounter.BytesSent
 	recv := current.BytesRecv - lastIOCounter.BytesRecv
 	lastIOCounter = current
+	log.Printf("Collected network traffic: iface=%s, curSent=%d, curRecv=%d, sent=%d, recv=%d", current.Name, current.BytesSent, current.BytesRecv, recv, sent)
 	return recv, sent
 }
 
@@ -103,6 +104,7 @@ func main() {
 		return
 	}
 	lastIOCounter = findIOCounter(iface)
+	log.Printf("Starting inspector agent with host ID %d, server URL %s, network iface %s", hostID, serverURL, lastIOCounter.Name)
 
 	uploadServerStatus(hostID, serverURL, iface)
 	for range time.Tick(UploadInterval) {
