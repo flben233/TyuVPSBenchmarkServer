@@ -7,19 +7,23 @@ services:
     volumes:
       - ./data:/app/data
       - type: bind
-      - source: ./config.json
-      - target: /app/config.json
+        source: ./config.json
+        target: /app/config.json
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - INFLUX_DATABASE=lolicon_vps
       - INFLUX_HOST=http://influxdb:8181
-      - INFLUX_TOKEN=apiv3_iher-K_VBPDi_3oqRFu9sL2TK5TpX5QcjekKiDbiYcJzvvNmbHcxL_jJpMfADYeZpxa41rklHAo4dOq2WYrwQA
+      - INFLUX_TOKEN=your_token_here
+      - GIN_MODE=release
+      - TZ=Asia/Shanghai
 
   influxdb:
     restart: unless-stopped
     container_name: influxdb3-core
     image: influxdb:3-core
     ports:
-      - "8181:8181"
+      - "127.0.0.1:8181:8181"
     command:
       - influxdb3
       - serve
@@ -40,7 +44,7 @@ services:
     restart: unless-stopped
     hostname: redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - ./redis/redis.conf:/etc/redis/redis.conf
       - ./redis/data/redis:/data
@@ -55,6 +59,8 @@ services:
       - NUXT_SITE_URL=https://vps.lolicon.llc
       - NUXT_SITE_NAME=Lolicon VPS
       - NUXT_BACKEND_URL=http://backend:12345/api
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   watchtower:
     image: "containrrr/watchtower:latest-dev"
