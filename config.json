@@ -11,5 +11,6 @@
 	"githubHttpsProxy": "http://127.0.0.1:10808",
 	"exporterUrl": "",
     "redisHost": "",
-    "redisPasswd": ""
+    "redisPasswd": "",
+	"appriseUrl": "http://127.0.0.1:8000/notify"
 }

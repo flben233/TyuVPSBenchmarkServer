@@ -33,6 +33,7 @@ const form = ref({
   target: "",
   tagsInput: "",
   notify: false,
+  notifyTolerance: 0,
 });
 
 const isEditMode = computed(() => props.mode === "edit");
@@ -49,6 +50,7 @@ watch(
       target: props.host?.target || "",
       tagsInput: Array.isArray(props.host?.tags) ? props.host.tags.join(", ") : "",
       notify: Boolean(props.host?.notify),
+      notifyTolerance: Math.max(0, Math.floor(Number(props.host?.notifyTolerance) || 0)),
     };
   },
   { immediate: true },
@@ -65,6 +67,7 @@ function handleSubmit() {
     target: form.value.target.trim(),
     tags: stringifyTagList(form.value.tagsInput),
     notify: Boolean(form.value.notify),
+    notify_tolerance: Math.max(0, Math.floor(Number(form.value.notifyTolerance) || 0)),
   });
 }
 </script>
@@ -93,6 +96,17 @@ function handleSubmit() {
       <el-form-item label="离线通知">
         <el-switch v-model="form.notify" />
         <div class="field-tip">开启后，目标离线/恢复时将按当前用户设置发送通知。</div>
+      </el-form-item>
+      <el-form-item label="通知容错次数" v-if="form.notify">
+        <el-input-number
+          v-model="form.notifyTolerance"
+          :min="0"
+          :step="1"
+          :precision="0"
+          step-strictly
+          controls-position="right"
+        />
+        <div class="field-tip">0 表示立即通知；大于 0 表示连续异常达到该次数后再通知。</div>
       </el-form-item>
     </el-form>
     <template #footer>

@@ -131,6 +131,30 @@ func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.P
 	return points, nil
 }
 
+func QueryLatestNPingPoints(hostID int64, n int64) ([]model.PingPoint, error) {
+	query := fmt.Sprintf("SELECT latency FROM %s WHERE host_id = $host_id ORDER BY time DESC LIMIT %d", PingMeasurement, n)
+	params := influxdb3.QueryParameters{
+		"host_id": strconv.FormatInt(hostID, 10),
+	}
+	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
+	if err != nil {
+		return nil, err
+	}
+	var points []model.PingPoint
+	for iter.Next() {
+		value := iter.Value()
+		points = append(points, model.PingPoint{
+			HostID:  hostID,
+			Latency: float32(value["latency"].(float64)),
+			Time:    value["time"].(time.Time),
+		})
+	}
+	if iter.Err() != nil {
+		return nil, iter.Err()
+	}
+	return points, nil
+}
+
 func queryLossPoints(hostID int64, start, end int64) ([]model.PingPoint, error) {
 	query := fmt.Sprintf("SELECT * FROM %s WHERE host_id = $host_id AND latency = 0 AND time >= $start AND time <= $end", PingMeasurement)
 	params := influxdb3.QueryParameters{

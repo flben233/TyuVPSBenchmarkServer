@@ -33,7 +33,7 @@ func CreateHost(ctx *gin.Context) {
 		return
 	}
 
-	id, err := service.CreateHost(userID.(int64), req.Target, req.Name, req.Tags, req.Notify)
+	id, err := service.CreateHost(userID.(int64), req.Target, req.Name, req.Tags, req.Notify, req.NotifyTolerance)
 	if err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return
@@ -72,7 +72,7 @@ func UpdateHost(ctx *gin.Context) {
 		return
 	}
 
-	err = service.UpdateHost(userID.(int64), hostID, req.Name, req.Tags, req.Target, req.Notify)
+	err = service.UpdateHost(userID.(int64), hostID, req.Name, req.Tags, req.Target, req.Notify, req.NotifyTolerance)
 	if err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return

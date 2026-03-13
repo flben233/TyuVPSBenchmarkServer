@@ -2,19 +2,17 @@ package service
 
 import (
 	"VPSBenchmarkBackend/internal/auth/util"
-	"VPSBenchmarkBackend/internal/cache"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
 	"VPSBenchmarkBackend/internal/inspector/model"
 	"VPSBenchmarkBackend/internal/inspector/response"
 	"VPSBenchmarkBackend/internal/inspector/store"
+	"VPSBenchmarkBackend/pkg/batch"
 	"VPSBenchmarkBackend/pkg/perfmon"
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"io"
 	"log"
@@ -27,10 +25,9 @@ import (
 var putRecord = make(map[int64]time.Time)
 
 const (
-	pingInterval   = 120 * time.Second
-	putInterval    = 30 * time.Second
-	putMaxLength   = 1
-	notifyInterval = 5 * time.Minute
+	pingInterval = 120 * time.Second
+	putInterval  = 30 * time.Second
+	putMaxLength = 1
 )
 
 func init() {
@@ -54,14 +51,29 @@ func pingHosts() {
 			Time:    time.Now(),
 		}}
 
-		if lat == 0 && host.Notify {
-			tryNotify(host.UserID, &host, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
-		} else if lat > 0 {
-			ping, err := store.QueryLatestPing(host.ID)
-			if err != nil {
-				log.Printf("Failed to query latest ping for host %d: %v", host.ID, err)
-			} else if ping == 0 && host.Notify {
-				tryNotify(host.UserID, &host, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
+		if host.Notify {
+			if lat == 0 {
+				points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance)
+				if err != nil {
+					log.Printf("Failed to query latest ping points for host %d: %v", host.ID, err)
+					continue
+				}
+				// 如果最新的 NotifyTolerance 条数据都是 0，才通知用户主机离线，避免偶尔的网络波动导致误报
+				if int64(len(points)) == host.NotifyTolerance && batch.IsAllTrue(points, func(p model.PingPoint) bool { return p.Latency == 0 }) {
+					tryNotify(host.UserID, &host, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
+				}
+			} else {
+				points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance*2)
+				if err != nil {
+					log.Printf("Failed to query latest ping for host %d: %v", host.ID, err)
+					continue
+				}
+				// 如果之前的 NotifyTolerance 条数据都是 0，且最近的 NotifyTolerance 条数据不是 0，才通知用户主机上线，避免偶尔的网络波动导致误报
+				if int64(len(points)) == host.NotifyTolerance*2 &&
+					batch.IsAllTrue(points[:host.NotifyTolerance], func(p model.PingPoint) bool { return p.Latency == 0 }) &&
+					!batch.IsAllTrue(points[int(host.NotifyTolerance):], func(p model.PingPoint) bool { return p.Latency > 0 }) {
+					tryNotify(host.UserID, &host, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
+				}
 			}
 		}
 
@@ -71,7 +83,7 @@ func pingHosts() {
 	}
 }
 
-func CreateHost(userID int64, target, name, tags string, notify bool) (int64, error) {
+func CreateHost(userID int64, target, name, tags string, notify bool, notifyTolerance int64) (int64, error) {
 	hosts, err := store.CountUserHosts(userID)
 	if err != nil {
 		return 0, err
@@ -87,12 +99,13 @@ func CreateHost(userID int64, target, name, tags string, notify bool) (int64, er
 		id = rand.Int63()
 	}
 	host := &model.InspectHost{
-		ID:     id,
-		UserID: userID,
-		Target: target,
-		Name:   name,
-		Tags:   tags,
-		Notify: notify,
+		ID:              id,
+		UserID:          userID,
+		Target:          target,
+		Name:            name,
+		Tags:            tags,
+		Notify:          notify,
+		NotifyTolerance: notifyTolerance,
 	}
 	if err := store.CreateHost(host); err != nil {
 		return 0, err
@@ -100,7 +113,7 @@ func CreateHost(userID int64, target, name, tags string, notify bool) (int64, er
 	return host.ID, nil
 }
 
-func UpdateHost(userID int64, hostID int64, name, tags, target string, notify bool) error {
+func UpdateHost(userID int64, hostID int64, name, tags, target string, notify bool, notifyTolerance int64) error {
 	// 校验主机属于当前用户
 	ids := store.GetHostIDByUser(userID)
 	found := false
@@ -122,6 +135,7 @@ func UpdateHost(userID int64, hostID int64, name, tags, target string, notify bo
 	host.Tags = tags
 	host.Target = target
 	host.Notify = notify
+	host.NotifyTolerance = notifyTolerance
 
 	store.UpdateHost(host)
 	return nil
@@ -313,32 +327,27 @@ func tryNotify(userID int64, host *model.InspectHost, message string) {
 		return
 	}
 	hostID := host.ID
-	err = cache.GetClient().Get(context.Background(), strconv.FormatInt(hostID, 10)).Err()
-	if errors.Is(err, redis.Nil) {
-		// 发送通知
-		go func() {
-			notifyReq := map[string]interface{}{
-				"urls":  setting.NotifyURL,
-				"body":  message,
-				"title": "Lolicon Monitor 通知",
-			}
-			reqBytes, err := json.Marshal(notifyReq)
-			if err != nil {
-				log.Printf("Failed to marshal notify request for host %d: %v", hostID, err)
-				return
-			}
-			resp, err := http.Post(config.Get().AppriseURL, "application/json", bytes.NewReader(reqBytes))
-			if err != nil {
-				log.Printf("Failed to send notify request for host %d: %v", hostID, err)
-				return
-			}
-			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
-				bodyBytes, _ := io.ReadAll(resp.Body)
-				log.Printf("Failed to send notify request for host %d, status: %d, response: %s", hostID, resp.StatusCode, string(bodyBytes))
-			}
-		}()
-		// 设置Redis键，过期时间为通知间隔，防止频繁通知
-		cache.GetClient().Set(context.Background(), strconv.FormatInt(hostID, 10), setting.NotifyURL, notifyInterval)
-	}
+	// 发送通知
+	go func() {
+		notifyReq := map[string]interface{}{
+			"urls":  setting.NotifyURL,
+			"body":  message,
+			"title": "Lolicon Monitor 通知",
+		}
+		reqBytes, err := json.Marshal(notifyReq)
+		if err != nil {
+			log.Printf("Failed to marshal notify request for host %d: %v", hostID, err)
+			return
+		}
+		resp, err := http.Post(config.Get().AppriseURL, "application/json", bytes.NewReader(reqBytes))
+		if err != nil {
+			log.Printf("Failed to send notify request for host %d: %v", hostID, err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			log.Printf("Failed to send notify request for host %d, status: %d, response: %s", hostID, resp.StatusCode, string(bodyBytes))
+		}
+	}()
 }

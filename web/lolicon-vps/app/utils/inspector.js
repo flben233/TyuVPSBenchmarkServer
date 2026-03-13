@@ -83,6 +83,10 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
+function normalizeNotifyTolerance(value) {
+  return Math.max(0, Math.floor(toNumber(value, 0)));
+}
+
 export function getEmptyInspectorSettings() {
   return { ...EMPTY_SETTINGS };
 }
@@ -185,6 +189,7 @@ export function normalizeHost(host = {}) {
     tags: parseTagList(host.tags),
     rawTags: host.tags || "",
     notify: Boolean(host.notify),
+    notifyTolerance: normalizeNotifyTolerance(host.notify_tolerance),
     latestPing: toNumber(host.latest_ping),
     uptimeSeconds: toNumber(host.uptime_seconds),
     lastUpdate: lastUpdate,
