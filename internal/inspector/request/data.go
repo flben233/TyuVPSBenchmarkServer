@@ -6,17 +6,19 @@ import (
 )
 
 type CreateHostRequest struct {
-	Target string `json:"target" binding:"required"`
-	Name   string `json:"name" binding:"required"`
-	Tags   string `json:"tags"`
-	Notify bool   `json:"notify"`
+	Target          string `json:"target" binding:"required"`
+	Name            string `json:"name" binding:"required"`
+	Tags            string `json:"tags"`
+	Notify          bool   `json:"notify"`
+	NotifyTolerance int64  `json:"notify_tolerance"`
 }
 
 type UpdateHostRequest struct {
-	Name   string `json:"name"`
-	Tags   string `json:"tags"`
-	Target string `json:"target"`
-	Notify bool   `json:"notify"`
+	Name            string `json:"name"`
+	Tags            string `json:"tags"`
+	Target          string `json:"target"`
+	Notify          bool   `json:"notify"`
+	NotifyTolerance int64  `json:"notify_tolerance"`
 }
 
 type PutDataRequest struct {

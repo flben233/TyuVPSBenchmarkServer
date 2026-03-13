@@ -20,6 +20,7 @@ const props = defineProps({
 });
 
 const hasData = computed(() => Number(props.sent) > 0 || Number(props.recv) > 0);
+const totalTraffic = computed(() => formatTrafficAmount(Number(props.sent) + Number(props.recv)));
 
 const chartOption = computed(() => ({
   animation: false,
@@ -32,6 +33,21 @@ const chartOption = computed(() => ({
     itemWidth: 12,
     textStyle: { color: "#606266" },
   },
+  title: {
+    text: totalTraffic,
+    subtext: '总计',
+    left: 'center',
+    top: 'center',
+    textStyle: {
+      fontSize: 20,
+      color: '#333',
+      fontWeight: 'bold'
+    },
+    subtextStyle: {
+      fontSize: 14,
+      color: '#666'
+    }
+  },
   series: [
     {
       type: "pie",
@@ -41,6 +57,10 @@ const chartOption = computed(() => ({
       label: {
         formatter: ({ percent }) => `${percent}%`,
         color: "#303133",
+      },
+      padAngle: 3,
+      itemStyle: {
+        borderRadius: 10
       },
       data: [
         { value: Number(props.recv || 0), name: "入站", itemStyle: { color: "#67c23a" } },

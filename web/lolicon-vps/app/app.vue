@@ -62,7 +62,7 @@
   }
   .el-input-number__decrease, .el-input-number__increase {
     background-color: transparent;
-    border: none;
+    border: none !important;
   }
   .el-input-number__decrease.is-hovering {
     box-shadow: none !important;

@@ -17,6 +17,21 @@ services:
       - INFLUX_TOKEN=your_token_here
       - GIN_MODE=release
       - TZ=Asia/Shanghai
+      - SERVER_STATUS_IFACE=eth0
+
+  apprise:
+    image: caronc/apprise:latest
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - APPRISE_STATEFUL_MODE=simple
+      - APPRISE_WORKER_COUNT=1
+      - APPRISE_ADMIN=y
+    volumes:
+      - ./apprise/config:/config
+      - ./apprise/plugin:/plugin
+      - ./apprise/attach:/attach
+    restart: unless-stopped
 
   influxdb:
     restart: unless-stopped

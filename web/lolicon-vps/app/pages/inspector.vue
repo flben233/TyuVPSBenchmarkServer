@@ -410,6 +410,7 @@ async function handleUpdateHost(payload) {
     target: payload.target,
     tags: payload.tags,
     notify: payload.notify,
+    notify_tolerance: payload.notify_tolerance,
   });
   submittingHost.value = false;
 
