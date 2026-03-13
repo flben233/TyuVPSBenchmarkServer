@@ -5,8 +5,9 @@ import { CanvasRenderer } from "echarts/renderers";
 import { PieChart } from "echarts/charts";
 import { LegendComponent, TooltipComponent } from "echarts/components";
 import { formatTrafficAmount } from "~/utils/inspector";
+import { TitleComponent } from 'echarts/components';
 
-use([CanvasRenderer, PieChart, LegendComponent, TooltipComponent]);
+use([CanvasRenderer, PieChart, LegendComponent, TooltipComponent, TitleComponent]);
 
 const props = defineProps({
   sent: {
@@ -23,7 +24,7 @@ const hasData = computed(() => Number(props.sent) > 0 || Number(props.recv) > 0)
 const totalTraffic = computed(() => formatTrafficAmount(Number(props.sent) + Number(props.recv)));
 
 const chartOption = computed(() => ({
-  animation: false,
+  animation: true,
   tooltip: {
     trigger: "item",
     formatter: ({ name, value, percent }) => `${name}<br/>${formatTrafficAmount(value)} (${percent}%)`,
@@ -34,25 +35,19 @@ const chartOption = computed(() => ({
     textStyle: { color: "#606266" },
   },
   title: {
-    text: totalTraffic,
-    subtext: '总计',
+    text: totalTraffic.value,
     left: 'center',
     top: 'center',
     textStyle: {
-      fontSize: 20,
+      fontSize: 13,
       color: '#333',
       fontWeight: 'bold'
-    },
-    subtextStyle: {
-      fontSize: 14,
-      color: '#666'
     }
   },
   series: [
     {
       type: "pie",
-      radius: ["45%", "72%"],
-      center: ["50%", "46%"],
+      radius: ["40%", "65%"],
       avoidLabelOverlap: true,
       label: {
         formatter: ({ percent }) => `${percent}%`,
@@ -60,7 +55,7 @@ const chartOption = computed(() => ({
       },
       padAngle: 3,
       itemStyle: {
-        borderRadius: 10
+        borderRadius: 6
       },
       data: [
         { value: Number(props.recv || 0), name: "入站", itemStyle: { color: "#67c23a" } },
