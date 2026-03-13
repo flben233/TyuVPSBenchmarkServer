@@ -120,7 +120,7 @@ func DeleteHost(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} common.APIResponse[[]model.InspectHost]
+// @Success 200 {object} common.APIResponse[[]response.HostListResponse]
 // @Router /inspector/hosts [get]
 func ListHosts(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
