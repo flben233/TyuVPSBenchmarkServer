@@ -37,6 +37,11 @@ func InitDB(dbPath string) error {
 			return err
 		}
 	}
+	s, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get database instance: %w", err)
+	}
+	s.SetMaxOpenConns(1)
 	return nil
 }
 
