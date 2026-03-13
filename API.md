@@ -1,159 +1,238 @@
-# VPSBenchmarkBackend REST API 文档
+# VPSBenchmarkBackend API 文档
 
-本文档基于代码仓库内现有路由与 handler 实现自动整理，放置于仓库根目录，便于开发和测试人员参考。
+本文件详细说明了 VPSBenchmarkBackend 的 API 接口、请求参数及返回结构。
 
-通用返回格式（JSON）:
+- **基础路径 (BasePath):** `/api`
+- **公共响应结构:**
+  所有接口通常返回以下 JSON 结构：
+  ```json
+  {
+    "code": 200,      // 状态码 (200 为成功)
+    "message": "OK",  // 提示信息
+    "data": { ... }   // 实际数据内容
+  }
+  ```
 
+---
+
+## 🔒 认证模块 (Auth)
+
+### 1. GitHub OAuth 登录
+`GET /auth/github/login`
+- **参数:** `code` (query, string) - GitHub 返回的临时 code
+- **返回:** `common.APIResponse-response_LoginResponse`
+  - `data.token`: JWT Token
+
+### 2. 刷新 JWT Token
+`POST /auth/refresh`
+- **返回:** `common.APIResponse-response_LoginResponse`
+  - `data.token`: 新的 JWT Token
+
+### 3. 获取当前用户信息
+`GET /auth/user` (需 JWT)
+- **返回:** `common.APIResponse-response_UserInfo`
+  - `data.name`: 用户名
+  - `data.avatar_url`: 头像链接
+
+### 4. 后台用户管理 (Admin)
+- `GET /auth/admin/users`: 列出用户。返回 `[]model.User`。
+- `POST /auth/admin/user`: 更新用户。请求体 `model.User` { `id`, `name`, `group_id` }。
+- `POST /auth/admin/user/delete`: 删除用户。请求体 `{ "UserID": 123 }`。
+- `GET /auth/admin/groups`: 列出所有用户组。返回 `[]model.UserGroup`。
+- `POST /auth/admin/group/create`: 创建用户组。请求体 `model.UserGroup` { `name`, `permissions` }。
+- `POST /auth/admin/group`: 更新用户组。请求体 `model.UserGroup` { `id`, `name`, `permissions` }。
+- `POST /auth/admin/group/delete`: 删除用户组。请求体 `{ "GroupID": 123 }`。
+
+---
+
+## 📊 监控模块 (Monitor)
+
+### 1. 获取服务器运行状态
+`GET /monitor/status`
+- **返回:** `response.ServerStatusResponse`
+  - `cpu_usage_percent`: CPU 使用率
+  - `memory_usage_percent`: 内存使用率
+  - `upload_mbps`/`download_mbps`: 实时网络 IO
+
+### 2. 获取监控统计信息
+`GET /monitor/statistics`
+- **返回:** `response.StatisticsResponse`
+  - `total_hosts`: 监控主机总数
+  - `online_hosts`: 在线主机数
+  - `offline_hosts`: 离线主机数
+
+### 3. 列出我的监控主机
+`GET /monitor/hosts` (需 JWT)
+- **返回:** `[]model.Host` (简要信息)
+
+### 4. 新增监控主机
+`POST /monitor/hosts/add` (需 JWT)
+- **请求体:** `request.HostRequest`
+  ```json
+  {
+    "name": "主机名",
+    "target": "检测目标 (IP/域名)"
+  }
+  ```
+- **返回:** `{ "data": { "id": 123 } }`
+
+### 5. 删除监控主机
+`POST /monitor/hosts/delete/{id}` (需 JWT)
+- **参数:** `id` (path, int) - 主机 ID
+- **返回:** `{ "code": 200, "message": "删除成功" }`
+
+### 6. 审核管理 (Admin)
+- `GET /monitor/admin/pending`: 列出待审核主机。返回 `[]model.Host`。
+- `POST /monitor/admin/approve/{id}`: 审核通过主机。参数 `id` (path, int)。
+- `POST /monitor/admin/reject/{id}`: 审核拒绝主机。参数 `id` (path, int)。
+
+---
+
+## 📑 报告模块 (Report)
+
+### 1. 分页获取报告列表
+`GET /report/data/list`
+- **参数:** `page`, `page_size` (query, int)
+- **返回:** `common.PaginatedResponse-array_response_ReportInfoResponse`
+
+### 2. 获取报告详情
+`GET /report/data/details`
+- **参数:** `id` (query, string)
+- **返回:** `model.BenchmarkResult` (包含详细的 CPU, Disk, Speedtest, Media 解锁等数据)
+
+### 3. 搜索报告
+`POST /report/data/search`
+- **请求体:** `request.SearchRequest`
+  ```json
+  {
+    "name": "关键词",
+    "virtualization": "KVM",
+    "ipv6_support": true,
+    "media_unlocks": ["Netflix", "Disney+"],
+    "cm_params": { "back_route": "CN2 GIA", "latency": 150 }
+  }
+  ```
+- **分页参数:** `page`, `page_size` (query)
+- **返回:** `common.PaginatedResponse-array_response_ReportInfoResponse`
+
+### 4. 添加报告
+`POST /report/admin/add` (需 JWT)
+- **请求体:** `AddReportRequest` (body/HTML)
+- **返回:** `{ "code": 200, "message": "添加成功", "data": { "id": 123 } }`
+
+### 5. 更新报告对应 Monitor ID
+`POST /report/admin/delete` (需 JWT)
+- **请求体:** `UpdateReportRequest` (body)
+- **返回:** `{ "code": 200, "message": "更新成功" }`
+
+---
+
+## 🔍 检测器模块 (Inspector)
+
+### 1. 列出检测主机
+`GET /inspector/hosts` (需 JWT)
+- **返回:** `[]model.InspectorHost` (简要信息)
+
+### 2. 创建检测主机
+`POST /inspector/hosts/create` (需 JWT)
+- **请求体:** `CreateHostRequest` (body)
+  ```json
+  {
+    "name": "主机名",
+    "target": "检测目标 (IP/域名)"
+  }
+  ```
+- **返回:** `{ "data": { "id": 123 } }`
+
+### 3. 更新检测主机
+`POST /inspector/hosts/update/{id}` (需 JWT)
+- **参数:** `id` (path, int) - 主机 ID
+- **请求体:** `UpdateHostRequest` (body)
+- **返回:** `{ "code": 200, "message": "更新成功" }`
+
+### 4. 删除检测主机
+`POST /inspector/hosts/delete/{id}` (需 JWT)
+- **参数:** `id` (path, int) - 主机 ID
+- **返回:** `{ "code": 200, "message": "删除成功" }`
+
+### 5. 查询检测历史数据
+`GET /inspector/data` (需 JWT)
+- **参数:**
+  - `start`: 开始时间 (纳秒时间戳)
+  - `end`: 结束时间 (纳秒时间戳)
+  - `interval`: 聚合间隔 (如 `1h`, `30m`)
+- **返回:** `[]response.HostData` (包含一段时间内的 Ping 和流量趋势)
+
+### 6. 上报检测数据 (Agent 使用)
+`POST /inspector/data/put`
+- **请求体:** `request.PutDataRequest`
+  ```json
+  {
+    "host_id": 1,
+    "hostInfo": { "cpu_usage_percent": 10.5, ... },
+    "traffic": [ { "time": "...", "sent": 100, "recv": 200 } ]
+  }
+  ```
+
+### 7. 获取个人检测设置
+`GET /inspector/settings` (需 JWT)
+- **返回:** `response.InspectorSettingsResponse`
+
+### 8. 更新个人检测设置
+`POST /inspector/settings/update` (需 JWT)
+- **请求体:** `UpdateInspectorSettingRequest` (body)
+- **返回:** `{ "code": 200, "message": "更新成功" }`
+
+---
+
+## 🔍 Looking Glass 模块
+
+### 1. 列出公开的 LG 记录
+`GET /lookingglass/list`
+- **返回:** `[]model.LookingGlass` (公开记录)
+
+### 2. 列出我的 LG 记录
+`GET /lookingglass/records` (需 JWT)
+- **返回:** `[]model.LookingGlass` (我的记录)
+
+### 3. 添加 LG 记录
+`POST /lookingglass/records` (需 JWT)
+- **请求体:** `request.LookingGlassRequest`
+  ```json
+  {
+    "server_name": "名称",
+    "test_url": "测速文件地址"
+  }
+  ```
+- **返回:** `{ "code": 200, "message": "添加成功", "data": { "id": 123 } }`
+
+### 4. 删除 LG 记录
+`POST /lookingglass/records/{id}` (需 JWT)
+- **参数:** `id` (path, int) - 记录 ID
+- **返回:** `{ "code": 200, "message": "删除成功" }`
+
+### 5. 审核管理 (Admin)
+- `GET /lookingglass/admin/pending`: 列出待审核 LG 记录。返回 `[]model.LookingGlass`。
+- `POST /lookingglass/admin/approve/{id}`: 审核通过 LG 记录。参数 `id` (path, int)。
+- `POST /lookingglass/admin/reject/{id}`: 审核拒绝 LG 记录。参数 `id` (path, int)。
+
+---
+
+## 📂 数据结构详解 (Definitions)
+
+### model.User
 ```json
-// 单次请求成功
 {
-  "code": 0,
-  "message": "success",
-  "data": { /* 实际数据 */ }
-}
-
-// 分页数据
-{
-  "code": 0,
-  "message": "success",
-  "data": [ /* items */ ],
-  "total": 123,
-  "page": 1,
-  "page_size": 10
-}
-
-// 失败示例
-{
-  "code": -2,
-  "message": "bad request"
+  "id": 12345,        // GitHub ID
+  "login": "username",
+  "name": "Nickname",
+  "group_id": 1
 }
 ```
 
-鉴权与中间件:
-- `GET /auth/user`、监控/管理类和 `report/admin` 路由受 JWT 验证保护；使用 `Authorization: Bearer <token>`。
-- `report/admin` 额外使用 Admin 校验中间件。
-
-模块路由总览（以 `base` 前缀为根，例如在代码中 RegisterRouter 的 `base`）：
-
-1) Auth
-- POST `/auth/github/login` — 使用 GitHub OAuth Code 交换登录 token。
-- GET `/auth/user` — 获取当前 JWT 中的用户信息（需 Bearer token）。
-
-2) Monitor
-- GET `/monitor/statistics` — 获取监控统计（公开）。
-- GET `/monitor/hosts` — 列出当前用户的监控主机（需 JWT）。
-- POST `/monitor/hosts` — 新增监控主机（需 JWT）。
-- POST `/monitor/hosts/:id` — 删除监控主机（需 JWT）。
-
-3) Report（数据查询）
-- GET `/report/data/list` — 分页列出报告。
-- GET `/report/data/details` — 获取单条报告详情。
-- GET or POST `/report/data/search` — 搜索报告，支持 JSON body 或 query params。
-- GET `/report/data/media-names` — 列出所有媒体解锁名称
-- GET `/report/data/virtualizations` — 列出所有虚拟化名称
-- GET `/report/data/backroute-types` — 列出所有回程类型
-
-4) Report（管理员）
-- POST `/report/admin/add` — 添加报告（需 JWT + Admin）
-- POST `/report/admin/delete` — 删除报告（需 JWT + Admin）
-
-5) Tool
-- GET/POST `/tool/ip` — IP 信息查询
-- GET/POST `/tool/traceroute` — 路由追踪（依赖外部 `nexttrace`）
-- GET/POST `/tool/whois` — WHOIS 查询（依赖外部 `whois`）
-
-详细接口说明
-
-**Auth**
-
-- POST `/auth/github/login`
-  - 描述：使用 GitHub OAuth `code` 换取本服务 JWT。 
-  - 请求体 (JSON): `{ "code": "<github_oauth_code>" }`（必填）
-  - 返回：`data` 为 `{"token": "<jwt>"}`
-
-- GET `/auth/user`
-  - 描述：返回当前 JWT 中保存的用户信息。
-  - 需要：`Authorization: Bearer <token>`
-  - 返回示例 `data`:
-    ```json
-    { "name": "username", "avatar_url": "https://..." }
-    ```
-
-**Monitor**
-
-- GET `/monitor/statistics`
-  - 描述：获取系统监控统计。
-
-- GET `/monitor/hosts`
-  - 描述：列出当前用户（或管理员）可见的监控主机。
-  - 返回 `data`：主机列表，具体字段以 `internal/monitor/model/monitor.go` 中定义为准。
-
-- POST `/monitor/hosts`
-  - 描述：新增监控主机（需 JWT）。
-  - 请求体 (JSON): `{ "target": "目标地址或域名", "name": "主机别名" }`
-  - 成功返回 201 并包含 `{"id": <new_id>}`
-
-- POST `/monitor/hosts/:id`
-  - 描述：删除主机（路由实现为 POST 而非 DELETE）。
-  - 参数：路径参数 `:id` 为主机 ID。
-
-**Report（数据查询）**
-
-- GET `/report/data/list`
-  - Query: `page`, `page_size`
-  - 返回：分页列表 `data` 为 `[]ReportInfoResponse`（查看 `internal/report/response/data.go`）
-
-- GET `/report/data/details?id=...`
-  - Query: `id`（必需）
-  - 返回：单条完整报告数据（模型位于 `internal/report/model/*`）
-
-- GET/POST `/report/data/search`
-  - 支持 JSON body 或 query 参数。
-  - JSON Body 示例（`SearchRequest`）:
-    ```json
-    {
-      "name": "关键字",
-      "media_unlocks": ["TikTok"],
-      "virtualization": "KVM",
-      "ipv6_support": true,
-      "disk_level": 3,
-      "ct_params": { "back_route": "某回程", "min_download": 50.0 }
-    }
-    ```
-  - 分页：`page`, `page_size`
-
-**Report（管理员）**
-
-- POST `/report/admin/add` (需要 JWT + admin)
-  - 支持 JSON `{ "html": "<report html>" }` 或者直接把 HTML 放在请求 body。
-  - 返回 201, `data` 示例: `{ "report_id": "<id>" }`
-
-- POST `/report/admin/delete` (需要 JWT + admin)
-  - JSON Body: `{ "id": "<report id>" }` 或者 query `id`
-
-**Tool**
-
-- GET/POST `/tool/ip`
-  - 请求体/参数: `target` (必需), `dataSource` (可选，`ipinfo` 或 `ip-api`)
-  - 返回：第三方 IP 服务的解析数据（map）
-
-- GET/POST `/tool/traceroute`
-  - 请求体/参数: `target` (必需), `mode` (`icmp` 或 `tcp` 默认 `icmp`), `port` (可选)
-  - 返回：`data` 包含 `{"raw": "nexttrace 输出 json 字符串"}`
-
-- GET/POST `/tool/whois`
-  - 请求体/参数: `target` (必需)
-  - 返回：`data` 包含 `{ "raw": "whois 原始输出" }`
-
-备注与已知差异
-- 路由实现中有少数与常见 REST 语义不完全一致的点（例如删除主机使用 `POST /monitor/hosts/:id`，非 `DELETE`）。文档以代码中实际注册的路由为准。
-- 管理类接口需要 JWT 且通过 `auth.GetAdminMiddleware()` 进一步限制，请确保 `config` 中 AdminID/权限配置正确。
-
-定位代码
-- 路由入口：`internal/*/router.go`（已扫描：`auth`, `monitor`, `report`, `tool`）
-- 重要 handler：`internal/*/handler/*.go`
-- 请求/响应模型：`internal/*/request`, `internal/*/response`, `internal/*/model`
-
-如果你希望我再生成 `openapi.yaml`（OpenAPI 3.0 规范）或自动提取更多字段（如模型字段类型与示例），我可以继续把这些模型解析并输出一个完整的 OpenAPI 文件。
-
--- 生成于代码扫描结果
+### model.BenchmarkResult (报告详情核心结构)
+- `cpu`: { `single`, `multi` }
+- `disk`: { `seq_read`, `seq_write` }
+- `spdtest`: Speedtest 结果列表
+- `media`: 流媒体解锁情况 (IPv4/IPv6)
+- `itdog`: Ping 和路由追踪结果

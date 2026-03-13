@@ -46,6 +46,369 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/admin/group": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing user group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Update User Group",
+                "parameters": [
+                    {
+                        "description": "UserGroup",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UserGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/admin/group/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new user group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Create User Group",
+                "parameters": [
+                    {
+                        "description": "UserGroup",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UserGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/admin/group/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a user group by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Delete User Group",
+                "parameters": [
+                    {
+                        "description": "Group ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/admin/groups": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List all user groups",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "List User Groups",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-array_model_UserGroup"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/admin/user": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Update User",
+                "parameters": [
+                    {
+                        "description": "User",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/admin/user/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a user by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Delete User",
+                "parameters": [
+                    {
+                        "description": "User ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/admin/user/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a user by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get User",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-model_User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List all users",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "List Users",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-array_model_User"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/github/login": {
             "get": {
                 "description": "Exchange GitHub OAuth code for JWT token",
@@ -90,6 +453,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/refresh": {
+            "post": {
+                "description": "Refresh JWT token using refresh token from cookie",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh JWT Token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/user": {
             "get": {
                 "security": [
@@ -116,6 +517,305 @@ const docTemplate = `{
                         "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/inspector/data": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspector"
+                ],
+                "summary": "Query Inspect Data",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp (nanoseconds)",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp (nanoseconds)",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Aggregation interval (e.g. 1h, 30m)",
+                        "name": "interval",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-array_response_HostData"
+                        }
+                    }
+                }
+            }
+        },
+        "/inspector/data/put": {
+            "post": {
+                "security": [
+                    {
+                        "None": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspector"
+                ],
+                "summary": "Put Inspect Data",
+                "parameters": [
+                    {
+                        "description": "Traffic and ping data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.PutDataRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/inspector/hosts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspector"
+                ],
+                "summary": "List Inspect Hosts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-array_response_HostListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/inspector/hosts/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspector"
+                ],
+                "summary": "Create Inspect Host",
+                "parameters": [
+                    {
+                        "description": "Host information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.CreateHostRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/inspector/hosts/delete/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspector"
+                ],
+                "summary": "Delete Inspect Host",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Host ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/inspector/hosts/update/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspector"
+                ],
+                "summary": "Update Inspect Host",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Host ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Host update information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.UpdateHostRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/inspector/settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspector"
+                ],
+                "summary": "Get Inspector User Settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-response_SettingData"
+                        }
+                    }
+                }
+            }
+        },
+        "/inspector/settings/update": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inspector"
+                ],
+                "summary": "Update Inspector User Settings",
+                "parameters": [
+                    {
+                        "description": "User setting information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.UpdateInspectorSettingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.APIResponse-response_SettingData"
                         }
                     }
                 }
@@ -644,7 +1344,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/monitor/hosts/add": {
             "post": {
                 "security": [
                     {
@@ -707,7 +1409,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/monitor/hosts/{id}": {
+        "/monitor/hosts/delete/{id}": {
             "post": {
                 "security": [
                     {
@@ -883,7 +1585,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete an existing report by ID. Requires admin authentication.",
+                "description": "Update the monitor ID of a report by ID. Requires admin authentication.",
                 "consumes": [
                     "application/json"
                 ],
@@ -893,14 +1595,14 @@ const docTemplate = `{
                 "tags": [
                     "report"
                 ],
-                "summary": "Delete Report (Admin)",
+                "summary": "Update the Monitor ID of a Report (Admin)",
                 "parameters": [
                     {
                         "description": "Report ID",
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/request.DeleteReportRequest"
+                            "$ref": "#/definitions/request.UpdateReportRequest"
                         }
                     }
                 ],
@@ -1212,55 +1914,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/tool/ip": {
-            "get": {
-                "description": "Lookup IP information by IP or domain. Accepts query parameter ` + "`" + `target` + "`" + ` or JSON body.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "tool"
-                ],
-                "summary": "IP Lookup",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Target IP or domain",
-                        "name": "target",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Data source: ipapi or ipinfo",
-                        "name": "data_source",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/common.APIResponse-handler_GenericMap"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/common.APIResponse-any"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/common.APIResponse-any"
-                        }
-                    }
-                }
-            }
-        },
         "/tool/traceroute": {
             "get": {
                 "description": "Perform a traceroute to a target. Supports query params ` + "`" + `target` + "`" + `, ` + "`" + `mode` + "`" + ` (icmp|tcp), and ` + "`" + `port` + "`" + `.",
@@ -1373,6 +2026,74 @@ const docTemplate = `{
                 }
             }
         },
+        "common.APIResponse-array_model_User": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.User"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "common.APIResponse-array_model_UserGroup": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.UserGroup"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "common.APIResponse-array_response_HostData": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.HostData"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "common.APIResponse-array_response_HostListResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.HostListResponse"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "common.APIResponse-array_response_HostResponse": {
             "type": "object",
             "properties": {
@@ -1441,20 +2162,6 @@ const docTemplate = `{
                 }
             }
         },
-        "common.APIResponse-handler_GenericMap": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/handler.GenericMap"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "common.APIResponse-model_BenchmarkResult": {
             "type": "object",
             "properties": {
@@ -1463,6 +2170,20 @@ const docTemplate = `{
                 },
                 "data": {
                     "$ref": "#/definitions/model.BenchmarkResult"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "common.APIResponse-model_User": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/model.User"
                 },
                 "message": {
                     "type": "string"
@@ -1553,6 +2274,20 @@ const docTemplate = `{
                 }
             }
         },
+        "common.APIResponse-response_SettingData": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/response.SettingData"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "common.APIResponse-response_UserInfo": {
             "type": "object",
             "properties": {
@@ -1561,6 +2296,20 @@ const docTemplate = `{
                 },
                 "data": {
                     "$ref": "#/definitions/response.UserInfo"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "common.APIResponse-string": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "string"
                 },
                 "message": {
                     "type": "string"
@@ -1592,10 +2341,6 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
-        },
-        "handler.GenericMap": {
-            "type": "object",
-            "additionalProperties": true
         },
         "model.BenchmarkResult": {
             "type": "object",
@@ -1629,6 +2374,13 @@ const docTemplate = `{
                 },
                 "media": {
                     "$ref": "#/definitions/model.MediaResults"
+                },
+                "monitor_id": {
+                    "description": "Optional monitor ID for association",
+                    "type": "integer"
+                },
+                "other_info": {
+                    "type": "string"
                 },
                 "spdtest": {
                     "type": "array",
@@ -1726,381 +2478,360 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "Factor": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "Abuser": {
-                                "type": "object",
-                                "additionalProperties": true
-                            },
-                            "CountryCode": {
-                                "type": "object",
-                                "additionalProperties": {
-                                    "type": "string"
-                                }
-                            },
-                            "Proxy": {
-                                "type": "object",
-                                "additionalProperties": true
-                            },
-                            "Robot": {
-                                "type": "object",
-                                "additionalProperties": true
-                            },
-                            "Server": {
-                                "type": "object",
-                                "additionalProperties": true
-                            },
-                            "Tor": {
-                                "type": "object",
-                                "additionalProperties": true
-                            },
-                            "VPN": {
-                                "type": "object",
-                                "additionalProperties": true
+                    "type": "object",
+                    "properties": {
+                        "Abuser": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "CountryCode": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
                             }
+                        },
+                        "Proxy": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "Robot": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "Server": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "Tor": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "VPN": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 },
                 "Head": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "Command": {
-                                "type": "string"
-                            },
-                            "GitHub": {
-                                "type": "string"
-                            },
-                            "IP": {
-                                "type": "string"
-                            },
-                            "Time": {
-                                "type": "string"
-                            },
-                            "Version": {
-                                "type": "string"
-                            }
+                    "type": "object",
+                    "properties": {
+                        "Command": {
+                            "type": "string"
+                        },
+                        "GitHub": {
+                            "type": "string"
+                        },
+                        "IP": {
+                            "type": "string"
+                        },
+                        "Time": {
+                            "type": "string"
+                        },
+                        "Version": {
+                            "type": "string"
                         }
                     }
                 },
                 "Info": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "ASN": {
-                                "type": "string"
-                            },
-                            "City": {
-                                "type": "object",
-                                "properties": {
-                                    "Name": {
-                                        "type": "string"
-                                    },
-                                    "PostalCode": {
-                                        "type": "string"
-                                    },
-                                    "SubCode": {
-                                        "type": "string"
-                                    },
-                                    "Subdivisions": {
-                                        "type": "string"
-                                    }
+                    "type": "object",
+                    "properties": {
+                        "ASN": {
+                            "type": "string"
+                        },
+                        "City": {
+                            "type": "object",
+                            "properties": {
+                                "Name": {
+                                    "type": "string"
+                                },
+                                "PostalCode": {
+                                    "type": "string"
+                                },
+                                "SubCode": {
+                                    "type": "string"
+                                },
+                                "Subdivisions": {
+                                    "type": "string"
                                 }
-                            },
-                            "Continent": {
-                                "type": "object",
-                                "properties": {
-                                    "Code": {
-                                        "type": "string"
-                                    },
-                                    "Name": {
-                                        "type": "string"
-                                    }
-                                }
-                            },
-                            "DMS": {
-                                "type": "string"
-                            },
-                            "Latitude": {
-                                "type": "string"
-                            },
-                            "Longitude": {
-                                "type": "string"
-                            },
-                            "Map": {
-                                "type": "string"
-                            },
-                            "Organization": {
-                                "type": "string"
-                            },
-                            "Region": {
-                                "type": "object",
-                                "properties": {
-                                    "Code": {
-                                        "type": "string"
-                                    },
-                                    "Name": {
-                                        "type": "string"
-                                    }
-                                }
-                            },
-                            "RegisteredRegion": {
-                                "type": "object",
-                                "properties": {
-                                    "Code": {
-                                        "type": "string"
-                                    },
-                                    "Name": {
-                                        "type": "string"
-                                    }
-                                }
-                            },
-                            "TimeZone": {
-                                "type": "string"
-                            },
-                            "Type": {
-                                "type": "string"
                             }
+                        },
+                        "Continent": {
+                            "type": "object",
+                            "properties": {
+                                "Code": {
+                                    "type": "string"
+                                },
+                                "Name": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "DMS": {
+                            "type": "string"
+                        },
+                        "Latitude": {
+                            "type": "string"
+                        },
+                        "Longitude": {
+                            "type": "string"
+                        },
+                        "Map": {
+                            "type": "string"
+                        },
+                        "Organization": {
+                            "type": "string"
+                        },
+                        "Region": {
+                            "type": "object",
+                            "properties": {
+                                "Code": {
+                                    "type": "string"
+                                },
+                                "Name": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "RegisteredRegion": {
+                            "type": "object",
+                            "properties": {
+                                "Code": {
+                                    "type": "string"
+                                },
+                                "Name": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "TimeZone": {
+                            "type": "string"
+                        },
+                        "Type": {
+                            "type": "string"
                         }
                     }
                 },
                 "Mail": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "163": {
-                                "type": "boolean"
-                            },
-                            "AOL": {
-                                "type": "boolean"
-                            },
-                            "Apple": {
-                                "type": "boolean"
-                            },
-                            "DNSBlacklist": {
-                                "type": "object",
-                                "properties": {
-                                    "Blacklisted": {
-                                        "type": "integer"
-                                    },
-                                    "Clean": {
-                                        "type": "integer"
-                                    },
-                                    "Marked": {
-                                        "type": "integer"
-                                    },
-                                    "Total": {
-                                        "type": "integer"
-                                    }
+                    "type": "object",
+                    "properties": {
+                        "163": {
+                            "type": "boolean"
+                        },
+                        "AOL": {
+                            "type": "boolean"
+                        },
+                        "Apple": {
+                            "type": "boolean"
+                        },
+                        "DNSBlacklist": {
+                            "type": "object",
+                            "properties": {
+                                "Blacklisted": {
+                                    "type": "integer"
+                                },
+                                "Clean": {
+                                    "type": "integer"
+                                },
+                                "Marked": {
+                                    "type": "integer"
+                                },
+                                "Total": {
+                                    "type": "integer"
                                 }
-                            },
-                            "GMX": {
-                                "type": "boolean"
-                            },
-                            "Gmail": {
-                                "type": "boolean"
-                            },
-                            "MailCOM": {
-                                "type": "boolean"
-                            },
-                            "MailRU": {
-                                "type": "boolean"
-                            },
-                            "Outlook": {
-                                "type": "boolean"
-                            },
-                            "Port25": {
-                                "type": "boolean"
-                            },
-                            "QQ": {
-                                "type": "boolean"
-                            },
-                            "Sina": {
-                                "type": "boolean"
-                            },
-                            "Sohu": {
-                                "type": "boolean"
-                            },
-                            "Yahoo": {
-                                "type": "boolean"
                             }
+                        },
+                        "GMX": {
+                            "type": "boolean"
+                        },
+                        "Gmail": {
+                            "type": "boolean"
+                        },
+                        "MailCOM": {
+                            "type": "boolean"
+                        },
+                        "MailRU": {
+                            "type": "boolean"
+                        },
+                        "Outlook": {
+                            "type": "boolean"
+                        },
+                        "Port25": {
+                            "type": "boolean"
+                        },
+                        "QQ": {
+                            "type": "boolean"
+                        },
+                        "Sina": {
+                            "type": "boolean"
+                        },
+                        "Sohu": {
+                            "type": "boolean"
+                        },
+                        "Yahoo": {
+                            "type": "boolean"
                         }
                     }
                 },
                 "Media": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "AmazonPrimeVideo": {
-                                "type": "object",
-                                "properties": {
-                                    "region": {
-                                        "type": "string"
-                                    },
-                                    "status": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    }
+                    "type": "object",
+                    "properties": {
+                        "AmazonPrimeVideo": {
+                            "type": "object",
+                            "properties": {
+                                "region": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
                                 }
-                            },
-                            "ChatGPT": {
-                                "type": "object",
-                                "properties": {
-                                    "region": {
-                                        "type": "string"
-                                    },
-                                    "status": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    }
+                            }
+                        },
+                        "ChatGPT": {
+                            "type": "object",
+                            "properties": {
+                                "region": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
                                 }
-                            },
-                            "DisneyPlus": {
-                                "type": "object",
-                                "properties": {
-                                    "region": {
-                                        "type": "string"
-                                    },
-                                    "status": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    }
+                            }
+                        },
+                        "DisneyPlus": {
+                            "type": "object",
+                            "properties": {
+                                "region": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
                                 }
-                            },
-                            "Netflix": {
-                                "type": "object",
-                                "properties": {
-                                    "region": {
-                                        "type": "string"
-                                    },
-                                    "status": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    }
+                            }
+                        },
+                        "Netflix": {
+                            "type": "object",
+                            "properties": {
+                                "region": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
                                 }
-                            },
-                            "Spotify": {
-                                "type": "object",
-                                "properties": {
-                                    "region": {
-                                        "type": "string"
-                                    },
-                                    "status": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    }
+                            }
+                        },
+                        "Spotify": {
+                            "type": "object",
+                            "properties": {
+                                "region": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
                                 }
-                            },
-                            "TikTok": {
-                                "type": "object",
-                                "properties": {
-                                    "region": {
-                                        "type": "string"
-                                    },
-                                    "status": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    }
+                            }
+                        },
+                        "TikTok": {
+                            "type": "object",
+                            "properties": {
+                                "region": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
                                 }
-                            },
-                            "Youtube": {
-                                "type": "object",
-                                "properties": {
-                                    "region": {
-                                        "type": "string"
-                                    },
-                                    "status": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    }
+                            }
+                        },
+                        "Youtube": {
+                            "type": "object",
+                            "properties": {
+                                "region": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
                                 }
                             }
                         }
                     }
                 },
                 "Score": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "AbuseIPDB": {
-                                "type": "string"
-                            },
-                            "DBIP": {
-                                "type": "string"
-                            },
-                            "IP2LOCATION": {
-                                "type": "string"
-                            },
-                            "IPQS": {
-                                "type": "string"
-                            },
-                            "SCAMALYTICS": {
-                                "type": "string"
-                            },
-                            "ipapi": {
-                                "type": "string"
-                            }
+                    "type": "object",
+                    "properties": {
+                        "AbuseIPDB": {
+                            "type": "string"
+                        },
+                        "DBIP": {
+                            "type": "string"
+                        },
+                        "IP2LOCATION": {
+                            "type": "string"
+                        },
+                        "IPQS": {
+                            "type": "string"
+                        },
+                        "SCAMALYTICS": {
+                            "type": "string"
+                        },
+                        "ipapi": {
+                            "type": "string"
                         }
                     }
                 },
                 "Type": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "Company": {
-                                "type": "object",
-                                "properties": {
-                                    "IPinfo": {
-                                        "type": "string"
-                                    },
-                                    "ipapi": {
-                                        "type": "string"
-                                    },
-                                    "ipregistry": {
-                                        "type": "string"
-                                    }
+                    "type": "object",
+                    "properties": {
+                        "Company": {
+                            "type": "object",
+                            "properties": {
+                                "IPinfo": {
+                                    "type": "string"
+                                },
+                                "ipapi": {
+                                    "type": "string"
+                                },
+                                "ipregistry": {
+                                    "type": "string"
                                 }
-                            },
-                            "Usage": {
-                                "type": "object",
-                                "properties": {
-                                    "AbuseIPDB": {
-                                        "type": "string"
-                                    },
-                                    "IP2LOCATION": {
-                                        "type": "string"
-                                    },
-                                    "IPinfo": {
-                                        "type": "string"
-                                    },
-                                    "ipapi": {
-                                        "type": "string"
-                                    },
-                                    "ipregistry": {
-                                        "type": "string"
-                                    }
+                            }
+                        },
+                        "Usage": {
+                            "type": "object",
+                            "properties": {
+                                "AbuseIPDB": {
+                                    "type": "string"
+                                },
+                                "IP2LOCATION": {
+                                    "type": "string"
+                                },
+                                "IPinfo": {
+                                    "type": "string"
+                                },
+                                "ipapi": {
+                                    "type": "string"
+                                },
+                                "ipregistry": {
+                                    "type": "string"
                                 }
                             }
                         }
@@ -2175,6 +2906,22 @@ const docTemplate = `{
                 }
             }
         },
+        "model.PingPoint": {
+            "type": "object",
+            "properties": {
+                "host_id": {
+                    "type": "integer"
+                },
+                "latency": {
+                    "description": "单位ms，为0表示丢包",
+                    "type": "number"
+                },
+                "time": {
+                    "description": "纳秒",
+                    "type": "string"
+                }
+            }
+        },
         "model.SpeedtestResult": {
             "type": "object",
             "properties": {
@@ -2223,6 +2970,27 @@ const docTemplate = `{
                 }
             }
         },
+        "model.TrafficPoint": {
+            "type": "object",
+            "properties": {
+                "host_id": {
+                    "description": "主机ID，首先在server端生成，然后在agent安装时填写，agent上报时携带这个ID",
+                    "type": "integer"
+                },
+                "recv": {
+                    "description": "单位MB",
+                    "type": "number"
+                },
+                "sent": {
+                    "description": "单位MB",
+                    "type": "number"
+                },
+                "time": {
+                    "description": "纳秒",
+                    "type": "string"
+                }
+            }
+        },
         "model.TyuDiskResult": {
             "type": "object",
             "properties": {
@@ -2237,6 +3005,73 @@ const docTemplate = `{
                 },
                 "time": {
                     "type": "string"
+                }
+            }
+        },
+        "model.User": {
+            "type": "object",
+            "properties": {
+                "group_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "Github ID",
+                    "type": "integer"
+                },
+                "login": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UserGroup": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "inspector_num": {
+                    "type": "integer"
+                },
+                "is_admin": {
+                    "type": "boolean"
+                },
+                "max_host_num": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "perfmon.ServerStatus": {
+            "type": "object",
+            "properties": {
+                "cpu_usage_percent": {
+                    "type": "number"
+                },
+                "download_mbps": {
+                    "type": "number"
+                },
+                "memory_total_bytes": {
+                    "type": "integer"
+                },
+                "memory_usage_percent": {
+                    "type": "number"
+                },
+                "memory_used_bytes": {
+                    "type": "integer"
+                },
+                "system": {
+                    "type": "string"
+                },
+                "upload_mbps": {
+                    "type": "number"
+                },
+                "uptime_seconds": {
+                    "type": "integer"
                 }
             }
         },
@@ -2273,6 +3108,36 @@ const docTemplate = `{
             ],
             "properties": {
                 "html": {
+                    "type": "string"
+                },
+                "monitor_id": {
+                    "type": "integer"
+                },
+                "other_info": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.CreateHostRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "target"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "notify": {
+                    "type": "boolean"
+                },
+                "notify_tolerance": {
+                    "type": "integer"
+                },
+                "tags": {
+                    "type": "string"
+                },
+                "target": {
                     "type": "string"
                 }
             }
@@ -2318,6 +3183,26 @@ const docTemplate = `{
                 }
             }
         },
+        "request.PutDataRequest": {
+            "type": "object",
+            "required": [
+                "host_id"
+            ],
+            "properties": {
+                "hostInfo": {
+                    "$ref": "#/definitions/perfmon.ServerStatus"
+                },
+                "host_id": {
+                    "type": "integer"
+                },
+                "traffic": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TrafficPoint"
+                    }
+                }
+            }
+        },
         "request.SearchRequest": {
             "type": "object",
             "properties": {
@@ -2355,10 +3240,178 @@ const docTemplate = `{
                 }
             }
         },
+        "request.UpdateHostRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "notify": {
+                    "type": "boolean"
+                },
+                "notify_tolerance": {
+                    "type": "integer"
+                },
+                "tags": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.UpdateInspectorSettingRequest": {
+            "type": "object",
+            "properties": {
+                "bg_url": {
+                    "type": "string"
+                },
+                "notify_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.UpdateReportRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "monitor_id": {
+                    "type": "integer"
+                },
+                "other_info": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.HostData": {
+            "type": "object",
+            "properties": {
+                "cpu_usage_percent": {
+                    "type": "number"
+                },
+                "download_mbps": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_update": {
+                    "type": "string"
+                },
+                "latest_ping": {
+                    "type": "number"
+                },
+                "memory_total_bytes": {
+                    "type": "integer"
+                },
+                "memory_usage_percent": {
+                    "type": "number"
+                },
+                "memory_used_bytes": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notify": {
+                    "type": "boolean"
+                },
+                "notify_tolerance": {
+                    "type": "integer"
+                },
+                "ping": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.PingPoint"
+                    }
+                },
+                "recv": {
+                    "type": "number"
+                },
+                "sent": {
+                    "type": "number"
+                },
+                "system": {
+                    "type": "string"
+                },
+                "tags": {
+                    "description": "json array of strings",
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "upload_mbps": {
+                    "type": "number"
+                },
+                "uptime_seconds": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.HostIDResponse": {
             "type": "object",
             "properties": {
                 "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.HostListResponse": {
+            "type": "object",
+            "properties": {
+                "cpu_usage_percent": {
+                    "type": "number"
+                },
+                "download_mbps": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_update": {
+                    "type": "string"
+                },
+                "memory_total_bytes": {
+                    "type": "integer"
+                },
+                "memory_usage_percent": {
+                    "type": "number"
+                },
+                "memory_used_bytes": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notify": {
+                    "type": "boolean"
+                },
+                "notify_tolerance": {
+                    "type": "integer"
+                },
+                "system": {
+                    "type": "string"
+                },
+                "tags": {
+                    "description": "json array of strings",
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "upload_mbps": {
+                    "type": "number"
+                },
+                "uptime_seconds": {
+                    "type": "integer"
+                },
+                "user_id": {
                     "type": "integer"
                 }
             }
@@ -2472,6 +3525,17 @@ const docTemplate = `{
                 },
                 "uptime_seconds": {
                     "type": "integer"
+                }
+            }
+        },
+        "response.SettingData": {
+            "type": "object",
+            "properties": {
+                "bg_url": {
+                    "type": "string"
+                },
+                "notify_url": {
+                    "type": "string"
                 }
             }
         },
