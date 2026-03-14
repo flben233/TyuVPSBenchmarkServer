@@ -37,3 +37,7 @@ type UpdateInspectorSettingRequest struct {
 	NotifyURL *string `json:"notify_url"`
 	BgURL     *string `json:"bg_url"`
 }
+
+type TestNotifyRequest struct {
+	NotifyURL string `json:"notify_url" binding:"required"`
+}

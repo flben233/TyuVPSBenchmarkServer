@@ -61,3 +61,23 @@ func UpdateUserSettings(ctx *gin.Context) {
 	data := service.GetUserSettings(userID.(int64))
 	ctx.JSON(http.StatusOK, common.Success[response.SettingData](*data))
 }
+
+// TestNotify
+//
+// @Summary Test Notification URL
+// @Tags inspector
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body request.TestNotifyRequest true "Notification URL to test"
+// @Success 200 {object} common.APIResponse[any]
+// @Router /inspector/notify/test [post]
+func TestNotify(ctx *gin.Context) {
+	var req request.TestNotifyRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, err.Error()))
+		return
+	}
+	service.TestNotify(req.NotifyURL)
+	ctx.JSON(http.StatusOK, common.Success[any](nil))
+}

@@ -108,6 +108,9 @@ function handleSubmit() {
         />
         <div class="field-tip">0 表示立即通知；大于 0 表示连续异常达到该次数后再通知。</div>
       </el-form-item>
+      <el-form-item>
+        <el-link type="primary" href="https://note.shirakawatyu.top/note/article/422">点我查看数据采集端部署说明</el-link>
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="dialogVisible = false">取消</el-button>
