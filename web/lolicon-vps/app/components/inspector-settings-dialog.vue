@@ -18,6 +18,9 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "save"]);
 
+const { testNotify } = useInspector();
+const { success, err } = useMessage();
+
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value) => emit("update:modelValue", value),
@@ -65,11 +68,29 @@ function handleSave() {
     bgUrl: form.value.bgUrl.trim(),
   });
 }
+
+async function handleTestNotify() {
+  if (!form.value.notifyUrl.trim()) {
+    return;
+  }
+
+  try {
+    const resp = await testNotify(form.value.notifyUrl.trim());
+    if (!resp.success) {
+      err("测试通知发送失败，请检查 URL 是否正确");
+      return;
+    }
+    success("测试通知已发送，请查看对应通知服务是否收到");
+  } catch (e) {
+    err("测试通知发送失败，请检查 URL 是否正确");
+  }
+
+}
 </script>
 
 <template>
   <div>
-    <el-dialog v-model="dialogVisible" title="Inspector 设置" width="640px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" title="设置" width="640px" destroy-on-close>
       <el-form label-position="top">
         <el-form-item>
           <div class="settings-header">
@@ -99,6 +120,10 @@ function handleSave() {
             </el-select>
             <el-button :disabled="!selectedPreset" @click="openBuilder">生成 URL</el-button>
           </div>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" @click="handleTestNotify" :disabled="!form.notifyUrl.trim()">测试通知 URL</el-button>
         </el-form-item>
 
         <el-form-item label="页面背景图片 URL">

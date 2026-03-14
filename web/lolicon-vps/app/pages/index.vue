@@ -106,6 +106,10 @@ onUnmounted(() => {
           :total="total"
           :page-size="pageSize"
         />
+        <div class="privacy">
+          登录意味着您同意我们的
+          <el-link href="/privacy.html" target="_blank" type="primary">隐私政策</el-link>
+        </div>
       </el-col>
       <el-col :span="6" :xs="0" :offset="1">
         <Profile>
@@ -198,5 +202,13 @@ onUnmounted(() => {
   grid-template-columns: auto auto;
   justify-content: space-between;
   color: #303133;
+}
+
+.privacy {
+  font-size: 14px;
+  color: #606266;
+  align-items: baseline;
+  display: flex;
+  margin-top: 16px;
 }
 </style>

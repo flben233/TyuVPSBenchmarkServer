@@ -52,6 +52,13 @@ func pingHosts() {
 		}}
 
 		if host.Notify {
+			setting, err := store.GetSettingByUserID(host.UserID)
+			if err != nil {
+				log.Printf("Failed to get setting for user %d: %v", host.UserID, err)
+			}
+			if setting.NotifyURL == nil {
+				return
+			}
 			if lat == 0 {
 				points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance)
 				if err != nil {
@@ -60,7 +67,7 @@ func pingHosts() {
 				}
 				// 如果最新的 NotifyTolerance 条数据都是 0，才通知用户主机离线，避免偶尔的网络波动导致误报
 				if int64(len(points)) == host.NotifyTolerance && batch.IsAllTrue(points, func(p model.PingPoint) bool { return p.Latency == 0 }) {
-					tryNotify(host.UserID, &host, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
+					tryNotify(*setting.NotifyURL, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
 				}
 			} else {
 				points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance*2)
@@ -72,7 +79,7 @@ func pingHosts() {
 				if int64(len(points)) == host.NotifyTolerance*2 &&
 					batch.IsAllTrue(points[:host.NotifyTolerance], func(p model.PingPoint) bool { return p.Latency == 0 }) &&
 					!batch.IsAllTrue(points[int(host.NotifyTolerance):], func(p model.PingPoint) bool { return p.Latency > 0 }) {
-					tryNotify(host.UserID, &host, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
+					tryNotify(*setting.NotifyURL, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
 				}
 			}
 		}
@@ -291,6 +298,10 @@ func UpdateUserSettings(userID int64, notifyURL, bgURL *string) error {
 	return store.UpsertSetting(setting)
 }
 
+func TestNotify(notifyURL string) {
+	tryNotify(notifyURL, "这是一条测试通知")
+}
+
 func queryHost(target string) (float32, error) {
 	req, err := json.Marshal([]string{target})
 	if err != nil {
@@ -318,36 +329,28 @@ func queryHost(target string) (float32, error) {
 	return data[target], nil
 }
 
-func tryNotify(userID int64, host *model.InspectHost, message string) {
-	setting, err := store.GetSettingByUserID(userID)
-	if err != nil {
-		log.Printf("Failed to get setting for user %d: %v", userID, err)
-	}
-	if setting.NotifyURL == nil {
-		return
-	}
-	hostID := host.ID
+func tryNotify(notifyURL string, message string) {
 	// 发送通知
 	go func() {
 		notifyReq := map[string]interface{}{
-			"urls":  setting.NotifyURL,
+			"urls":  notifyURL,
 			"body":  message,
 			"title": "Lolicon Monitor 通知",
 		}
 		reqBytes, err := json.Marshal(notifyReq)
 		if err != nil {
-			log.Printf("Failed to marshal notify request for host %d: %v", hostID, err)
+			log.Printf("Failed to marshal notify request: %v", err)
 			return
 		}
 		resp, err := http.Post(config.Get().AppriseURL, "application/json", bytes.NewReader(reqBytes))
 		if err != nil {
-			log.Printf("Failed to send notify request for host %d: %v", hostID, err)
+			log.Printf("Failed to send notify request: %v", err)
 			return
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			bodyBytes, _ := io.ReadAll(resp.Body)
-			log.Printf("Failed to send notify request for host %d, status: %d, response: %s", hostID, resp.StatusCode, string(bodyBytes))
+			log.Printf("Failed to send notify request, status: %d, response: %s", resp.StatusCode, string(bodyBytes))
 		}
 	}()
 }

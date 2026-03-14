@@ -26,6 +26,7 @@ func RegisterRoute(base string, r *gin.Engine) {
 		protectedAPI.GET("/data", handler.QueryData)
 		protectedAPI.GET("/settings", handler.GetUserSettings)
 		protectedAPI.POST("/settings/update", handler.UpdateUserSettings)
+		protectedAPI.POST("/notify/test", handler.TestNotify)
 	}
 
 	publicAPI := r.Group(base)

@@ -139,6 +139,15 @@ export function useInspector() {
     };
   }
 
+  async function testNotify(notifyUrl) {
+    return request(
+      "/inspector/notify/test",
+      "POST",
+      "测试通知失败",
+      { body: { notify_url: notifyUrl } },
+    );
+  }
+
   return {
     getDefaultInspectorQuery,
     listHosts,
@@ -149,5 +158,6 @@ export function useInspector() {
     deleteHost,
     getSettings,
     updateSettings,
+    testNotify
   };
 }
