@@ -1,134 +1,157 @@
 package store
 
 import (
+	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/inspector/model"
-	"VPSBenchmarkBackend/pkg/influxdb"
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
-	"github.com/InfluxCommunity/influxdb3-go/v2/influxdb3"
-	"github.com/apache/arrow-go/v18/arrow"
+	"github.com/jackc/pgx/v5"
+	qdb "github.com/questdb/go-questdb-client/v4"
+	"log"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
-var client *influxdb3.Client
-var ctx = context.Background()
+var sender qdb.LineSender
+var pgConn *pgx.Conn
 var validIntervalRegex = regexp.MustCompile(`^[1-9]\d*[smhd]$`)
 
 const (
-	TrafficMeasurement = "traffic"
-	PingMeasurement    = "ping"
-	PointsLimit        = 288
+	TrafficMeasurement  = "traffic"
+	PingMeasurement     = "ping"
+	PointsLimit         = 288
+	RetentionDays       = 90
+	CleanupScanInterval = 12 * time.Hour
 )
 
-type traffic struct {
-	RecvSum float64 `json:"recv_sum"`
-	SentSum float64 `json:"sent_sum"`
-}
-
 func init() {
-	// Initialize the InfluxDB client
-	client1, err := influxdb3.NewFromEnv()
+	var err error
+	sender, pgConn, err = buildQuestDB()
 	if err != nil {
-		panic("Failed to initialize InfluxDB client: " + err.Error())
+		panic("failed to initialize QuestDB client: " + err.Error())
 	}
-	client = client1
+	if err = ensureTables(); err != nil {
+		panic("failed to initialize QuestDB tables: " + err.Error())
+	}
+	common.RegisterCronJob(CleanupScanInterval, retentionCleaner)
 }
 
 func SaveTrafficPoints(points []model.TrafficPoint) error {
-	// Create a new point with the appropriate measurement and tags
-	pArr := make([]*influxdb3.Point, len(points))
-	for i, point := range points {
-		pArr[i] = influxdb3.NewPoint(
-			TrafficMeasurement,
-			map[string]string{"host_id": strconv.FormatInt(point.HostID, 10)},
-			map[string]interface{}{
-				"recv": point.Recv,
-				"sent": point.Sent,
-			},
-			point.Time,
-		)
+	if len(points) == 0 {
+		return nil
 	}
-	return client.WritePoints(ctx, pArr)
+	for _, point := range points {
+		err := sender.Table(TrafficMeasurement).
+			Symbol("host_id", strconv.FormatInt(point.HostID, 10)).
+			Float64Column("recv", float64(point.Recv)).
+			Float64Column("sent", float64(point.Sent)).
+			At(context.Background(), point.Time)
+		if err != nil {
+			return err
+		}
+	}
+	return sender.Flush(context.Background())
 }
 
 func SavePingPoints(points []model.PingPoint) error {
-	pArr := make([]*influxdb3.Point, len(points))
-	for i, point := range points {
-		pArr[i] = influxdb3.NewPoint(
-			PingMeasurement,
-			map[string]string{"host_id": strconv.FormatInt(point.HostID, 10)},
-			map[string]interface{}{"latency": point.Latency},
-			point.Time,
-		)
+	if len(points) == 0 {
+		return nil
 	}
-	return client.WritePoints(ctx, pArr)
+	for _, point := range points {
+		err := sender.Table(PingMeasurement).
+			Symbol("host_id", strconv.FormatInt(point.HostID, 10)).
+			Float64Column("latency", float64(point.Latency)).
+			At(context.Background(), point.Time)
+		if err != nil {
+			return err
+		}
+	}
+	return sender.Flush(context.Background())
 }
 
 func QueryTrafficSum(hostID int64, start, end int64) (float64, float64, error) {
-	query := fmt.Sprintf("SELECT SUM(recv) AS recv_sum, SUM(sent) AS sent_sum FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end", TrafficMeasurement)
-	params := influxdb3.QueryParameters{
-		"host_id": strconv.FormatInt(hostID, 10),
-		"start":   time.Unix(0, start),
-		"end":     time.Unix(0, end),
-	}
-	t, err := influxdb.QueryItem(query, params, client, func(value map[string]interface{}) (*traffic, error) {
-		if value["recv_sum"] == nil || value["sent_sum"] == nil {
-			return nil, nil
-		}
-		return &traffic{
-			RecvSum: value["recv_sum"].(float64),
-			SentSum: value["sent_sum"].(float64),
-		}, nil
-	})
-	if err != nil || t == nil {
+	row, err := pgConn.Query(context.Background(),
+		"SELECT SUM(recv) AS recv_sum, SUM(sent) AS sent_sum FROM "+TrafficMeasurement+" WHERE host_id = $1 AND ts >= $2 AND ts <= $3",
+		strconv.FormatInt(hostID, 10),
+		time.Unix(0, start),
+		time.Unix(0, end),
+	)
+	if err != nil {
 		return 0, 0, err
 	}
-	return t.RecvSum, t.SentSum, nil
+	defer row.Close()
+	if row.Next() {
+		var recvSum, sentSum sql.NullFloat64
+		if err = row.Scan(&recvSum, &sentSum); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return 0, 0, nil
+			}
+			return 0, 0, err
+		}
+		if !recvSum.Valid || !sentSum.Valid {
+			return 0, 0, nil
+		}
+		return recvSum.Float64, sentSum.Float64, nil
+	}
+	return 0, 0, row.Err()
 }
 
 func QueryLatestPing(hostID int64, start, end int64) (float32, error) {
-	query := fmt.Sprintf("SELECT latency FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end ORDER BY time DESC LIMIT 1", PingMeasurement)
-	params := influxdb3.QueryParameters{
-		"host_id": strconv.FormatInt(hostID, 10),
-		"start":   time.Unix(0, start),
-		"end":     time.Unix(0, end),
-	}
-	latency, err := influxdb.QueryItem(query, params, client, func(value map[string]interface{}) (*float32, error) {
-		f := float32(value["latency"].(float64))
-		return &f, nil
-	})
+	row, err := pgConn.Query(context.Background(),
+		"SELECT latency FROM "+PingMeasurement+" WHERE host_id = $1 AND ts >= $2 AND ts <= $3 ORDER BY ts DESC LIMIT 1",
+		strconv.FormatInt(hostID, 10),
+		time.Unix(0, start),
+		time.Unix(0, end),
+	)
 	if err != nil {
 		return 0, err
 	}
-	return *latency, nil
+	defer row.Close()
+	var latency sql.NullFloat64
+	if row.Next() {
+		if err = row.Scan(&latency); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return 0, nil
+			}
+			return 0, err
+		}
+	}
+
+	if !latency.Valid {
+		return 0, nil
+	}
+	return float32(latency.Float64), nil
 }
 
 func QueryLossRate(hostID int64, start, end int64) (float64, error) {
-	query := fmt.Sprintf("SELECT COUNT(*) AS total, SUM(CASE WHEN latency = 0 THEN 1 ELSE 0 END) AS loss FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end", PingMeasurement)
-	params := influxdb3.QueryParameters{
-		"host_id": strconv.FormatInt(hostID, 10),
-		"start":   time.Unix(0, start),
-		"end":     time.Unix(0, end),
-	}
-	rate, err := influxdb.QueryItemWithQL(query, params, client, influxdb3.SQL, func(value map[string]interface{}) (*float64, error) {
-		if value["total"] == nil || value["loss"] == nil {
-			return nil, nil
-		}
-		total := value["total"].(int64)
-		loss := value["loss"].(int64)
-		if total == 0 {
-			return new(float64), nil
-		}
-		rate := float64(loss) / float64(total)
-		return &rate, nil
-	})
+	row, err := pgConn.Query(context.Background(),
+		"SELECT COUNT(*) AS total, SUM(CASE WHEN latency = 0 THEN 1 ELSE 0 END) AS loss FROM "+PingMeasurement+" WHERE host_id = $1 AND ts >= $2 AND ts <= $3",
+		strconv.FormatInt(hostID, 10),
+		time.Unix(0, start),
+		time.Unix(0, end),
+	)
 	if err != nil {
 		return 0, err
 	}
-	return *rate, nil
+	defer row.Close()
+	if !row.Next() {
+		return 0, nil
+	}
+	var total float64
+	var loss sql.NullInt64
+	if err := row.Scan(&total, &loss); err != nil {
+		return 0, err
+	}
+	if total == 0 || !loss.Valid {
+		return 0, nil
+	}
+	return float64(loss.Int64) / total, nil
 }
 
 func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
@@ -152,62 +175,157 @@ func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.P
 }
 
 func QueryLatestNPingPoints(hostID int64, n int64) ([]model.PingPoint, error) {
-	query := fmt.Sprintf("SELECT latency FROM %s WHERE host_id = $host_id ORDER BY time ASC LIMIT %d", PingMeasurement, n)
-	params := influxdb3.QueryParameters{
-		"host_id": strconv.FormatInt(hostID, 10),
+	if n <= 0 {
+		return []model.PingPoint{}, nil
 	}
-	points, err := influxdb.QueryItems(query, params, client, func(value map[string]interface{}) (*model.PingPoint, error) {
-		return &model.PingPoint{
-			HostID:  hostID,
-			Latency: float32(value["latency"].(float64)),
-			Time:    value["time"].(time.Time),
-		}, nil
-	})
+	rows, err := pgConn.Query(context.Background(),
+		fmt.Sprintf("SELECT latency, ts FROM %s WHERE host_id = $1 ORDER BY ts ASC LIMIT %d", PingMeasurement, n),
+		strconv.FormatInt(hostID, 10),
+	)
 	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	points := make([]model.PingPoint, 0, int(n))
+	for rows.Next() {
+		var latency float64
+		var ts time.Time
+		if err := rows.Scan(&latency, &ts); err != nil {
+			return nil, err
+		}
+		points = append(points, model.PingPoint{
+			HostID:  hostID,
+			Latency: float32(latency),
+			Time:    ts,
+		})
+	}
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return points, nil
 }
 
 func queryLossPoints(hostID int64, start, end int64) ([]model.PingPoint, error) {
-	query := fmt.Sprintf("SELECT * FROM %s WHERE host_id = $host_id AND latency = 0 AND time >= $start AND time <= $end", PingMeasurement)
-	params := influxdb3.QueryParameters{
-		"host_id": strconv.FormatInt(hostID, 10),
-		"start":   time.Unix(0, start),
-		"end":     time.Unix(0, end),
+	rows, err := pgConn.Query(context.Background(),
+		"SELECT ts FROM "+PingMeasurement+" WHERE host_id = $1 AND latency = 0 AND ts >= $2 AND ts <= $3 ORDER BY ts ASC",
+		strconv.FormatInt(hostID, 10),
+		time.Unix(0, start),
+		time.Unix(0, end),
+	)
+	if err != nil {
+		return nil, err
 	}
-	points, err := influxdb.QueryItems(query, params, client, func(value map[string]interface{}) (*model.PingPoint, error) {
-		return &model.PingPoint{
+	defer rows.Close()
+	points := make([]model.PingPoint, 0)
+	for rows.Next() {
+		var ts time.Time
+		if err := rows.Scan(&ts); err != nil {
+			return nil, err
+		}
+		points = append(points, model.PingPoint{
 			HostID:  hostID,
 			Latency: 0,
-			Time:    value["time"].(time.Time),
-		}, nil
-	})
-	if err != nil {
+			Time:    ts,
+		})
+	}
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return points, nil
 }
 
 func queryLatencyPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
-	query := fmt.Sprintf("SELECT MEAN(latency) FROM %s WHERE host_id = $host_id AND latency > 0 AND time >= $start AND time <= $end GROUP BY time(%s) LIMIT %d", PingMeasurement, interval, PointsLimit)
-	params := influxdb3.QueryParameters{
-		"host_id": strconv.FormatInt(hostID, 10),
-		"start":   time.Unix(0, start),
-		"end":     time.Unix(0, end),
-	}
-	points, err := influxdb.QueryItems(query, params, client, func(value map[string]interface{}) (*model.PingPoint, error) {
-		if value["mean"] == nil {
-			return nil, nil
-		}
-		return &model.PingPoint{
-			HostID:  hostID,
-			Latency: float32(value["mean"].(float64)),
-			Time:    time.Unix(0, int64(value["time"].(arrow.Timestamp))),
-		}, nil
-	})
+	query := fmt.Sprintf(
+		"SELECT ts, AVG(latency) AS mean FROM %s WHERE host_id = $1 AND latency > 0 AND ts >= $2 AND ts <= $3 SAMPLE BY %s ALIGN TO CALENDAR LIMIT %d",
+		PingMeasurement,
+		interval,
+		PointsLimit,
+	)
+	rows, err := pgConn.Query(context.Background(), query, strconv.FormatInt(hostID, 10), time.Unix(0, start), time.Unix(0, end))
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+	points := make([]model.PingPoint, 0)
+	for rows.Next() {
+		var ts time.Time
+		var mean sql.NullFloat64
+		if err := rows.Scan(&ts, &mean); err != nil {
+			return nil, err
+		}
+		if !mean.Valid {
+			continue
+		}
+		points = append(points, model.PingPoint{
+			HostID:  hostID,
+			Latency: float32(mean.Float64),
+			Time:    ts,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return points, nil
+}
+
+func ensureTables() error {
+	if _, err := pgConn.Exec(context.Background(), fmt.Sprintf(
+		"CREATE TABLE IF NOT EXISTS %s (host_id SYMBOL, recv DOUBLE, sent DOUBLE, ts TIMESTAMP) TIMESTAMP(ts) PARTITION BY DAY WAL",
+		TrafficMeasurement,
+	)); err != nil {
+		return err
+	}
+	if _, err := pgConn.Exec(context.Background(), fmt.Sprintf(
+		"CREATE TABLE IF NOT EXISTS %s (host_id SYMBOL, latency DOUBLE, ts TIMESTAMP) TIMESTAMP(ts) PARTITION BY DAY WAL",
+		PingMeasurement,
+	)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func buildQuestDB() (qdb.LineSender, *pgx.Conn, error) {
+	host := getEnv("QUESTDB_HOST", "127.0.0.1")
+	httpPort := getEnv("QUESTDB_HTTP_PORT", "9000")
+	pgPort := getEnv("QUESTDB_PG_PORT", "8812")
+	user := getEnv("QUESTDB_USER", "admin")
+	pass := getEnv("QUESTDB_PASSWORD", "quest")
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, fmt.Sprintf("postgresql://%s:%s@%s:%s/qdb", user, pass, host, pgPort))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to QuestDB: %w", err)
+	}
+	if err = conn.Ping(ctx); err != nil {
+		return nil, nil, fmt.Errorf("failed to ping QuestDB: %w", err)
+	}
+	qdbSender, err := qdb.NewLineSender(context.Background(), qdb.WithHttp(), qdb.WithAddress(fmt.Sprintf("%s:%s", host, httpPort)), qdb.WithBasicAuth(user, pass))
+	if err != nil {
+		_ = conn.Close(ctx)
+		return nil, nil, fmt.Errorf("failed to create QuestDB line sender: %w", err)
+	}
+	return qdbSender, conn, err
+}
+
+func getEnv(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+func retentionCleaner() {
+	// 计算 90 天前的时间
+	retentionDate := time.Now().AddDate(0, 0, -RetentionDays).Format("2006-01-02")
+
+	// 执行删除 SQL
+	queries := []string{
+		fmt.Sprintf("ALTER TABLE %s DROP PARTITION WHERE ts < '%s'", TrafficMeasurement, retentionDate),
+		fmt.Sprintf("ALTER TABLE %s DROP PARTITION WHERE ts < '%s'", PingMeasurement, retentionDate),
+	}
+	_, err := pgConn.Exec(context.Background(), strings.Join(queries, "; "))
+	if err != nil {
+		log.Printf("Failed to clean expired data: %v", err)
+	} else {
+		log.Printf("Data before %s was cleaned successfully.", retentionDate)
+	}
 }

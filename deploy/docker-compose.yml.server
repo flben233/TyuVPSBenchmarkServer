@@ -12,12 +12,14 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     environment:
-      - INFLUX_DATABASE=lolicon_vps
-      - INFLUX_HOST=http://influxdb:8181
-      - INFLUX_TOKEN=your_token_here
       - GIN_MODE=release
       - TZ=Asia/Shanghai
       - SERVER_STATUS_IFACE=eth0
+      - QUESTDB_HOST=
+      - QUESTDB_HTTP_PORT=
+      - QUESTDB_PG_PORT=
+      - QUESTDB_USER=
+      - QUESTDB_PASSWORD=
 
   apprise:
     image: caronc/apprise:latest
@@ -33,26 +35,21 @@ services:
       - ./apprise/attach:/attach
     restart: unless-stopped
 
-  influxdb:
+  questdb:
     restart: unless-stopped
-    container_name: influxdb3-core
-    image: influxdb:3-core
+    image: questdb/questdb:latest
     ports:
-      - "127.0.0.1:8181:8181"
-    command:
-      - influxdb3
-      - serve
-      - --node-id=node0
-      - --object-store=file
-      - --data-dir=/var/lib/influxdb3/data
-      - --plugin-dir=/var/lib/influxdb3/plugins
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:8812:8812"
     volumes:
       - type: bind
-        source: ./influxdb3/data
-        target: /var/lib/influxdb3/data
-      - type: bind
-        source: ./influxdb3/plugins
-        target: /var/lib/influxdb3/plugins
+        source: ./questdb/data
+        target: /var/lib/questdb
+    environment:
+      - QDB_PG_PASSWORD=
+      - QDB_PG_USER=
+      - QDB_HTTP_PASSWORD=
+      - QDB_HTTP_USER=
 
   redis:
     image: "redis:8.6.1-alpine"
