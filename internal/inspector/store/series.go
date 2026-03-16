@@ -2,6 +2,7 @@ package store
 
 import (
 	"VPSBenchmarkBackend/internal/inspector/model"
+	"VPSBenchmarkBackend/pkg/influxdb"
 	"context"
 	"fmt"
 	"github.com/InfluxCommunity/influxdb3-go/v2/influxdb3"
@@ -21,6 +22,11 @@ const (
 	PingMeasurement    = "ping"
 	PointsLimit        = 288
 )
+
+type traffic struct {
+	RecvSum float64 `json:"recv_sum"`
+	SentSum float64 `json:"sent_sum"`
+}
 
 func init() {
 	// Initialize the InfluxDB client
@@ -61,54 +67,68 @@ func SavePingPoints(points []model.PingPoint) error {
 	return client.WritePoints(ctx, pArr)
 }
 
-func QueryTrafficSum(hostID int64, start, end int64, interval string) (float64, float64, error) {
-	match := validIntervalRegex.Match([]byte(interval))
-	if !match {
-		return 0, 0, fmt.Errorf("invalid interval format: %s", interval)
-	}
-	query := fmt.Sprintf("SELECT SUM(recv) AS recv_sum, SUM(sent) AS sent_sum FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end GROUP BY time(%s)", TrafficMeasurement, interval)
+func QueryTrafficSum(hostID int64, start, end int64) (float64, float64, error) {
+	query := fmt.Sprintf("SELECT SUM(recv) AS recv_sum, SUM(sent) AS sent_sum FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end", TrafficMeasurement)
 	params := influxdb3.QueryParameters{
 		"host_id": strconv.FormatInt(hostID, 10),
 		"start":   time.Unix(0, start),
 		"end":     time.Unix(0, end),
 	}
-	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
-	if err != nil {
+	t, err := influxdb.QueryItem(query, params, client, func(value map[string]interface{}) (*traffic, error) {
+		if value["recv_sum"] == nil || value["sent_sum"] == nil {
+			return nil, nil
+		}
+		return &traffic{
+			RecvSum: value["recv_sum"].(float64),
+			SentSum: value["sent_sum"].(float64),
+		}, nil
+	})
+	if err != nil || t == nil {
 		return 0, 0, err
 	}
-	var recvSum, sentSum float64
-	for iter.Next() {
-		value := iter.Value()
-		if value["recv_sum"] == nil || value["sent_sum"] == nil {
-			continue
-		}
-		recvSum += value["recv_sum"].(float64)
-		sentSum += value["sent_sum"].(float64)
-	}
-	if iter.Err() != nil {
-		return 0, 0, iter.Err()
-	}
-	return recvSum, sentSum, nil
+	return t.RecvSum, t.SentSum, nil
 }
 
-func QueryLatestPing(hostID int64) (float32, error) {
-	query := fmt.Sprintf("SELECT latency FROM %s WHERE host_id = $host_id ORDER BY time DESC LIMIT 1", PingMeasurement)
+func QueryLatestPing(hostID int64, start, end int64) (float32, error) {
+	query := fmt.Sprintf("SELECT latency FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end ORDER BY time DESC LIMIT 1", PingMeasurement)
 	params := influxdb3.QueryParameters{
 		"host_id": strconv.FormatInt(hostID, 10),
+		"start":   time.Unix(0, start),
+		"end":     time.Unix(0, end),
 	}
-	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
+	latency, err := influxdb.QueryItem(query, params, client, func(value map[string]interface{}) (*float32, error) {
+		f := float32(value["latency"].(float64))
+		return &f, nil
+	})
 	if err != nil {
 		return 0, err
 	}
-	var latency float32
-	if iter.Next() {
-		value := iter.Value()
-		latency = float32(value["latency"].(float64))
+	return *latency, nil
+}
+
+func QueryLossRate(hostID int64, start, end int64) (float64, error) {
+	query := fmt.Sprintf("SELECT COUNT(*) AS total, SUM(CASE WHEN latency = 0 THEN 1 ELSE 0 END) AS loss FROM %s WHERE host_id = $host_id AND time >= $start AND time <= $end", PingMeasurement)
+	params := influxdb3.QueryParameters{
+		"host_id": strconv.FormatInt(hostID, 10),
+		"start":   time.Unix(0, start),
+		"end":     time.Unix(0, end),
 	}
-	if iter.Err() != nil {
-		return 0, iter.Err()
+	rate, err := influxdb.QueryItemWithQL(query, params, client, influxdb3.SQL, func(value map[string]interface{}) (*float64, error) {
+		if value["total"] == nil || value["loss"] == nil {
+			return nil, nil
+		}
+		total := value["total"].(int64)
+		loss := value["loss"].(int64)
+		if total == 0 {
+			return new(float64), nil
+		}
+		rate := float64(loss) / float64(total)
+		return &rate, nil
+	})
+	if err != nil {
+		return 0, err
 	}
-	return latency, nil
+	return *rate, nil
 }
 
 func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
@@ -132,25 +152,19 @@ func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.P
 }
 
 func QueryLatestNPingPoints(hostID int64, n int64) ([]model.PingPoint, error) {
-	query := fmt.Sprintf("SELECT latency FROM %s WHERE host_id = $host_id ORDER BY time DESC LIMIT %d", PingMeasurement, n)
+	query := fmt.Sprintf("SELECT latency FROM %s WHERE host_id = $host_id ORDER BY time ASC LIMIT %d", PingMeasurement, n)
 	params := influxdb3.QueryParameters{
 		"host_id": strconv.FormatInt(hostID, 10),
 	}
-	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
-	if err != nil {
-		return nil, err
-	}
-	var points []model.PingPoint
-	for iter.Next() {
-		value := iter.Value()
-		points = append(points, model.PingPoint{
+	points, err := influxdb.QueryItems(query, params, client, func(value map[string]interface{}) (*model.PingPoint, error) {
+		return &model.PingPoint{
 			HostID:  hostID,
 			Latency: float32(value["latency"].(float64)),
 			Time:    value["time"].(time.Time),
-		})
-	}
-	if iter.Err() != nil {
-		return nil, iter.Err()
+		}, nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return points, nil
 }
@@ -162,21 +176,15 @@ func queryLossPoints(hostID int64, start, end int64) ([]model.PingPoint, error) 
 		"start":   time.Unix(0, start),
 		"end":     time.Unix(0, end),
 	}
-	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
-	if err != nil {
-		return nil, err
-	}
-	var points []model.PingPoint
-	for iter.Next() {
-		v := iter.Value()
-		points = append(points, model.PingPoint{
+	points, err := influxdb.QueryItems(query, params, client, func(value map[string]interface{}) (*model.PingPoint, error) {
+		return &model.PingPoint{
 			HostID:  hostID,
 			Latency: 0,
-			Time:    v["time"].(time.Time),
-		})
-	}
-	if iter.Err() != nil {
-		return nil, iter.Err()
+			Time:    value["time"].(time.Time),
+		}, nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return points, nil
 }
@@ -188,23 +196,18 @@ func queryLatencyPoints(hostID int64, start, end int64, interval string) ([]mode
 		"start":   time.Unix(0, start),
 		"end":     time.Unix(0, end),
 	}
-	iter, err := client.QueryWithParameters(ctx, query, params, influxdb3.WithQueryType(influxdb3.InfluxQL))
+	points, err := influxdb.QueryItems(query, params, client, func(value map[string]interface{}) (*model.PingPoint, error) {
+		if value["mean"] == nil {
+			return nil, nil
+		}
+		return &model.PingPoint{
+			HostID:  hostID,
+			Latency: float32(value["mean"].(float64)),
+			Time:    time.Unix(0, int64(value["time"].(arrow.Timestamp))),
+		}, nil
+	})
 	if err != nil {
 		return nil, err
-	}
-	var points []model.PingPoint
-	for iter.Next() {
-		v := iter.Value()
-		if v["mean"] != nil {
-			points = append(points, model.PingPoint{
-				HostID:  hostID,
-				Latency: float32(v["mean"].(float64)),
-				Time:    time.Unix(0, int64(v["time"].(arrow.Timestamp))), // 从没见过这么丑陋的框架，插入的时候允许time.Time，取出又变成了arrow.Timestamp
-			})
-		}
-	}
-	if iter.Err() != nil {
-		return nil, iter.Err()
 	}
 	return points, nil
 }
