@@ -210,6 +210,7 @@ export function normalizeHostData(item = {}) {
     ...host,
     sent: toNumber(item.sent),
     recv: toNumber(item.recv),
+    loss: toNumber(item.loss),
     ping: Array.isArray(item.ping)
       ? item.ping.map((point) => ({
           hostId: toNumber(point.host_id),
@@ -411,4 +412,19 @@ export function buildAppriseUrl(type, form = {}) {
     default:
       return "";
   }
+}
+
+export function generateIdStar(id) {
+  let stars = [];
+  for (let i = 0; i < String(id).length; i++) {
+    stars.push("*");
+  }
+  return stars.join("");
+}
+
+export function generateIpStar(ip) {
+  let isV6 = ip.includes(":");
+  let segments = isV6 ? ip.split(":") : ip.split(".");
+  let stars = segments.map(() => "***");
+  return isV6 ? stars.join(":") : stars.join(".");
 }
