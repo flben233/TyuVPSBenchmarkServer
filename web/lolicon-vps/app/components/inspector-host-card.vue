@@ -4,7 +4,7 @@ import {
   formatBytes,
   formatNetworkSpeed,
   formatPercent,
-  formatUptime,
+  formatUptime, generateIdStar, generateIpStar,
   getLatestPingValue,
 } from "~/utils/inspector";
 
@@ -18,20 +18,13 @@ const props = defineProps({
 const emit = defineEmits(["edit", "delete"]);
 
 const expanded = ref(false);
+const showId = ref(false)
+const showIp = ref(false)
 const isAgentActive = computed(() => Number(props.host.uptimeSeconds) > 0);
 const isOnline = computed(() => props.host.latestPing > 0);
 const latestPingText = computed(() => getLatestPingValue(props.host.ping, props.host.latestPing));
 const packetLossRateText = computed(() => {
-  const points = Array.isArray(props.host.ping) ? props.host.ping : [];
-  if (points.length === 0) {
-    return "暂无数据";
-  }
-
-  const lostCount = points.reduce(
-    (count, point) => count + (Number(point?.latency) === 0 ? 1 : 0),
-    0,
-  );
-  return formatPercent((lostCount / points.length) * 100);
+  return formatPercent(props.host.loss * 100);
 });
 
 const compactMetrics = computed(() => {
@@ -51,19 +44,30 @@ const compactMetrics = computed(() => {
 });
 
 const detailItems = computed(() => {
-  if (!isAgentActive.value) {
-    return [
-      { label: "目标地址", value: props.host.target || "-" },
-      { label: "丢包率", value: packetLossRateText.value }
-    ];
+  let items = [];
+  if (showIp.value) {
+    items.push({
+      label: "目标地址",
+      value: props.host.target || "-",
+      onHover: () => showIp.value = true,
+      onLeave: () => showIp.value = false
+    });
+  } else {
+    items.push({
+      label: "目标地址",
+      value: generateIpStar(props.host.target || "-"),
+      onHover: () => showIp.value = true,
+      onLeave: () => showIp.value = false
+    });
   }
-
-  return [
-    { label: "目标地址", value: props.host.target || "-" },
-    { label: "系统信息", value: props.host.system || "未知系统" },
-    { label: "运行时间", value: formatUptime(props.host.uptimeSeconds) },
-    { label: "丢包率", value: packetLossRateText.value },
-  ];
+  if (isAgentActive.value) {
+    items.push(
+        { label: "系统信息", value: props.host.system || "未知系统" },
+        { label: "运行时间", value: formatUptime(props.host.uptimeSeconds) }
+    )
+  }
+  items.push({ label: "丢包率", value: packetLossRateText.value })
+  return items;
 });
 </script>
 
@@ -96,7 +100,7 @@ const detailItems = computed(() => {
       <div v-if="expanded" class="expanded-content">
         <div class="expanded-header">
           <div class="tag-row">
-            <el-tag size="small" effect="dark">ID {{ host.id }}</el-tag>
+            <el-tag size="small" effect="dark" @mouseenter="showId = true" @mouseleave="showId = false">ID {{ showId ? host.id : generateIdStar(host.id) }}</el-tag>
             <el-tag size="small" :type="host.notify ? 'warning' : 'info'" effect="dark">
               {{ host.notify ? "通知已开启" : "通知未开启" }}
             </el-tag>
@@ -115,7 +119,7 @@ const detailItems = computed(() => {
         <div class="detail-grid" :class="{ single: !isAgentActive }">
           <div class="detail-panel">
             <div class="panel-title">基础信息</div>
-            <div v-for="item in detailItems" :key="item.label" class="detail-item">
+            <div v-for="item in detailItems" :key="item.label" class="detail-item" @mouseenter="item.onHover" @mouseleave="item.onLeave">
               <span class="detail-label">{{ item.label }}</span>
               <span class="detail-value">{{ item.value }}</span>
             </div>
