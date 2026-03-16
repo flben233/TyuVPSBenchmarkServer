@@ -7,7 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	qdb "github.com/questdb/go-questdb-client/v4"
 	"log"
 	"os"
@@ -19,7 +19,7 @@ import (
 )
 
 var sender qdb.LineSender
-var pgConn *pgx.Conn
+var pgConn *pgxpool.Pool
 var validIntervalRegex = regexp.MustCompile(`^[1-9]\d*[smhd]$`)
 
 const (
@@ -284,7 +284,7 @@ func ensureTables() error {
 	return nil
 }
 
-func buildQuestDB() (qdb.LineSender, *pgx.Conn, error) {
+func buildQuestDB() (qdb.LineSender, *pgxpool.Pool, error) {
 	host := getEnv("QUESTDB_HOST", "127.0.0.1")
 	httpPort := getEnv("QUESTDB_HTTP_PORT", "9000")
 	pgPort := getEnv("QUESTDB_PG_PORT", "8812")
@@ -292,7 +292,7 @@ func buildQuestDB() (qdb.LineSender, *pgx.Conn, error) {
 	pass := getEnv("QUESTDB_PASSWORD", "quest")
 	log.Printf("Connecting to QuestDB at %s:%s with user %s", host, pgPort, user)
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, fmt.Sprintf("postgresql://%s:%s@%s:%s/qdb", user, pass, host, pgPort))
+	conn, err := pgxpool.New(ctx, fmt.Sprintf("postgresql://%s:%s@%s:%s/qdb", user, pass, host, pgPort))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to QuestDB: %w", err)
 	}
@@ -301,7 +301,7 @@ func buildQuestDB() (qdb.LineSender, *pgx.Conn, error) {
 	}
 	qdbSender, err := qdb.NewLineSender(context.Background(), qdb.WithHttp(), qdb.WithAddress(fmt.Sprintf("%s:%s", host, httpPort)), qdb.WithBasicAuth(user, pass))
 	if err != nil {
-		_ = conn.Close(ctx)
+		conn.Close()
 		return nil, nil, fmt.Errorf("failed to create QuestDB line sender: %w", err)
 	}
 	return qdbSender, conn, err
