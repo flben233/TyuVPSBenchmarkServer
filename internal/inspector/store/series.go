@@ -290,6 +290,7 @@ func buildQuestDB() (qdb.LineSender, *pgx.Conn, error) {
 	pgPort := getEnv("QUESTDB_PG_PORT", "8812")
 	user := getEnv("QUESTDB_USER", "admin")
 	pass := getEnv("QUESTDB_PASSWORD", "quest")
+	log.Printf("Connecting to QuestDB at %s:%s with user %s, pass: %s", host, pgPort, user, pass)
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, fmt.Sprintf("postgresql://%s:%s@%s:%s/qdb", user, pass, host, pgPort))
 	if err != nil {
