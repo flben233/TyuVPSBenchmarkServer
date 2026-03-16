@@ -10,6 +10,7 @@ type HostData struct {
 	Sent            float64           `json:"sent"`
 	Recv            float64           `json:"recv"`
 	Ping            []model.PingPoint `json:"ping"`
+	Loss            float64           `json:"loss"`
 	LatestPing      float32           `json:"latest_ping"`
 	ID              string            `json:"id"`
 	Target          string            `json:"target"`

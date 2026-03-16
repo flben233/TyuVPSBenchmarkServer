@@ -239,16 +239,21 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 		if err != nil {
 			return nil, err
 		}
-		recv, sent, err := store.QueryTrafficSum(host.ID, start, end, interval)
+		recv, sent, err := store.QueryTrafficSum(host.ID, start, end)
 		if err != nil {
 			return nil, err
 		}
-		latestPing, err := store.QueryLatestPing(host.ID)
+		latestPing, err := store.QueryLatestPing(host.ID, start, end)
+		if err != nil {
+			return nil, err
+		}
+		lossRate, err := store.QueryLossRate(host.ID, start, end)
 		if err != nil {
 			return nil, err
 		}
 		data[i] = &response.HostData{
 			Ping:         pingPoints,
+			Loss:         lossRate,
 			Sent:         sent,
 			Recv:         recv,
 			ID:           strconv.FormatInt(host.ID, 10),
