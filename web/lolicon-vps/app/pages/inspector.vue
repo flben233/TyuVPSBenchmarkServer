@@ -268,6 +268,10 @@ async function applyQuery({ silent = false } = {}) {
 
   const startMs = Number(nextState.query.start) / 1_000_000;
   const endMs = Number(nextState.query.end) / 1_000_000;
+  if (endMs - startMs > 90 * 24 * 60 * 60 * 1000) {
+    warn("请选择不超过 90 天的时间范围");
+    return;
+  }
   if (exceedsInspectorPointLimit(startMs, endMs, nextState.query.interval, MAX_QUERY_POINTS)) {
     warn(`当前时间范围和粒度会超过 ${MAX_QUERY_POINTS} 个数据点，请增大时间粒度或缩短时间范围`);
     return;
