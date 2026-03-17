@@ -209,15 +209,7 @@ func PutData(trafficData []model.TrafficPoint, hostInfo perfmon.ServerStatus, ho
 		return fmt.Errorf("failed to get host by ID %d: %w", hostID, err)
 	}
 
-	host = &model.InspectHost{
-		ID:           host.ID,
-		UserID:       host.UserID,
-		Target:       host.Target,
-		Name:         host.Name,
-		Tags:         host.Tags,
-		LastUpdate:   time.Now(),
-		ServerStatus: hostInfo,
-	}
+	host.ServerStatus = hostInfo
 
 	store.UpdateHost(host)
 
