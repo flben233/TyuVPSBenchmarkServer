@@ -1,4 +1,4 @@
-export const APPRISE_DOCS_URL = "https://github.com/caronc/apprise/wiki";
+export const APPRISE_DOCS_URL = "https://appriseit.com/services/";
 
 export const NOTIFY_PRESETS = [
   { label: "钉钉", value: "dingtalk" },
