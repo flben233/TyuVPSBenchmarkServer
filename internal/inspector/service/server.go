@@ -210,6 +210,7 @@ func PutData(trafficData []model.TrafficPoint, hostInfo perfmon.ServerStatus, ho
 	}
 
 	host.ServerStatus = hostInfo
+	host.LastUpdate = time.Now()
 
 	store.UpdateHost(host)
 
