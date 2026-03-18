@@ -79,8 +79,8 @@ func QueryTrafficSum(hostID int64, start, end int64) (float64, float64, error) {
 	row, err := pgConn.Query(context.Background(),
 		"SELECT SUM(recv) AS recv_sum, SUM(sent) AS sent_sum FROM "+TrafficMeasurement+" WHERE host_id = $1 AND ts >= $2 AND ts <= $3",
 		strconv.FormatInt(hostID, 10),
-		time.Unix(0, start),
-		time.Unix(0, end),
+		time.Unix(0, start).UTC(),
+		time.Unix(0, end).UTC(),
 	)
 	if err != nil {
 		return 0, 0, err
@@ -106,8 +106,8 @@ func QueryLatestPing(hostID int64, start, end int64) (float32, error) {
 	row, err := pgConn.Query(context.Background(),
 		"SELECT latency FROM "+PingMeasurement+" WHERE host_id = $1 AND ts >= $2 AND ts <= $3 ORDER BY ts DESC LIMIT 1",
 		strconv.FormatInt(hostID, 10),
-		time.Unix(0, start),
-		time.Unix(0, end),
+		time.Unix(0, start).UTC(),
+		time.Unix(0, end).UTC(),
 	)
 	if err != nil {
 		return 0, err
@@ -133,8 +133,8 @@ func QueryLossRate(hostID int64, start, end int64) (float64, error) {
 	row, err := pgConn.Query(context.Background(),
 		"SELECT COUNT(*) AS total, SUM(CASE WHEN latency = 0 THEN 1 ELSE 0 END) AS loss FROM "+PingMeasurement+" WHERE host_id = $1 AND ts >= $2 AND ts <= $3",
 		strconv.FormatInt(hostID, 10),
-		time.Unix(0, start),
-		time.Unix(0, end),
+		time.Unix(0, start).UTC(),
+		time.Unix(0, end).UTC(),
 	)
 	if err != nil {
 		return 0, err
@@ -209,8 +209,8 @@ func queryLossPoints(hostID int64, start, end int64) ([]model.PingPoint, error) 
 	rows, err := pgConn.Query(context.Background(),
 		"SELECT ts FROM "+PingMeasurement+" WHERE host_id = $1 AND latency = 0 AND ts >= $2 AND ts <= $3 ORDER BY ts ASC",
 		strconv.FormatInt(hostID, 10),
-		time.Unix(0, start),
-		time.Unix(0, end),
+		time.Unix(0, start).UTC(),
+		time.Unix(0, end).UTC(),
 	)
 	if err != nil {
 		return nil, err
@@ -241,7 +241,7 @@ func queryLatencyPoints(hostID int64, start, end int64, interval string) ([]mode
 		interval,
 		PointsLimit,
 	)
-	rows, err := pgConn.Query(context.Background(), query, strconv.FormatInt(hostID, 10), time.Unix(0, start), time.Unix(0, end))
+	rows, err := pgConn.Query(context.Background(), query, strconv.FormatInt(hostID, 10), time.Unix(0, start).UTC(), time.Unix(0, end).UTC())
 	if err != nil {
 		return nil, err
 	}
