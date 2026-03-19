@@ -89,23 +89,41 @@ const avatarNav = (command) => {
       <el-icon size="24">
         <House />
       </el-icon>
+      <template #title>
+        <span>主页</span>
+      </template>
     </el-menu-item>
     <el-menu-item index="/search" class="menu-item">
       <el-icon size="24">
         <Search />
       </el-icon>
+      <template #title>
+        <span>搜索</span>
+      </template>
     </el-menu-item>
-    <el-menu-item index="/monitor" class="menu-item">
-      <el-icon size="24">
-        <Odometer />
-      </el-icon>
-    </el-menu-item>
+    <el-sub-menu index="a">
+      <template #title>
+        <el-icon size="24">
+          <Odometer />
+        </el-icon>
+      </template>
+      <el-menu-item index="/monitor" class="menu-item">
+        公共服务器监控
+      </el-menu-item>
+      <el-menu-item index="/inspector" class="menu-item">
+        Lolicon Monitor
+      </el-menu-item>
+    </el-sub-menu>
+
     <el-menu-item index="/looking-glass" class="menu-item">
       <el-icon size="24">
         <Notebook />
       </el-icon>
+      <template #title>
+        <span>Looking Glass</span>
+      </template>
     </el-menu-item>
-    <el-sub-menu index="4">
+    <el-sub-menu index="b">
       <template #title>
         <el-icon size="24">
           <More />
