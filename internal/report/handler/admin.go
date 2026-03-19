@@ -96,7 +96,7 @@ func DeleteReport(ctx *gin.Context) {
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 401 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
-// @Router /report/admin/delete [post]
+// @Router /report/admin/update [post]
 func UpdateReport(ctx *gin.Context) {
 	var req request.UpdateReportRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {

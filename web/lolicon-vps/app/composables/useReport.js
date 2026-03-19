@@ -55,7 +55,7 @@ export function useReport() {
 
   async function updateReport(id, monitorId, otherInfo) {
     try {
-      const resp = await $fetch(`${backendUrl}/report/admin/update`, "POST", {
+      const resp = await requestWithAuth(`${backendUrl}/report/admin/update`, "POST", {
         body: JSON.stringify({ id, monitor_id: monitorId, other_info: otherInfo || "" })
       });
 
