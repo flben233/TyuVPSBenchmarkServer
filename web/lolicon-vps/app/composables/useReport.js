@@ -39,7 +39,7 @@ export function useReport() {
 
   async function deleteReport(id) {
     try {
-      const resp = await requestWithAuth(`${backendUrl}/report/admin/delete`, "POST", {
+      const resp = await requestWithAuth(`/report/admin/delete`, "POST", {
         body: JSON.stringify({ id })
       });
 
@@ -55,7 +55,7 @@ export function useReport() {
 
   async function updateReport(id, monitorId, otherInfo) {
     try {
-      const resp = await requestWithAuth(`${backendUrl}/report/admin/update`, "POST", {
+      const resp = await requestWithAuth(`/report/admin/update`, "POST", {
         body: JSON.stringify({ id, monitor_id: monitorId, other_info: otherInfo || "" })
       });
 
