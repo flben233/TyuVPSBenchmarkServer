@@ -15,14 +15,14 @@ const (
 type APIResponse[T any] struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
-	Data    T      `json:"data,omitempty"`
+	Data    T      `json:"data"`
 }
 
 // PaginatedResponse is the response structure for paginated data
 type PaginatedResponse[T any] struct {
 	Code     int    `json:"code"`
 	Message  string `json:"message"`
-	Data     T      `json:"data,omitempty"`
+	Data     T      `json:"data"`
 	Total    int64  `json:"total"`
 	Page     int    `json:"page"`
 	PageSize int    `json:"page_size"`
