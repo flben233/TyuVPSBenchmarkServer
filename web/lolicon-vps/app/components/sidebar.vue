@@ -176,6 +176,8 @@ const avatarNav = (command) => {
     align-items: center;
     justify-content: center;
     padding: 6px 0;
+    width: 64px;
+    box-sizing: border-box;
   }
 
   .m-avatar-container {
