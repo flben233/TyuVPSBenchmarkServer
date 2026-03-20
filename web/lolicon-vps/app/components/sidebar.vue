@@ -85,7 +85,7 @@ const avatarNav = (command) => {
       </el-dropdown>
     </div>
 
-    <el-menu-item index="/" class="menu-item">
+    <el-menu-item index="/" class="menu-item first-item">
       <el-icon size="24">
         <House />
       </el-icon>
@@ -149,8 +149,9 @@ const avatarNav = (command) => {
   }
 
   .m-avatar-dropdown {
-    margin: auto;
-    padding: 6px;
+    width: 64px;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -166,9 +167,10 @@ const avatarNav = (command) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 64px;
 }
 
-.menu-icon {
-  margin: 0;
+.menu-item:nth-child(2) {
+  margin-left: auto;
 }
 </style>
