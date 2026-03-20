@@ -534,12 +534,10 @@ const gotoDetail = (reportId) => {
                   <div class="report-item-header">{{ report.name }}</div>
                   <div>创建时间: {{ report.date }}</div>
                 </el-card>
-                <el-pagination
+                <reactive-pagination
                   v-if="total > 0"
                   v-model:current-page="page"
                   :disabled="disabled"
-                  :background="false"
-                  layout="total, prev, pager, next, jumper"
                   :total="total"
                   :page-size="pageSize"
                 />

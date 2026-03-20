@@ -14,6 +14,7 @@ const avatarUrl = ref(null);
 const activePath = computed(() => {
   return useRoute().path;
 });
+const ellipse = ref(false);
 
 if (userInfo.value) {
   avatarUrl.value = userInfo.value.avatarUrl;
@@ -25,6 +26,8 @@ function handleWidthChange() {
   } else {
     mode.value = "vertical";
   }
+
+  ellipse.value = window.innerWidth < 384;
 }
 
 watch(userInfo, (newVal) => {
@@ -65,6 +68,7 @@ const avatarNav = (command) => {
     :collapse="true"
     :default-active="activePath"
     router
+    :ellipsis="ellipse"
   >
     <div class="m-avatar-container">
       <el-dropdown @command="avatarNav" class="m-avatar-dropdown">
@@ -143,20 +147,7 @@ const avatarNav = (command) => {
 </template>
 
 <style scoped>
-@media screen and (max-width: 768px) {
-  #m-root {
-    width: 100% !important;
-  }
-
-  .m-avatar-dropdown {
-    width: 64px;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
 .m-avatar-container {
-  width: 100%;
   text-align: center;
   padding: 8px;
   box-sizing: border-box;
@@ -172,5 +163,24 @@ const avatarNav = (command) => {
 
 .menu-item:nth-child(2) {
   margin-left: auto;
+}
+
+@media screen and (max-width: 768px) {
+  #m-root {
+    width: 100% !important;
+    padding: 0 16px;
+    align-items: center;
+  }
+
+  .m-avatar-dropdown {
+    align-items: center;
+    justify-content: center;
+    padding: 6px 0;
+  }
+
+  .m-avatar-container {
+    padding: 0;
+    margin: 8px 0;
+  }
 }
 </style>

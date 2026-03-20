@@ -18,6 +18,7 @@ const disabled = ref(false);
 const total = ref(0);
 const loading = ref(false);
 const pageSize = 7;
+const paginationSize = ref("default");
 const resp = await listReports(page.value, pageSize);
 let reportsData = { data: [], total: 0 };
 if (resp.data.value && resp.data.value.code === 0) {
@@ -98,11 +99,9 @@ onUnmounted(() => {
           <div class="report-item-header">{{ report.name }}</div>
           <div>创建时间: {{ report.date }}</div>
         </el-card>
-        <el-pagination
+        <reactive-pagination
           v-model:current-page="page"
           :disabled="disabled"
-          :background="false"
-          layout="total, prev, pager, next, jumper"
           :total="total"
           :page-size="pageSize"
         />
@@ -168,33 +167,7 @@ onUnmounted(() => {
   font-size: 18px;
   margin-bottom: 8px;
 }
-#site-title {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #303133;
-}
-#site-owner-container {
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-}
-#site-owner {
-  margin-left: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  justify-content: space-between;
-  display: flex;
-  flex-direction: column;
-  height: 56px;
-  box-sizing: border-box;
-  padding: 4px;
-}
-.a-icon {
-  width: 13px;
-  height: 13px;
-  margin-right: 2px;
-}
+
 .s-item {
   margin-top: 8px;
   font-size: 14px;
