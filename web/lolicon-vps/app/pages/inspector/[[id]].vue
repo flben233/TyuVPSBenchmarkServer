@@ -32,7 +32,7 @@ const RELATIVE_RANGE_OPTIONS = [
   { label: "过去 7 天", value: 7 * 24 * 60 * 60 * 1000 },
 ];
 
-const { token } = useAuth();
+const { token, fetchUserInfo, userInfo } = useAuth();
 const router = useRouter();
 const {
   loadDashboard,
@@ -72,8 +72,6 @@ const activeQueryMeta = ref({
   relativeRange: DEFAULT_RANGE_MS,
 });
 const selectedTags = ref([]);
-
-const { userInfo } = useAuth();
 
 const intervalOptions = INSPECTOR_INTERVAL_OPTIONS;
 const relativeRangeOptions = RELATIVE_RANGE_OPTIONS;
@@ -504,6 +502,7 @@ watch(
         loading.value = false;
         return;
       }
+      await fetchUserInfo();
       ownerId.value = userInfo.value.id;
     }
 
