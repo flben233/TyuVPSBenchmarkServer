@@ -197,3 +197,36 @@ func QueryData(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, common.Success(data))
 }
+
+// GetVisitorPage
+//
+// @Summary Get Inspector Visitor Page
+// @Tags inspector
+// @Accept json
+// @Produce json
+// @Param start query int true "Start timestamp (nanoseconds)"
+// @Param end query int true "End timestamp (nanoseconds)"
+// @Param interval query string true "Aggregation interval (e.g. 1h, 30m)"
+// @Success 200 {object} common.APIResponse[response.VisitorPageData]
+// @Router /inspector/visitor/{id} [get]
+func GetVisitorPage(ctx *gin.Context) {
+	var req request.VisitorPageRequest
+	ownerIDStr := ctx.Param("id")
+	ownerID, err := strconv.ParseInt(ownerIDStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "Invalid owner ID"))
+		return
+	}
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, err.Error()))
+		return
+	}
+
+	data, err := service.GetVisitorPage(ownerID, req.Start, req.End, req.Interval)
+	if err != nil {
+		common.DefaultErrorHandler(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, common.Success(data))
+}

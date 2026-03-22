@@ -262,7 +262,7 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 	return data, nil
 }
 
-func GetUserSettings(userID int64) *response.SettingData {
+func GetUserSettings(userID int64) (*response.SettingData, error) {
 	setting, err := store.GetSettingByUserID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -277,13 +277,19 @@ func GetUserSettings(userID int64) *response.SettingData {
 			setting = &model.InspectorSetting{UserID: userID}
 		}
 	}
-	return &response.SettingData{
-		NotifyURL: setting.NotifyURL,
-		BgURL:     setting.BgURL,
+	allowedHostIDs, err := parseAllowedHostIDs(setting.AllowedHostIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse allowed host IDs for user %d: %w", userID, err)
 	}
+	return &response.SettingData{
+		NotifyURL:      setting.NotifyURL,
+		BgURL:          setting.BgURL,
+		VisitorEnabled: setting.VisitorEnabled,
+		AllowedHostIDs: allowedHostIDs,
+	}, nil
 }
 
-func UpdateUserSettings(userID int64, notifyURL, bgURL *string) error {
+func UpdateUserSettings(userID int64, notifyURL, bgURL *string, visitorEnabled bool, allowedHostIDs []string) error {
 	setting, err := store.GetSettingByUserID(userID)
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -293,6 +299,12 @@ func UpdateUserSettings(userID int64, notifyURL, bgURL *string) error {
 	}
 	setting.BgURL = bgURL
 	setting.NotifyURL = notifyURL
+	setting.VisitorEnabled = visitorEnabled
+	allowedHostIDsStr, err := formatAllowedHostIDs(allowedHostIDs)
+	if err != nil {
+		return fmt.Errorf("failed to format allowed host IDs for user %d: %w", userID, err)
+	}
+	setting.AllowedHostIDs = allowedHostIDsStr
 	return store.UpsertSetting(setting)
 }
 
@@ -351,4 +363,28 @@ func tryNotify(notifyURL string, message string) {
 			log.Printf("Failed to send notify request, status: %d, response: %s", resp.StatusCode, string(bodyBytes))
 		}
 	}()
+}
+
+func parseAllowedHostIDs(raw string) ([]string, error) {
+	if raw == "" {
+		return []string{}, nil
+	}
+
+	var hostIDs []string
+	if err := json.Unmarshal([]byte(raw), &hostIDs); err != nil {
+		return nil, err
+	}
+	return hostIDs, nil
+}
+
+func formatAllowedHostIDs(hostIDs []string) (string, error) {
+	if len(hostIDs) == 0 {
+		return "", nil
+	}
+
+	data, err := json.Marshal(hostIDs)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }

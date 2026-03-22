@@ -32,5 +32,6 @@ func RegisterRoute(base string, r *gin.Engine) {
 	publicAPI := r.Group(base)
 	{
 		publicAPI.POST("/data/put", handler.PutData)
+		publicAPI.GET("/visitor/:id", handler.GetVisitorPage)
 	}
 }

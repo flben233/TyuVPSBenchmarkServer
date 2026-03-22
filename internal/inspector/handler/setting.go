@@ -26,7 +26,11 @@ func GetUserSettings(ctx *gin.Context) {
 		return
 	}
 
-	data := service.GetUserSettings(userID.(int64))
+	data, err := service.GetUserSettings(userID.(int64))
+	if err != nil {
+		common.DefaultErrorHandler(ctx, err)
+		return
+	}
 	ctx.JSON(http.StatusOK, common.Success(data))
 }
 
@@ -53,12 +57,16 @@ func UpdateUserSettings(ctx *gin.Context) {
 		return
 	}
 
-	if err := service.UpdateUserSettings(userID.(int64), req.NotifyURL, req.BgURL); err != nil {
+	if err := service.UpdateUserSettings(userID.(int64), req.NotifyURL, req.BgURL, req.VisitorEnabled, req.AllowedHostIDs); err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
-	data := service.GetUserSettings(userID.(int64))
+	data, err := service.GetUserSettings(userID.(int64))
+	if err != nil {
+		common.DefaultErrorHandler(ctx, err)
+		return
+	}
 	ctx.JSON(http.StatusOK, common.Success[response.SettingData](*data))
 }
 

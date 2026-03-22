@@ -35,6 +35,27 @@ type HostListResponse struct {
 }
 
 type SettingData struct {
-	NotifyURL *string `json:"notify_url"`
-	BgURL     *string `json:"bg_url"`
+	NotifyURL      *string  `json:"notify_url"`
+	BgURL          *string  `json:"bg_url"`
+	VisitorEnabled bool     `json:"visitor_enabled"`
+	AllowedHostIDs []string `json:"allowed_host_ids"`
+}
+
+type VisitorHostData struct {
+	Sent       float64           `json:"sent"`
+	Recv       float64           `json:"recv"`
+	Ping       []model.PingPoint `json:"ping"`
+	Loss       float64           `json:"loss"`
+	LatestPing float32           `json:"latest_ping"`
+	Name       string            `json:"name"`
+	Tags       string            `json:"tags"`
+	LastUpdate time.Time         `json:"last_update"`
+	perfmon.ServerStatus
+}
+
+type VisitorPageData struct {
+	OwnerName string            `json:"owner_name"`
+	OwnerID   string            `json:"owner_id"`
+	BgURL     *string           `json:"bg_url"`
+	Hosts     []VisitorHostData `json:"hosts"`
 }
