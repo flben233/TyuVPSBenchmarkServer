@@ -1,24 +1,23 @@
 package response
 
 import (
-	"VPSBenchmarkBackend/internal/inspector/model"
 	"VPSBenchmarkBackend/pkg/perfmon"
 	"time"
 )
 
 type HostData struct {
-	Sent            float64           `json:"sent"`
-	Recv            float64           `json:"recv"`
-	Ping            []model.PingPoint `json:"ping"`
-	Loss            float64           `json:"loss"`
-	LatestPing      float32           `json:"latest_ping"`
-	ID              string            `json:"id"`
-	Target          string            `json:"target"`
-	Name            string            `json:"name"`
-	Tags            string            `json:"tags"` // json array of strings
-	Notify          bool              `json:"notify"`
-	NotifyTolerance int64             `json:"notify_tolerance"`
-	LastUpdate      time.Time         `json:"last_update"`
+	Sent            float64         `json:"sent"`
+	Recv            float64         `json:"recv"`
+	Ping            []PingPointData `json:"ping"`
+	Loss            float64         `json:"loss"`
+	LatestPing      float32         `json:"latest_ping"`
+	ID              string          `json:"id"`
+	Target          string          `json:"target"`
+	Name            string          `json:"name"`
+	Tags            string          `json:"tags"` // json array of strings
+	Notify          bool            `json:"notify"`
+	NotifyTolerance int64           `json:"notify_tolerance"`
+	LastUpdate      time.Time       `json:"last_update"`
 	perfmon.ServerStatus
 }
 
