@@ -45,7 +45,7 @@ const {
 } = useInspector();
 
 const ownerName = ref("");
-const ownerId = useRoute().params.id;
+const ownerId = ref("");
 const loading = ref(false);
 const refreshing = ref(false);
 const submittingHost = ref(false);
