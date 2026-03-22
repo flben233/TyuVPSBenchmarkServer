@@ -233,7 +233,7 @@ async function loadInspectorData({ silent = false } = {}) {
 
   if (readOnly.value) {
     let [result] = await Promise.allSettled([
-      getVisitorPage(ownerId, activeQuery.value),
+      getVisitorPage(ownerId.value, activeQuery.value),
     ]);
     settingsResult = { status: "fulfilled" };
     dashboardResult = { status: "fulfilled" };
@@ -495,16 +495,20 @@ watch(
   async (currentToken) => {
     stopAutoRefresh();
 
-    if (!currentToken) {
-      hosts.value = [];
-      settings.value = getEmptyInspectorSettings();
-      loading.value = false;
-      return;
+    if (readOnly.value) {
+      ownerId.value = useRoute().params.id;
+    } else {
+      if (!currentToken) {
+        hosts.value = [];
+        settings.value = getEmptyInspectorSettings();
+        loading.value = false;
+        return;
+      }
+      ownerId.value = userInfo.value.id;
     }
 
     await loadInspectorData();
     startAutoRefresh();
-    ownerId.value = userInfo.value.id;
   },
   { immediate: true },
 );
@@ -515,14 +519,6 @@ watch(availableTags, (tags) => {
 
 onUnmounted(() => {
   stopAutoRefresh();
-});
-
-onMounted(async () => {
-  if (readOnly.value) {
-    await loadInspectorData();
-    startAutoRefresh();
-  }
-  console.log("Inspector 页面已加载，readOnly =", readOnly.value);
 });
 </script>
 
