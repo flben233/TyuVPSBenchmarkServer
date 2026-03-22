@@ -13,6 +13,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["edit", "delete"]);
@@ -45,20 +49,22 @@ const compactMetrics = computed(() => {
 
 const detailItems = computed(() => {
   let items = [];
-  if (showIp.value) {
-    items.push({
-      label: "目标地址",
-      value: props.host.target || "-",
-      onHover: () => showIp.value = true,
-      onLeave: () => showIp.value = false
-    });
-  } else {
-    items.push({
-      label: "目标地址",
-      value: generateIpStar(props.host.target || "-"),
-      onHover: () => showIp.value = true,
-      onLeave: () => showIp.value = false
-    });
+  if (!props.readOnly) {
+    if (showIp.value) {
+      items.push({
+        label: "目标地址",
+        value: props.host.target || "-",
+        onHover: () => showIp.value = true,
+        onLeave: () => showIp.value = false
+      });
+    } else {
+      items.push({
+        label: "目标地址",
+        value: generateIpStar(props.host.target || "-"),
+        onHover: () => showIp.value = true,
+        onLeave: () => showIp.value = false
+      });
+    }
   }
   if (isAgentActive.value) {
     items.push(
@@ -100,8 +106,8 @@ const detailItems = computed(() => {
       <div v-if="expanded" class="expanded-content">
         <div class="expanded-header">
           <div class="tag-row">
-            <el-tag size="small" effect="dark" @mouseenter="showId = true" @mouseleave="showId = false">ID {{ showId ? host.id : generateIdStar(host.id) }}</el-tag>
-            <el-tag size="small" :type="host.notify ? 'warning' : 'info'" effect="dark">
+            <el-tag size="small" effect="dark" @mouseenter="showId = true" @mouseleave="showId = false" v-if="!readOnly">ID {{ showId ? host.id : generateIdStar(host.id) }}</el-tag>
+            <el-tag size="small" :type="host.notify ? 'warning' : 'info'" effect="dark" v-if="!readOnly">
               {{ host.notify ? "通知已开启" : "通知未开启" }}
             </el-tag>
             <el-tag size="small" type="info" effect="dark">
@@ -110,7 +116,7 @@ const detailItems = computed(() => {
             <el-tag v-for="tag in host.tags" :key="tag" size="small" effect="dark">{{ tag }}</el-tag>
           </div>
 
-          <div class="header-actions">
+          <div v-if="!readOnly" class="header-actions">
             <el-button link :icon="EditPen" @click.stop="emit('edit', host)">编辑</el-button>
             <el-button link type="danger" :icon="Delete" @click.stop="emit('delete', host)">删除</el-button>
           </div>

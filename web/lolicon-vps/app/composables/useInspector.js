@@ -2,6 +2,7 @@ import {
   getDefaultInspectorQuery,
   mergeHostData,
   normalizeInspectorSettings,
+  normalizeVisitorPage,
 } from "~/utils/inspector";
 import {requestWithAuth} from "~/composables/useAuth.js";
 
@@ -29,6 +30,38 @@ export function useInspector() {
       };
     } catch (error) {
       console.error(error)
+      return {
+        success: false,
+        data: null,
+        message: resolveErrorMessage(error, fallbackMessage),
+      };
+    }
+  }
+
+  async function publicRequest(path, method, fallbackMessage = "请求失败", options = {}) {
+    const { backendUrl } = useAppConfig();
+
+    try {
+      const response = await $fetch(`${backendUrl}${path}`, {
+        method,
+        ...options,
+      });
+
+      if (response?.code === 0) {
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || "",
+        };
+      }
+
+      return {
+        success: false,
+        data: null,
+        message: response?.message || fallbackMessage,
+      };
+    } catch (error) {
+      console.error(error);
       return {
         success: false,
         data: null,
@@ -124,6 +157,10 @@ export function useInspector() {
           body: {
             notify_url: payload.notifyUrl || null,
             bg_url: payload.bgUrl || null,
+            visitor_enabled: Boolean(payload.visitorEnabled),
+            allowed_host_ids: Array.isArray(payload.allowedHostIds)
+              ? payload.allowedHostIds.map((id) => String(id))
+              : [],
           },
         }
     );
@@ -148,6 +185,29 @@ export function useInspector() {
     );
   }
 
+  async function getVisitorPage(owner, query = getDefaultInspectorQuery()) {
+    const result = await publicRequest(
+      "/inspector/visitor/" + owner,
+      "GET",
+      "获取访客页失败",
+      {
+        query: {
+          ...query,
+        },
+      },
+    );
+
+    if (!result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      data: normalizeVisitorPage(result.data),
+      message: "",
+    };
+  }
+
   return {
     getDefaultInspectorQuery,
     listHosts,
@@ -158,6 +218,7 @@ export function useInspector() {
     deleteHost,
     getSettings,
     updateSettings,
-    testNotify
+    testNotify,
+    getVisitorPage,
   };
 }

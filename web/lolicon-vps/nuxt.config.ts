@@ -32,10 +32,10 @@ export default defineNuxtConfig({
   vite: {
     plugins: [
       AutoImport({
-        resolvers: [ElementPlusResolver({ importStyle: false })],
+        resolvers: [ElementPlusResolver({ importStyle: true })],
       }),
       Components({
-        resolvers: [ElementPlusResolver({ importStyle: false })],
+        resolvers: [ElementPlusResolver({ importStyle: true })],
       }),
     ],
   },
@@ -43,6 +43,7 @@ export default defineNuxtConfig({
     "/report/**": { cache: { maxAge: 300 } },
     "/slide/**": { cache: { maxAge: 300 } },
     "/inspector": { ssr: false },
+    "/inspector/**": { ssr: false },
     "/tools/**": { prerender: true },
     "/center": { prerender: true },
     "/index": { cache: { maxAge: 300 } },

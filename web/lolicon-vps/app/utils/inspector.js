@@ -59,6 +59,8 @@ export const NOTIFY_PRESET_FIELDS = {
 const EMPTY_SETTINGS = {
   notifyUrl: "",
   bgUrl: "",
+  visitorEnabled: false,
+  allowedHostIds: [],
 };
 
 export const INSPECTOR_INTERVAL_OPTIONS = [
@@ -174,6 +176,10 @@ export function normalizeInspectorSettings(payload) {
   return {
     notifyUrl: payload?.notify_url || "",
     bgUrl: payload?.bg_url || "",
+    visitorEnabled: Boolean(payload?.visitor_enabled),
+    allowedHostIds: Array.isArray(payload?.allowed_host_ids)
+      ? payload.allowed_host_ids.map((id) => String(id))
+      : [],
   };
 }
 
@@ -218,6 +224,39 @@ export function normalizeHostData(item = {}) {
           time: point.time,
         }))
       : [],
+  };
+}
+
+export function normalizeVisitorHost(item = {}) {
+  const normalized = normalizeHost({
+    ...item,
+    id: "",
+    target: "",
+  });
+
+  return {
+    ...normalized,
+    id: "",
+    target: "",
+    sent: toNumber(item.sent),
+    recv: toNumber(item.recv),
+    loss: toNumber(item.loss),
+    ping: Array.isArray(item.ping)
+      ? item.ping.map((point) => ({
+          hostId: toNumber(point.host_id),
+          latency: toNumber(point.latency),
+          time: point.time,
+        }))
+      : [],
+  };
+}
+
+export function normalizeVisitorPage(payload = {}) {
+  return {
+    ownerName: payload.owner_name || "",
+    ownerId: payload.owner_id || "",
+    bgUrl: payload.bg_url || "",
+    hosts: Array.isArray(payload.hosts) ? payload.hosts.map((host) => normalizeVisitorHost(host)) : [],
   };
 }
 

@@ -9,7 +9,7 @@ import {
   formatBytes,
   formatPercent,
   formatTrafficAmount,
-} from "~/utils/inspector";
+} from "~/utils/inspector.js";
 
 useHead({
   title: "Lolicon Monitor",
@@ -41,8 +41,11 @@ const {
   deleteHost,
   getSettings,
   updateSettings,
+  getVisitorPage
 } = useInspector();
 
+const ownerName = ref("");
+const ownerId = useRoute().params.id;
 const loading = ref(false);
 const refreshing = ref(false);
 const submittingHost = ref(false);
@@ -70,9 +73,16 @@ const activeQueryMeta = ref({
 });
 const selectedTags = ref([]);
 
+const { userInfo } = useAuth();
+
 const intervalOptions = INSPECTOR_INTERVAL_OPTIONS;
 const relativeRangeOptions = RELATIVE_RANGE_OPTIONS;
 const isLoggedIn = computed(() => Boolean(token.value));
+
+const readOnly = computed(() => {
+  let oid = useRoute().params.id;
+  return oid != null && oid !== "";
+});
 
 const pageBackgroundStyle = computed(() => ({
   backgroundImage: `url('${settings.value.bgUrl.replace(/'/g, "\\'")}')`,
@@ -206,10 +216,6 @@ function startGithubLogin() {
 }
 
 async function loadInspectorData({ silent = false } = {}) {
-  if (!token.value) {
-    return;
-  }
-
   if (!silent) {
     loading.value = true;
     errorMessage.value = "";
@@ -217,12 +223,31 @@ async function loadInspectorData({ silent = false } = {}) {
     refreshing.value = true;
   }
 
+  if (!token.value && !readOnly.value) {
+    return;
+  }
+
   refreshActiveQueryForRelativeRange();
 
-  const [dashboardResult, settingsResult] = await Promise.allSettled([
-    loadDashboard(activeQuery.value),
-    getSettings(),
-  ]);
+  let dashboardResult, settingsResult;
+
+  if (readOnly.value) {
+    let [result] = await Promise.allSettled([
+      getVisitorPage(ownerId, activeQuery.value),
+    ]);
+    settingsResult = { status: "fulfilled" };
+    dashboardResult = { status: "fulfilled" };
+    if (result.status === "fulfilled" && result.value.success) {
+      settingsResult.value = { success: true, data: { bgUrl: result.value.data.bgUrl } }
+      dashboardResult.value = { success: true, data: result.value.data.hosts || [] };
+      ownerName.value = result.value.data.ownerName || "";
+    }
+  } else {
+    [dashboardResult, settingsResult] = await Promise.allSettled([
+      loadDashboard(activeQuery.value),
+      getSettings(),
+    ]);
+  }
 
   const errors = [];
 
@@ -431,7 +456,7 @@ async function handleUpdateHost(payload) {
 
 async function handleDeleteHost(host) {
   try {
-    await ElMessageBox.confirm(`确定删除服务器「${host.name}」吗？`, "删除确认", {
+    ElMessageBox.confirm(`确定删除服务器「${host.name}」吗？`, "删除确认", {
       type: "warning",
       confirmButtonText: "删除",
       cancelButtonText: "取消",
@@ -479,6 +504,7 @@ watch(
 
     await loadInspectorData();
     startAutoRefresh();
+    ownerId.value = userInfo.value.id;
   },
   { immediate: true },
 );
@@ -490,6 +516,14 @@ watch(availableTags, (tags) => {
 onUnmounted(() => {
   stopAutoRefresh();
 });
+
+onMounted(async () => {
+  if (readOnly.value) {
+    await loadInspectorData();
+    startAutoRefresh();
+  }
+  console.log("Inspector 页面已加载，readOnly =", readOnly.value);
+});
 </script>
 
 <template>
@@ -497,13 +531,14 @@ onUnmounted(() => {
     <div class="inspector-overlay">
       <div class="inspector-header">
         <div>
-          <h1 class="page-title">Lolicon Monitor</h1>
+          <h1 v-if="readOnly" class="page-title">{{ ownerName + " 的探针" }}</h1>
+          <h1 v-else class="page-title">Lolicon Monitor</h1>
         </div>
         <div class="toolbar">
           <el-button class="tool-btn" link :icon="ArrowLeft" @click="router.back()"/>
           <el-button class="tool-btn" link :icon="RefreshRight" :loading="refreshing" @click="loadInspectorData({ silent: true })"/>
-          <el-button class="tool-btn" link :icon="Setting" @click="settingsDialogVisible = true" :disabled="!isLoggedIn"/>
-          <el-button class="tool-btn" link type="primary" :icon="Plus" @click="addDialogVisible = true" :disabled="!isLoggedIn"/>
+          <el-button v-if="!readOnly" class="tool-btn" link :icon="Setting" @click="settingsDialogVisible = true" :disabled="!isLoggedIn"/>
+          <el-button v-if="!readOnly" class="tool-btn" link type="primary" :icon="Plus" @click="addDialogVisible = true" :disabled="!isLoggedIn"/>
         </div>
       </div>
 
@@ -516,7 +551,7 @@ onUnmounted(() => {
         :title="errorMessage"
       />
 
-      <div v-if="!isLoggedIn" class="login-state">
+      <div v-if="!isLoggedIn && !readOnly" class="login-state">
         <el-empty description="请先登录后访问">
           <el-button type="primary" @click="startGithubLogin">使用 GitHub 登录</el-button>
         </el-empty>
@@ -558,6 +593,7 @@ onUnmounted(() => {
                 v-for="host in filteredHosts"
                 :key="host.id"
                 :host="host"
+                :read-only="readOnly"
                 @edit="openEditDialog"
                 @delete="handleDeleteHost"
               />
@@ -588,6 +624,8 @@ onUnmounted(() => {
       :class="childTheme"
       v-model="settingsDialogVisible"
       :settings="settings"
+      :hosts="hosts"
+      :owner-id="ownerId"
       :submitting="submittingSettings"
       @save="handleSaveSettings"
     />

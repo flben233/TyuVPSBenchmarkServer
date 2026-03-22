@@ -101,6 +101,7 @@ export function useAuth() {
     
     if (resp && resp.code === 0) {
       userInfo.value = {
+        id: resp.data.id,
         name: resp.data.name,
         avatarUrl: resp.data.avatar_url,
       };

@@ -7,6 +7,7 @@ import (
 	"VPSBenchmarkBackend/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -103,15 +104,17 @@ func RefreshToken(c *gin.Context) {
 // @Router /auth/user [get]
 func GetUserInfo(c *gin.Context) {
 	// Get user info from context (set by middleware)
-	name, exists := c.Get("user_name")
+	id, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
 		return
 	}
 
+	name, _ := c.Get("user_name")
 	avatarURL, _ := c.Get("user_avatar_url")
 
 	userInfo := response.UserInfo{
+		ID:        strconv.FormatInt(id.(int64), 10),
 		Name:      name.(string),
 		AvatarURL: avatarURL.(string),
 	}

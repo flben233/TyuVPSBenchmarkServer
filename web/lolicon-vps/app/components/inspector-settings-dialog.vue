@@ -10,11 +10,20 @@ const props = defineProps({
     type: Object,
     default: () => ({ notifyUrl: "", bgUrl: "" }),
   },
+  hosts: {
+    type: Array,
+    default: () => [],
+  },
   submitting: {
     type: Boolean,
     default: false,
   },
+  ownerId: {
+    type: String,
+    default: "",
+  }
 });
+const siteUrl = ref("");
 
 const emit = defineEmits(["update:modelValue", "save"]);
 
@@ -29,6 +38,8 @@ const dialogVisible = computed({
 const form = ref({
   notifyUrl: "",
   bgUrl: "",
+  visitorEnabled: false,
+  allowedHostIds: [],
 });
 
 const selectedPreset = ref("");
@@ -44,10 +55,25 @@ watch(
     form.value = {
       notifyUrl: props.settings?.notifyUrl || "",
       bgUrl: props.settings?.bgUrl || "",
+      visitorEnabled: Boolean(props.settings?.visitorEnabled),
+      allowedHostIds: Array.isArray(props.settings?.allowedHostIds) ? [...props.settings.allowedHostIds] : [],
     };
     selectedPreset.value = "";
   },
   { immediate: true },
+);
+
+onMounted(() => {
+  siteUrl.value = window.location.origin;
+});
+
+const hostOptions = computed(() =>
+  [...props.hosts]
+    .sort((left, right) => String(left.name || "").localeCompare(String(right.name || ""), "zh-CN"))
+    .map((host) => ({
+      value: String(host.id),
+      label: host.name || `主机 ${host.id}`,
+    })),
 );
 
 function openBuilder() {
@@ -66,6 +92,8 @@ function handleSave() {
   emit("save", {
     notifyUrl: form.value.notifyUrl.trim(),
     bgUrl: form.value.bgUrl.trim(),
+    visitorEnabled: Boolean(form.value.visitorEnabled),
+    allowedHostIds: Array.isArray(form.value.allowedHostIds) ? [...form.value.allowedHostIds] : [],
   });
 }
 
@@ -133,6 +161,37 @@ async function handleTestNotify() {
           />
           <div class="settings-helper">建议使用分辨率较高、对比度较低的图片，以保持卡片内容可读性。</div>
         </el-form-item>
+
+        <el-form-item label="访客页开关">
+          <div class="visitor-switch-row">
+            <el-switch v-model="form.visitorEnabled"/>
+            <span class="settings-helper inline-helper">开启后，访客可通过公开链接查看你允许展示的主机。</span>
+          </div>
+          <span class="settings-helper inline-helper" v-if="form.visitorEnabled"> 访问链接: {{siteUrl}}/inspector/{{ownerId}} </span>
+        </el-form-item>
+
+        <el-form-item label="允许展示的主机">
+          <el-select
+            v-model="form.allowedHostIds"
+            multiple
+            filterable
+            collapse-tags
+            collapse-tags-tooltip
+            class="preset-select"
+            :disabled="!form.visitorEnabled"
+            placeholder="请选择允许展示给访客的主机"
+          >
+            <el-option
+              v-for="option in hostOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+          <div class="settings-helper">
+            访客页会隐藏主机 ID 和目标地址，只展示这里勾选的主机。
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -179,9 +238,21 @@ async function handleTestNotify() {
   flex: 1;
 }
 
+.visitor-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.inline-helper {
+  margin-top: 0;
+}
+
 @media screen and (max-width: 768px) {
   .settings-header,
-  .preset-row {
+  .preset-row,
+  .visitor-switch-row {
     flex-direction: column;
     align-items: stretch;
   }

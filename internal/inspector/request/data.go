@@ -34,10 +34,18 @@ type QueryDataRequest struct {
 }
 
 type UpdateInspectorSettingRequest struct {
-	NotifyURL *string `json:"notify_url"`
-	BgURL     *string `json:"bg_url"`
+	NotifyURL      *string  `json:"notify_url"`
+	BgURL          *string  `json:"bg_url"`
+	VisitorEnabled bool     `json:"visitor_enabled"`
+	AllowedHostIDs []string `json:"allowed_host_ids"`
 }
 
 type TestNotifyRequest struct {
 	NotifyURL string `json:"notify_url" binding:"required"`
+}
+
+type VisitorPageRequest struct {
+	Start    int64  `form:"start" binding:"required"`
+	End      int64  `form:"end" binding:"required"`
+	Interval string `form:"interval" binding:"required"`
 }
