@@ -42,14 +42,14 @@ type SettingData struct {
 }
 
 type VisitorHostData struct {
-	Sent       float64           `json:"sent"`
-	Recv       float64           `json:"recv"`
-	Ping       []model.PingPoint `json:"ping"`
-	Loss       float64           `json:"loss"`
-	LatestPing float32           `json:"latest_ping"`
-	Name       string            `json:"name"`
-	Tags       string            `json:"tags"`
-	LastUpdate time.Time         `json:"last_update"`
+	Sent       float64         `json:"sent"`
+	Recv       float64         `json:"recv"`
+	Ping       []PingPointData `json:"ping"`
+	Loss       float64         `json:"loss"`
+	LatestPing float32         `json:"latest_ping"`
+	Name       string          `json:"name"`
+	Tags       string          `json:"tags"`
+	LastUpdate time.Time       `json:"last_update"`
 	perfmon.ServerStatus
 }
 
@@ -58,4 +58,9 @@ type VisitorPageData struct {
 	OwnerID   string            `json:"owner_id"`
 	BgURL     *string           `json:"bg_url"`
 	Hosts     []VisitorHostData `json:"hosts"`
+}
+
+type PingPointData struct {
+	Latency float32   `json:"latency"` // 单位ms，为0表示丢包
+	Time    time.Time `json:"time"`    // 纳秒
 }
