@@ -5,6 +5,7 @@ import (
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/inspector/response"
 	"VPSBenchmarkBackend/internal/inspector/store"
+	"VPSBenchmarkBackend/internal/inspector/util"
 	"errors"
 	"fmt"
 	"log"
@@ -55,13 +56,7 @@ func GetVisitorPage(ownerID, start, end int64, interval string) (*response.Visit
 			return nil, err
 		}
 
-		pingPoints := make([]response.PingPointData, len(rawPingPoints))
-		for i, p := range rawPingPoints {
-			pingPoints[i] = response.PingPointData{
-				Latency: p.Latency,
-				Time:    p.Time,
-			}
-		}
+		pingPoints := util.ConvertToPointVO(rawPingPoints)
 
 		recv, sent, err := store.QueryTrafficSum(host.ID, start, end)
 		if err != nil {

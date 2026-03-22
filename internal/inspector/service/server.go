@@ -1,12 +1,13 @@
 package service
 
 import (
-	"VPSBenchmarkBackend/internal/auth/util"
+	authUtil "VPSBenchmarkBackend/internal/auth/util"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
 	"VPSBenchmarkBackend/internal/inspector/model"
 	"VPSBenchmarkBackend/internal/inspector/response"
 	"VPSBenchmarkBackend/internal/inspector/store"
+	"VPSBenchmarkBackend/internal/inspector/util"
 	"VPSBenchmarkBackend/pkg/batch"
 	"VPSBenchmarkBackend/pkg/perfmon"
 	"bytes"
@@ -95,7 +96,7 @@ func CreateHost(userID int64, target, name, tags string, notify bool, notifyTole
 	if err != nil {
 		return 0, err
 	}
-	if !util.CheckInspectorQuota(userID, hosts) {
+	if !authUtil.CheckInspectorQuota(userID, hosts) {
 		return 0, &common.LimitExceededError{Message: fmt.Sprintf("Host limit reached: %d hosts", hosts)}
 	}
 	id := rand.Int63()
@@ -228,10 +229,12 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 	}
 	data := make([]*response.HostData, len(hosts))
 	for i, host := range hosts {
-		pingPoints, err := store.QueryPingPoints(host.ID, start, end, interval)
+		rawPingPoints, err := store.QueryPingPoints(host.ID, start, end, interval)
 		if err != nil {
 			return nil, err
 		}
+		pingPoints := util.ConvertToPointVO(rawPingPoints)
+
 		recv, sent, err := store.QueryTrafficSum(host.ID, start, end)
 		if err != nil {
 			return nil, err
