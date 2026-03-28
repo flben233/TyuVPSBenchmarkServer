@@ -80,6 +80,8 @@ func processReports(msg *kafka.Message) error {
 			}
 		}
 	}
+	task.Status = model.TaskDone
+	task.Progress = 1.0
 
 	return cache.SetJSON(context.Background(), rdbKey, task, 24*time.Hour)
 }
