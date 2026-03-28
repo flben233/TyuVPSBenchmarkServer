@@ -29,10 +29,15 @@ const (
 	rdbPrefix   = "report_task:"
 )
 
-var kafWriter = mq.NewWriter(config.Get().KafkaURL, reportTopic)
+var kafWriter *kafka.Writer
 var rdbClient = cache.GetClient()
 
 func init() {
+	writer, err := mq.NewWriter(config.Get().KafkaURL, reportTopic)
+	if err != nil {
+		log.Fatalf("Failed to create Kafka writer: %v", err)
+	}
+	kafWriter = writer
 	// Subscribe to Kafka topic for report processing
 	reader := mq.NewReader(config.Get().KafkaURL, reportTopic, reportGroup)
 	mq.Subscribe(reader, context.Background(), processReports)
