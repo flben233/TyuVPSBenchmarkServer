@@ -5,45 +5,58 @@ import (
 	"VPSBenchmarkBackend/internal/report/request"
 	"VPSBenchmarkBackend/internal/report/response"
 	"VPSBenchmarkBackend/internal/report/service"
-	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
+// QueryReportTaskStatus handles GET /report/admin/status
+// @Summary Query Report Task Status (Admin)
+// @Description Query the status of an asynchronous report task by ID. Requires admin authentication.
+// @Tags report
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "Report Task ID"
+// @Success 200 {object} common.APIResponse[string]
+// @Failure 400 {object} common.APIResponse[any]
+// @Failure 401 {object} common.APIResponse[any]
+// @Failure 500 {object} common.APIResponse[any]
+// @Router /report/admin/status [get]
+func QueryReportTaskStatus(ctx *gin.Context) {
+	id := ctx.Query("id")
+	status, err := service.QueryReportTaskStatus(id)
+	if err != nil {
+		common.DefaultErrorHandler(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, common.Success(status))
+}
+
 // AddReport handles POST /report/admin/add
 // @Summary Add Report (Admin)
-// @Description Add a new report. Request can be JSON with `html` field or raw HTML body. Requires admin authentication.
+// @Description Async submit reports. Request should be JSON with `html` field. Requires admin authentication.
 // @Tags report
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param request body request.AddReportRequest false "Report HTML or raw body"
-// @Success 201 {object} common.APIResponse[response.ReportIDResponse]
+// @Success 201 {object} common.APIResponse[[]response.ReportIDResponse]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 401 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
 // @Router /report/admin/add [post]
 func AddReport(ctx *gin.Context) {
-	var req request.AddReportRequest
+	var req []request.AddReportRequest
 
 	// Try to bind JSON first
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		// If JSON binding fails, try to read raw HTML from body
-		body, readErr := io.ReadAll(ctx.Request.Body)
-		if readErr != nil {
-			ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "invalid request format"))
-			return
-		}
-		req.HTML = string(body)
-	}
-
-	if req.HTML == "" {
-		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "HTML content is required"))
+		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, "invalid request format"))
 		return
 	}
 
-	reportID, err := service.AddReport(req.HTML, req.MonitorID, req.OtherInfo)
+	reportID, err := service.AddReportsAsync(req)
 	if err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return

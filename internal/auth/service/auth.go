@@ -103,7 +103,7 @@ func GithubLogin(code string) (*AuthToken, error) {
 }
 
 func RefreshToken(userID int64, family, refreshToken string) (*AuthToken, error) {
-	key := getRedisKey(userID, family, refreshToken)
+	key := buildRedisKey(userID, family, refreshToken)
 	client := cache.GetClient()
 	result, err := client.Get(context.Background(), key).Result()
 	if err != nil {
@@ -111,7 +111,7 @@ func RefreshToken(userID int64, family, refreshToken string) (*AuthToken, error)
 		if errors.Is(err, redis.Nil) {
 			cursor := uint64(0)
 			var keys []string
-			pattern := getRedisKey(userID, family, "*")
+			pattern := buildRedisKey(userID, family, "*")
 			for {
 				keys, cursor, err = client.Scan(context.Background(), 0, pattern, 100).Result()
 				if err != nil {
@@ -274,13 +274,8 @@ func generateToken(userInfo *GithubUserInfo, cfg *config.Config, family string) 
 		return nil, err
 	}
 
-	key := getRedisKey(userInfo.ID, family, randIDStr)
-	infoJson, err := json.Marshal(userInfo)
-	if err != nil {
-		return nil, err
-	}
-	err = cache.GetClient().Set(context.Background(), key, string(infoJson), refreshExp).Err()
-	if err != nil {
+	key := buildRedisKey(userInfo.ID, family, randIDStr)
+	if err = cache.SetJSON(context.Background(), key, userInfo, refreshExp); err != nil {
 		return nil, err
 	}
 
@@ -290,6 +285,6 @@ func generateToken(userInfo *GithubUserInfo, cfg *config.Config, family string) 
 	}, nil
 }
 
-func getRedisKey(userID int64, family string, randID string) string {
+func buildRedisKey(userID int64, family string, randID string) string {
 	return fmt.Sprintf("token:%d:%s:%s", userID, family, randID)
 }

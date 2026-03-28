@@ -31,5 +31,6 @@ func RegisterRoute(base string, r *gin.Engine) {
 		adminAPI.POST("/add", handler.AddReport)
 		adminAPI.POST("/delete", handler.DeleteReport)
 		adminAPI.POST("/update", handler.UpdateReport)
+		adminAPI.GET("/status", handler.QueryReportTaskStatus)
 	}
 }

@@ -1,17 +1,42 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/cache"
+	"VPSBenchmarkBackend/internal/common"
+	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/mq"
 	"VPSBenchmarkBackend/internal/report/model"
 	"VPSBenchmarkBackend/internal/report/parser"
+	"VPSBenchmarkBackend/internal/report/request"
 	"VPSBenchmarkBackend/internal/report/store"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 )
+
+const (
+	reportTopic = "report_processing"
+	reportGroup = "report_processor_group"
+	rdbPrefix   = "report_task:"
+)
+
+var kafWriter = mq.NewWriter(config.Get().KafkaURL, reportTopic)
+var rdbClient = cache.GetClient()
+
+func init() {
+	// Subscribe to Kafka topic for report processing
+	reader := mq.NewReader(config.Get().KafkaURL, reportTopic, reportGroup)
+	mq.Subscribe(reader, context.Background(), processReports)
+}
 
 // generateID generates a random ID for reports
 func generateID() string {
@@ -20,8 +45,47 @@ func generateID() string {
 	return hex.EncodeToString(b)
 }
 
-// AddReport parses and saves a new benchmark report
-func AddReport(rawHTML string, monitorID *int64, otherInfo string) (string, error) {
+func processReports(msg *kafka.Message) error {
+	var reqArr []request.AddReportRequest
+	err := json.Unmarshal(msg.Value, &reqArr)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal report processing request: %w", err)
+	}
+
+	rdbKey := rdbPrefix + string(msg.Key)
+	var task model.AddReportTask
+	err = cache.GetJSON(context.Background(), rdbKey, &task)
+	if err != nil {
+		return fmt.Errorf("failed to get report task from Redis: %w", err)
+	}
+
+	task.Status = model.TaskRunning
+	err = cache.SetJSON(context.Background(), rdbKey, task, 24*time.Hour)
+	if err != nil {
+		return fmt.Errorf("failed to update report task status in Redis: %w", err)
+	}
+
+	for i, req := range reqArr {
+		_, err = addReport(req.HTML, req.MonitorID, req.OtherInfo)
+
+		if err != nil {
+			log.Println("Error processing report:", err)
+			task.Failed = append(task.Failed, i)
+		}
+		task.Progress = float32(i+1) / float32(len(reqArr))
+		if i%2 == 0 { // Update progress every 2 reports to reduce Redis writes
+			err = cache.SetJSON(context.Background(), rdbKey, task, 24*time.Hour)
+			if err != nil {
+				log.Printf("Failed to update report task progress in Redis: %v", err)
+			}
+		}
+	}
+
+	return cache.SetJSON(context.Background(), rdbKey, task, 24*time.Hour)
+}
+
+// addReport parses and saves a new benchmark report
+func addReport(rawHTML string, monitorID *int64, otherInfo string) (string, error) {
 	if rawHTML == "" {
 		return "", errors.New("raw HTML content is required")
 	}
@@ -179,6 +243,41 @@ func AddReport(rawHTML string, monitorID *int64, otherInfo string) (string, erro
 	}
 
 	return reportID, nil
+}
+
+func QueryReportTaskStatus(taskID string) (*model.AddReportTask, error) {
+	if taskID == "" {
+		return nil, &common.InvalidParamError{Message: "Task ID is required"}
+	}
+	var task model.AddReportTask
+	err := cache.GetJSON(context.Background(), rdbPrefix+taskID, &task)
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, &common.InvalidParamError{Message: "Invalid task ID or task has expired"}
+		}
+		return nil, fmt.Errorf("failed to get task status from Redis: %w", err)
+	}
+	return &task, nil
+}
+
+func AddReportsAsync(request []request.AddReportRequest) (string, error) {
+	taskID, err := mq.WriteJSONMessage(kafWriter, request)
+	if err != nil {
+		return "", fmt.Errorf("failed to enqueue report processing task: %w", err)
+	}
+	task := model.AddReportTask{
+		ID:       taskID,
+		Status:   model.TaskPending,
+		Progress: 0,
+		Failed:   make([]int, 0),
+	}
+	var taskData []byte
+	taskData, err = json.Marshal(task)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal report task data: %w", err)
+	}
+	rdbClient.Set(context.Background(), rdbPrefix+taskID, string(taskData), 24*time.Hour)
+	return taskID, nil
 }
 
 // DeleteReport removes a report from the database
