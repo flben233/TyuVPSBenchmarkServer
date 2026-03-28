@@ -4,7 +4,6 @@ const (
 	TaskPending = "pending"
 	TaskRunning = "running"
 	TaskDone    = "done"
-	TaskFailed  = "failed"
 )
 
 type AddReportTask struct {
