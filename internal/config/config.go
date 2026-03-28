@@ -21,6 +21,8 @@ type Config struct {
 	RedisPasswd     string `json:"redisPasswd"`
 	AppriseURL      string `json:"appriseUrl"`
 	KafkaURL        string `json:"kafkaUrl"`
+	KafkaUser       string `json:"kafkaUser"`
+	KafkaPasswd     string `json:"kafkaPasswd"`
 }
 
 var cfg *Config
