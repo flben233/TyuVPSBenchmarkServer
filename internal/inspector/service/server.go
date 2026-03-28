@@ -58,7 +58,7 @@ func pingHosts() {
 				log.Printf("Failed to get setting for user %d: %v", host.UserID, err)
 			}
 			if setting.NotifyURL == nil {
-				return
+				continue
 			}
 			if lat == 0 {
 				points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance)
