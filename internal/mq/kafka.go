@@ -13,7 +13,7 @@ import (
 
 var sharedTransport *kafka.Transport
 
-func NewWriter(addr, topic string) (*kafka.Writer, error) {
+func NewWriter(topic string) (*kafka.Writer, error) {
 	cfg := config.Get()
 	mechanism, err := scram.Mechanism(scram.SHA512, cfg.KafkaUser, cfg.KafkaPasswd)
 	if err != nil {
@@ -25,39 +25,60 @@ func NewWriter(addr, topic string) (*kafka.Writer, error) {
 		}
 	}
 	return &kafka.Writer{
-		Addr:      kafka.TCP(addr),
+		Addr:      kafka.TCP(cfg.KafkaURL),
 		Topic:     topic,
 		Balancer:  &kafka.Hash{},
 		Transport: sharedTransport,
 	}, nil
 }
 
-func NewReader(addr, topic, groupID string) *kafka.Reader {
+func NewReader(topic, groupID string) (*kafka.Reader, error) {
+	cfg := config.Get()
+	mechanism, err := scram.Mechanism(scram.SHA512, cfg.KafkaUser, cfg.KafkaPasswd)
+	if err != nil {
+		return nil, err
+	}
+	dialer := &kafka.Dialer{
+		Timeout:       10 * time.Second,
+		DualStack:     true,
+		SASLMechanism: mechanism,
+	}
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{addr},
+		Brokers: []string{cfg.KafkaURL},
 		Topic:   topic,
 		GroupID: groupID,
-	})
+		Dialer:  dialer,
+	}), nil
 }
 
-func WriteMessage(writer *kafka.Writer, val []byte) (string, error) {
-	u := uuid.New().String()
+func WriteMessages(writer *kafka.Writer, val ...[]byte) ([]string, error) {
+	keys := make([]string, len(val))
+	msgs := make([]kafka.Message, len(val))
+	for i, v := range val {
+		u := uuid.New().String()
+		msgs[i] = kafka.Message{
+			Key:   []byte(u),
+			Value: v,
+		}
+		keys[i] = u
+	}
 	err := writer.WriteMessages(
 		context.Background(),
-		kafka.Message{
-			Key:   []byte(u),
-			Value: val,
-		},
+		msgs...,
 	)
-	return u, err
+	return keys, err
 }
 
-func WriteJSONMessage(writer *kafka.Writer, v any) (string, error) {
-	msg, err := json.Marshal(v)
-	if err != nil {
-		return "", err
+func WriteJSONMessages(writer *kafka.Writer, v ...any) ([]string, error) {
+	msgs := make([][]byte, len(v))
+	for i, item := range v {
+		msg, err := json.Marshal(item)
+		if err != nil {
+			return make([]string, 0), err
+		}
+		msgs[i] = msg
 	}
-	return WriteMessage(writer, msg)
+	return WriteMessages(writer, msgs...)
 }
 
 func Subscribe(reader *kafka.Reader, ctx context.Context, handler func(message *kafka.Message) error) {
@@ -69,10 +90,12 @@ func Subscribe(reader *kafka.Reader, ctx context.Context, handler func(message *
 				time.Sleep(1 * time.Second)
 				continue
 			}
-			err = handler(&m)
-			if err != nil {
-				log.Printf("Error handling message: %v", err)
-			}
+			go func(m *kafka.Message) {
+				err = handler(m)
+				if err != nil {
+					log.Printf("Error handling message: %v", err)
+				}
+			}(&m)
 		}
 	}()
 }

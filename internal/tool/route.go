@@ -12,7 +12,7 @@ func init() {
 	common.RegisterRoutes(RegisterRoute)
 }
 
-// RegisterRouter wires tool endpoints.
+// RegisterRoute wires tool endpoints.
 func RegisterRoute(base string, r *gin.Engine) {
 	group := r.Group(base + "/tool")
 	group.GET("/traceroute", handler.Traceroute)

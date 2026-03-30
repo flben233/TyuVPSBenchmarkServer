@@ -1,36 +1,53 @@
 package main
 
 import (
-	ms "VPSBenchmarkBackend/internal/monitor/service"
-	ts "VPSBenchmarkBackend/internal/tool/service"
-
-	"github.com/gin-gonic/gin"
+	"VPSBenchmarkBackend/internal/exporter"
+	"VPSBenchmarkBackend/internal/mq"
+	"context"
+	"encoding/json"
+	"github.com/segmentio/kafka-go"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
-func QueryHosts(ctx *gin.Context) {
-	var targets []string
-	if err := ctx.BindJSON(&targets); err != nil {
-		ctx.JSON(400, gin.H{"error": "Invalid request"})
-		return
+const (
+	pingGroup    = "exporter_ping"
+	tracertGroup = "exporter_tracert"
+)
+
+func Ping(msg *kafka.Message) error {
+	var req exporter.PingReq
+	if err := json.Unmarshal(msg.Value, &req); err != nil {
+		return err
 	}
-	results := ms.ExportQueryHosts(targets)
-	ctx.JSON(200, results)
+	return exporter.Ping(req.Target, req.HostID)
 }
 
-func Tracert(ctx *gin.Context) {
-	var req ts.TracertRequest
-	if err := ctx.BindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"error": "Invalid request"})
-		return
+func Tracert(msg *kafka.Message) error {
+	var req exporter.TracertReq
+	if err := json.Unmarshal(msg.Value, &req); err != nil {
+		return err
 	}
-	results := ts.ExportTracert(&req)
-	ctx.String(200, results)
+	return exporter.Tracert(req.Mode, req.Target, req.Port)
 }
 
 func main() {
-	base := "/exporter"
-	r := gin.Default()
-	r.POST(base+"/monitor", QueryHosts)
-	r.POST(base+"/tracert", Tracert)
-	r.Run(":20831")
+	pingReader, err := mq.NewReader(exporter.PingSentTopic, pingGroup)
+	if err != nil {
+		panic(err)
+	}
+	mq.Subscribe(pingReader, context.Background(), Ping)
+
+	tracertReader, err := mq.NewReader(exporter.TracertSentTopic, tracertGroup)
+	if err != nil {
+		panic(err)
+	}
+	mq.Subscribe(tracertReader, context.Background(), Tracert)
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	pingReader.Close()
+	tracertReader.Close()
 }
