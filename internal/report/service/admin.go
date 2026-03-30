@@ -1,9 +1,6 @@
 package service
 
 import (
-	"VPSBenchmarkBackend/internal/cache"
-	"VPSBenchmarkBackend/internal/common"
-	"VPSBenchmarkBackend/internal/config"
 	"VPSBenchmarkBackend/internal/mq"
 	"VPSBenchmarkBackend/internal/report/model"
 	"VPSBenchmarkBackend/internal/report/parser"
@@ -15,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"strconv"
@@ -26,20 +22,21 @@ import (
 const (
 	reportTopic = "report_processing"
 	reportGroup = "report_processor_group"
-	rdbPrefix   = "report_task:"
 )
 
 var kafWriter *kafka.Writer
-var rdbClient = cache.GetClient()
 
 func init() {
-	writer, err := mq.NewWriter(config.Get().KafkaURL, reportTopic)
+	writer, err := mq.NewWriter(reportTopic)
 	if err != nil {
 		log.Fatalf("Failed to create Kafka writer: %v", err)
 	}
 	kafWriter = writer
 	// Subscribe to Kafka topic for report processing
-	reader := mq.NewReader(config.Get().KafkaURL, reportTopic, reportGroup)
+	reader, err := mq.NewReader(reportTopic, reportGroup)
+	if err != nil {
+		log.Fatalf("Failed to create Kafka reader: %v", err)
+	}
 	mq.Subscribe(reader, context.Background(), processReports)
 }
 
@@ -57,15 +54,13 @@ func processReports(msg *kafka.Message) error {
 		return fmt.Errorf("failed to unmarshal report processing request: %w", err)
 	}
 
-	rdbKey := rdbPrefix + string(msg.Key)
-	var task model.AddReportTask
-	err = cache.GetJSON(context.Background(), rdbKey, &task)
+	task, err := mq.GetTask[model.AddReportTask](string(msg.Key))
 	if err != nil {
 		return fmt.Errorf("failed to get report task from Redis: %w", err)
 	}
 
-	task.Status = model.TaskRunning
-	err = cache.SetJSON(context.Background(), rdbKey, task, 24*time.Hour)
+	task.Status = mq.TaskRunning
+	err = mq.SetTask(*task)
 	if err != nil {
 		return fmt.Errorf("failed to update report task status in Redis: %w", err)
 	}
@@ -75,20 +70,20 @@ func processReports(msg *kafka.Message) error {
 
 		if err != nil {
 			log.Println("Error processing report:", err)
-			task.Failed = append(task.Failed, i)
+			task.Result.Failed = append(task.Result.Failed, i)
 		}
 		task.Progress = float32(i+1) / float32(len(reqArr))
 		if i%2 == 0 { // Update progress every 2 reports to reduce Redis writes
-			err = cache.SetJSON(context.Background(), rdbKey, task, 24*time.Hour)
+			err = mq.SetTask(*task)
 			if err != nil {
 				log.Printf("Failed to update report task progress in Redis: %v", err)
 			}
 		}
 	}
-	task.Status = model.TaskDone
+	task.Status = mq.TaskDone
 	task.Progress = 1.0
 
-	return cache.SetJSON(context.Background(), rdbKey, task, 24*time.Hour)
+	return mq.SetTask(*task)
 }
 
 // addReport parses and saves a new benchmark report
@@ -252,39 +247,22 @@ func addReport(rawHTML string, monitorID *int64, otherInfo string) (string, erro
 	return reportID, nil
 }
 
-func QueryReportTaskStatus(taskID string) (*model.AddReportTask, error) {
-	if taskID == "" {
-		return nil, &common.InvalidParamError{Message: "Task ID is required"}
-	}
-	var task model.AddReportTask
-	err := cache.GetJSON(context.Background(), rdbPrefix+taskID, &task)
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return nil, &common.InvalidParamError{Message: "Invalid task ID or task has expired"}
-		}
-		return nil, fmt.Errorf("failed to get task status from Redis: %w", err)
-	}
-	return &task, nil
-}
-
 func AddReportsAsync(request []request.AddReportRequest) (string, error) {
-	taskID, err := mq.WriteJSONMessage(kafWriter, request)
+	taskIDs, err := mq.WriteJSONMessages(kafWriter, request)
 	if err != nil {
 		return "", fmt.Errorf("failed to enqueue report processing task: %w", err)
 	}
-	task := model.AddReportTask{
-		ID:       taskID,
-		Status:   model.TaskPending,
+	task := mq.Task[model.AddReportTask]{
+		ID:       taskIDs[0],
+		Status:   mq.TaskPending,
 		Progress: 0,
-		Failed:   make([]int, 0),
+		Result:   model.AddReportTask{Failed: make([]int, 0)},
 	}
-	var taskData []byte
-	taskData, err = json.Marshal(task)
+	err = mq.SetTask(task)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal report task data: %w", err)
 	}
-	rdbClient.Set(context.Background(), rdbPrefix+taskID, string(taskData), 24*time.Hour)
-	return taskID, nil
+	return taskIDs[0], nil
 }
 
 // DeleteReport removes a report from the database

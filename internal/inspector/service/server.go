@@ -4,16 +4,20 @@ import (
 	authUtil "VPSBenchmarkBackend/internal/auth/util"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/exporter"
 	"VPSBenchmarkBackend/internal/inspector/model"
 	"VPSBenchmarkBackend/internal/inspector/response"
 	"VPSBenchmarkBackend/internal/inspector/store"
 	"VPSBenchmarkBackend/internal/inspector/util"
+	"VPSBenchmarkBackend/internal/mq"
 	"VPSBenchmarkBackend/pkg/batch"
 	"VPSBenchmarkBackend/pkg/perfmon"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
 	"io"
 	"log"
@@ -23,72 +27,105 @@ import (
 	"time"
 )
 
-var putRecord = make(map[int64]time.Time)
+var (
+	putRecord = make(map[int64]time.Time)
+	kafWriter *kafka.Writer
+)
 
 const (
-	pingInterval = 120 * time.Second
-	putInterval  = 30 * time.Second
-	putMaxLength = 1
+	pingInterval  = 120 * time.Second
+	putInterval   = 30 * time.Second
+	putMaxLength  = 1
+	pingSentTopic = "inspector_ping_sent"
+	pingRecvGroup = "inspector_ping_group"
 )
 
 func init() {
 	common.RegisterCronJob(pingInterval, pingHosts)
+	writer, err := mq.NewWriter(pingSentTopic)
+	if err != nil {
+		log.Fatalf("Failed to create Kafka writer: %v", err)
+	}
+	reader, err := mq.NewReader(exporter.PingRecvTopic, pingRecvGroup)
+	if err != nil {
+		log.Fatalf("Failed to create Kafka reader: %v", err)
+	}
+	kafWriter = writer
+	mq.Subscribe(reader, context.Background(), postPing)
 }
 
+// 向Kafka提交Ping任务，由Exporter消费并执行，结果再由Exporter提交到另一个Kafka主题
 func pingHosts() {
 	hosts, err := store.ListAllHost()
 	if err != nil {
 		log.Printf("Failed to list all hosts for pinging: %v", err)
 		return
 	}
-	for _, host := range hosts {
-		lat, err := queryHost(host.Target)
-		if err != nil {
-			log.Printf("failed to query host %s: %s", host.Target, err.Error())
-		}
-		pingData := []model.PingPoint{{
-			HostID:  host.ID,
-			Latency: lat,
-			Time:    time.Now(),
-		}}
-
-		if host.Notify {
-			setting, err := store.GetSettingByUserID(host.UserID)
-			if err != nil {
-				log.Printf("Failed to get setting for user %d: %v", host.UserID, err)
-			}
-			if setting.NotifyURL == nil {
-				continue
-			}
-			if lat == 0 {
-				points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance)
-				if err != nil {
-					log.Printf("Failed to query latest ping points for host %d: %v", host.ID, err)
-					continue
-				}
-				// 如果最新的 NotifyTolerance 条数据都是 0，才通知用户主机离线，避免偶尔的网络波动导致误报
-				if int64(len(points)) == host.NotifyTolerance && batch.IsAllTrue(points, func(p model.PingPoint) bool { return p.Latency == 0 }) {
-					tryNotify(*setting.NotifyURL, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
-				}
-			} else {
-				points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance*2)
-				if err != nil {
-					log.Printf("Failed to query latest ping for host %d: %v", host.ID, err)
-					continue
-				}
-				// 如果之前的 NotifyTolerance 条数据都是 0，且最近的 NotifyTolerance 条数据不是 0，才通知用户主机上线，避免偶尔的网络波动导致误报
-				if int64(len(points)) == host.NotifyTolerance*2 &&
-					batch.IsAllTrue(points[:host.NotifyTolerance], func(p model.PingPoint) bool { return p.Latency == 0 }) &&
-					!batch.IsAllTrue(points[int(host.NotifyTolerance):], func(p model.PingPoint) bool { return p.Latency > 0 }) {
-					tryNotify(*setting.NotifyURL, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
-				}
-			}
-		}
-
-		if err := store.SavePingPoints(pingData); err != nil {
-			log.Printf("Failed to save ping points for host %d: %v", host.ID, err)
+	targets := make([]any, len(hosts))
+	for i, host := range hosts {
+		targets[i] = exporter.PingReq{
+			HostID: host.ID,
+			Target: host.Target,
 		}
 	}
+	_, err = mq.WriteJSONMessages(kafWriter, targets...)
+	if err != nil {
+		log.Printf("Failed to write ping messages to Kafka: %v", err)
+		return
+	}
+}
+
+func postPing(msg *kafka.Message) error {
+	var resp exporter.PingResp
+	err := json.Unmarshal(msg.Value, &resp)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal ping message: %v", err)
+	}
+	host, err := store.GetHostByID(resp.HostID)
+	if err != nil {
+		return fmt.Errorf("failed to get host by ID %d: %v", resp.HostID, err)
+	}
+	pingData := []model.PingPoint{{
+		HostID:  resp.HostID,
+		Latency: resp.Lat,
+		Time:    time.Now(),
+	}}
+
+	if host.Notify {
+		setting, err := store.GetSettingByUserID(host.UserID)
+		if err != nil {
+			return fmt.Errorf("failed to get setting for user %d: %v", host.UserID, err)
+		}
+		if setting.NotifyURL == nil {
+			return nil
+		}
+		if resp.Lat == 0 {
+			points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance)
+			if err != nil {
+				return fmt.Errorf("failed to query latest ping points for host %d: %v", host.ID, err)
+			}
+			// 如果最新的 NotifyTolerance 条数据都是 0，才通知用户主机离线，避免偶尔的网络波动导致误报
+			if int64(len(points)) == host.NotifyTolerance && batch.IsAllTrue(points, func(p model.PingPoint) bool { return p.Latency == 0 }) {
+				tryNotify(*setting.NotifyURL, fmt.Sprintf("主机 %s (%s) 离线", host.Name, host.Target))
+			}
+		} else {
+			points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance*2)
+			if err != nil {
+				return fmt.Errorf("failed to query latest ping for host %d: %v", host.ID, err)
+			}
+			// 如果之前的 NotifyTolerance 条数据都是 0，且最近的 NotifyTolerance 条数据不是 0，才通知用户主机上线，避免偶尔的网络波动导致误报
+			if int64(len(points)) == host.NotifyTolerance*2 &&
+				batch.IsAllTrue(points[:host.NotifyTolerance], func(p model.PingPoint) bool { return p.Latency == 0 }) &&
+				!batch.IsAllTrue(points[int(host.NotifyTolerance):], func(p model.PingPoint) bool { return p.Latency > 0 }) {
+				tryNotify(*setting.NotifyURL, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
+			}
+		}
+	}
+
+	if err := store.SavePingPoints(pingData); err != nil {
+		return fmt.Errorf("failed to save ping points for host %d: %v", host.ID, err)
+	}
+	return nil
 }
 
 func CreateHost(userID int64, target, name, tags string, notify bool, notifyTolerance int64) (int64, error) {

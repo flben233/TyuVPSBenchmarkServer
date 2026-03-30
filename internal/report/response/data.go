@@ -7,6 +7,6 @@ type ReportInfoResponse struct {
 	Date string `json:"date"`
 }
 
-type ReportIDResponse struct {
-	Id string `json:"id"`
+type AddReportResponse struct {
+	ID string `json:"id"`
 }

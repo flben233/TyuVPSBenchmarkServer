@@ -10,30 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// QueryReportTaskStatus handles GET /report/admin/status
-// @Summary Query Report Task Status (Admin)
-// @Description Query the status of an asynchronous report task by ID. Requires admin authentication.
-// @Tags report
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id query string true "Report Task ID"
-// @Success 200 {object} common.APIResponse[string]
-// @Failure 400 {object} common.APIResponse[any]
-// @Failure 401 {object} common.APIResponse[any]
-// @Failure 500 {object} common.APIResponse[any]
-// @Router /report/admin/status [get]
-func QueryReportTaskStatus(ctx *gin.Context) {
-	id := ctx.Query("id")
-	status, err := service.QueryReportTaskStatus(id)
-	if err != nil {
-		common.DefaultErrorHandler(ctx, err)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, common.Success(status))
-}
-
 // AddReport handles POST /report/admin/add
 // @Summary Add Report (Admin)
 // @Description Async submit reports. Request should be JSON with `html` field. Requires admin authentication.
@@ -41,8 +17,8 @@ func QueryReportTaskStatus(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body request.AddReportRequest false "Report HTML or raw body"
-// @Success 201 {object} common.APIResponse[[]response.ReportIDResponse]
+// @Param request body []request.AddReportRequest
+// @Success 201 {object} common.APIResponse[response.AddReportResponse]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 401 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
@@ -56,13 +32,13 @@ func AddReport(ctx *gin.Context) {
 		return
 	}
 
-	reportID, err := service.AddReportsAsync(req)
+	taskID, err := service.AddReportsAsync(req)
 	if err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, common.SuccessWithMessage("Report added successfully", response.ReportIDResponse{Id: reportID}))
+	ctx.JSON(http.StatusCreated, common.SuccessWithMessage("Report added successfully", response.AddReportResponse{ID: taskID}))
 }
 
 // DeleteReport handles POST /report/admin/delete

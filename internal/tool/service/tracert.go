@@ -1,14 +1,11 @@
 package service
 
 import (
-	"VPSBenchmarkBackend/internal/config"
-	"bytes"
+	"VPSBenchmarkBackend/internal/exporter"
+	"VPSBenchmarkBackend/internal/mq"
+	"context"
 	"encoding/json"
-	"io"
-	"net/http"
-	"os/exec"
-	"strconv"
-	"strings"
+	"github.com/segmentio/kafka-go"
 )
 
 type TracertRequest struct {
@@ -17,44 +14,56 @@ type TracertRequest struct {
 	Port   uint16 `json:"port"`
 }
 
-func ExportTracert(req *TracertRequest) string {
-	// Needs to install nexttrace
-	var cmd *exec.Cmd
-	params := []string{"--json"}
-	if req.Mode == "tcp" {
-		params = append(params, "--tcp")
-		if req.Port != 0 {
-			params = append(params, "--port", strconv.FormatUint(uint64(req.Port), 10), req.Target)
-		} else {
-			params = append(params, req.Target)
-		}
-	} else {
-		params = append(params, req.Target)
+var tracertWriter *kafka.Writer
+
+func init() {
+	writer, err := mq.NewWriter(exporter.TracertSentTopic)
+	if err != nil {
+		panic(err)
 	}
-	cmd = exec.Command("nexttrace", params...)
-	result, _ := cmd.Output()
-	return string(result)
+	tracertWriter = writer
+
+	reader, err := mq.NewReader(exporter.TracertRecvTopic, "tracert_processor_group")
+	if err != nil {
+		panic(err)
+	}
+	mq.Subscribe(reader, context.Background(), postTracert)
 }
 
-func Traceroute(req *TracertRequest) (error, map[string]interface{}) {
-	reqBody, err := json.Marshal(req)
-	if err != nil {
-		return err, nil
+func postTracert(msg *kafka.Message) error {
+	var resp exporter.TracertResp
+	if err := json.Unmarshal(msg.Value, &resp); err != nil {
+		return err
 	}
-	resp, err := http.Post(config.Get().ExporterURL+"/tracert", "application/json", bytes.NewReader(reqBody))
+	err := mq.SetTask(mq.Task[map[string]interface{}]{
+		ID:       string(msg.Key),
+		Status:   mq.TaskDone,
+		Progress: 1.0,
+		Result:   resp.Result,
+	})
 	if err != nil {
-		return err, nil
+		return err
 	}
-	defer resp.Body.Close()
-	bodyBytes, err := io.ReadAll(resp.Body)
+	return nil
+}
+
+func Traceroute(req *TracertRequest) (string, error) {
+	taskID, err := mq.WriteJSONMessages(tracertWriter, exporter.TracertReq{
+		Mode:   req.Mode,
+		Target: req.Target,
+		Port:   uint64(req.Port),
+	})
 	if err != nil {
-		return err, nil
+		return "", err
 	}
-	bodyStr := string(bodyBytes)[strings.Index(string(bodyBytes), "{"):]
-	var result map[string]interface{}
-	err = json.Unmarshal([]byte(bodyStr), &result)
+	err = mq.SetTask(mq.Task[any]{
+		ID:       taskID[0],
+		Status:   mq.TaskPending,
+		Progress: 0.0,
+		Result:   nil,
+	})
 	if err != nil {
-		return err, nil
+		return "", err
 	}
-	return nil, result
+	return taskID[0], nil
 }

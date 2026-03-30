@@ -9,6 +9,7 @@ import (
 	_ "VPSBenchmarkBackend/internal/inspector"
 	_ "VPSBenchmarkBackend/internal/lookingglass"
 	_ "VPSBenchmarkBackend/internal/monitor"
+	_ "VPSBenchmarkBackend/internal/mq"
 	_ "VPSBenchmarkBackend/internal/report"
 	_ "VPSBenchmarkBackend/internal/tool"
 	"fmt"
