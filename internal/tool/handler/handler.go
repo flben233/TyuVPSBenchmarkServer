@@ -46,12 +46,12 @@ func Traceroute(ctx *gin.Context) {
 		return
 	}
 
-	outputErr, output := service.Traceroute(&req)
-	if outputErr != nil {
-		common.DefaultErrorHandler(ctx, outputErr)
+	taskID, err := service.Traceroute(&req)
+	if err != nil {
+		common.DefaultErrorHandler(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, common.Success(output))
+	ctx.JSON(http.StatusOK, common.Success(service.TracertResponse{TaskID: taskID}))
 }
 
 // Whois handles WHOIS lookup requests.

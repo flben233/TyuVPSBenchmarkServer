@@ -14,6 +14,10 @@ type TracertRequest struct {
 	Port   uint16 `json:"port"`
 }
 
+type TracertResponse struct {
+	TaskID string `json:"task_id"`
+}
+
 var tracertWriter *kafka.Writer
 
 func init() {
