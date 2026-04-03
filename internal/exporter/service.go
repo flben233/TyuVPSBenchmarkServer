@@ -3,29 +3,44 @@ package exporter
 import (
 	"VPSBenchmarkBackend/internal/mq"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	probing "github.com/prometheus-community/pro-bing"
 )
 
+var errHTTPStatus = errors.New("http non-2xx status")
+
 func Probe(target string, hostID int64, monitorType, replyTo, msgId string) error {
-	writeErr := func(err error) error {
-		_, err = mq.PublishJSONWithID(replyTo, "", PingResp{
+	writeLoss := func() error {
+		_, err := mq.PublishJSONWithID(replyTo, "", PingResp{
 			HostID:      hostID,
 			Lat:         0,
 			MonitorType: monitorType,
 		}, msgId)
 		return err
 	}
+	writeErr := func(err error) error {
+		if publishErr := writeLoss(); publishErr != nil {
+			return publishErr
+		}
+		return err
+	}
 
 	latency, err := measureLatency(target, monitorType)
 	if err != nil {
+		if shouldTreatAsLoss(err) {
+			return writeLoss()
+		}
 		return writeErr(err)
 	}
 
@@ -90,6 +105,9 @@ func httpLatency(target string) (float32, error) {
 			return err
 		}
 		_ = resp.Body.Close()
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			return fmt.Errorf("%w: %d", errHTTPStatus, resp.StatusCode)
+		}
 		return nil
 	})
 }
@@ -112,6 +130,45 @@ func averageProbeLatency(target string, probe func() error) (float32, error) {
 		return 0, fmt.Errorf("failed to probe %s: %w", target, lastErr)
 	}
 	return float32(total / float64(success)), nil
+}
+
+func shouldTreatAsLoss(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, errHTTPStatus) {
+		return true
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return true
+	}
+
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return true
+	}
+
+	var syscallErr *os.SyscallError
+	if errors.As(err, &syscallErr) {
+		return true
+	}
+
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		switch {
+		case errors.Is(errno, syscall.ECONNREFUSED), errors.Is(errno, syscall.ECONNRESET), errors.Is(errno, syscall.ETIMEDOUT), errors.Is(errno, syscall.EHOSTUNREACH), errors.Is(errno, syscall.ENETUNREACH):
+			return true
+		}
+	}
+
+	return false
 }
 
 func Tracert(mode, target string, port uint64, replyTo, msgId string) error {
