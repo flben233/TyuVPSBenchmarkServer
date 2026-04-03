@@ -3,23 +3,22 @@ package store
 import (
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/inspector/model"
+	"VPSBenchmarkBackend/internal/inspector/util"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
-	qdb "github.com/questdb/go-questdb-client/v4"
 	"log"
 	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
-var senderPool *sync.Pool
+var senderPool *util.QDBPool
 var pgConn *pgxpool.Pool
 var validIntervalRegex = regexp.MustCompile(`^[1-9]\d*[smhd]$`)
 
@@ -47,7 +46,7 @@ func SaveTrafficPoints(points []model.TrafficPoint) error {
 	if len(points) == 0 {
 		return nil
 	}
-	sender := senderPool.Get().(qdb.LineSender)
+	sender := senderPool.Get()
 	defer senderPool.Put(sender)
 	for _, point := range points {
 		err := sender.Table(TrafficMeasurement).
@@ -66,7 +65,7 @@ func SavePingPoints(points []model.PingPoint) error {
 	if len(points) == 0 {
 		return nil
 	}
-	sender := senderPool.Get().(qdb.LineSender)
+	sender := senderPool.Get()
 	defer senderPool.Put(sender)
 	for _, point := range points {
 		err := sender.Table(PingMeasurement).
@@ -289,7 +288,7 @@ func ensureTables() error {
 	return nil
 }
 
-func buildQuestDB() (*sync.Pool, *pgxpool.Pool, error) {
+func buildQuestDB() (*util.QDBPool, *pgxpool.Pool, error) {
 	host := getEnv("QUESTDB_HOST", "127.0.0.1")
 	httpPort := getEnv("QUESTDB_HTTP_PORT", "9000")
 	pgPort := getEnv("QUESTDB_PG_PORT", "8812")
@@ -304,16 +303,7 @@ func buildQuestDB() (*sync.Pool, *pgxpool.Pool, error) {
 	if err = conn.Ping(ctx); err != nil {
 		return nil, nil, fmt.Errorf("failed to ping QuestDB: %w", err)
 	}
-	sPool := &sync.Pool{
-		New: func() any {
-			qdbSender, err := qdb.NewLineSender(context.Background(), qdb.WithHttp(), qdb.WithAddress(fmt.Sprintf("%s:%s", host, httpPort)), qdb.WithBasicAuth(user, pass))
-			if err != nil {
-				log.Printf("failed to create QuestDB line sender: %v", err)
-				return nil
-			}
-			return qdbSender
-		},
-	}
+	sPool, err := util.NewQDBPool(ctx, fmt.Sprintf("%s:%s", host, httpPort), user, pass, 16)
 	return sPool, conn, err
 }
 
