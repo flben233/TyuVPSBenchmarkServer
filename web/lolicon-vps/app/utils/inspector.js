@@ -253,11 +253,13 @@ export function normalizeVisitorHost(item = {}) {
 }
 
 export function normalizeVisitorPage(payload = {}) {
+  const hosts = Array.isArray(payload.hosts) ? payload.hosts.map((host) => normalizeVisitorHost(host)) : [];
+
   return {
     ownerName: payload.owner_name || "",
     ownerId: payload.owner_id || "",
     bgUrl: payload.bg_url || "",
-    hosts: Array.isArray(payload.hosts) ? payload.hosts.map((host) => normalizeVisitorHost(host)) : [],
+    hosts: sortHostsByName(hosts),
   };
 }
 
@@ -269,7 +271,7 @@ export function mergeHostData(hosts = [], queryData = []) {
     }),
   );
 
-  return hosts.map((host) => {
+  const merged = hosts.map((host) => {
     const normalizedHost = normalizeHost(host);
     const metrics = dataMap.get(normalizedHost.id);
 
@@ -291,6 +293,26 @@ export function mergeHostData(hosts = [], queryData = []) {
       latestPing: metrics.latestPing,
       ping: metrics.ping,
     };
+  });
+
+  return sortHostsByName(merged);
+}
+
+export function sortHostsByName(hosts = []) {
+  return [...hosts].sort((left, right) => {
+    const leftName = String(left?.name || "");
+    const rightName = String(right?.name || "");
+    const compared = leftName.localeCompare(rightName, "zh-Hans-CN-u-co-pinyin", {
+      sensitivity: "base",
+      numeric: true,
+    });
+    if (compared !== 0) {
+      return compared;
+    }
+
+    return String(left?.id || "").localeCompare(String(right?.id || ""), "zh-Hans-CN", {
+      numeric: true,
+    });
   });
 }
 
