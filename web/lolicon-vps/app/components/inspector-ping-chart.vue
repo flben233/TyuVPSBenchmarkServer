@@ -102,7 +102,7 @@ const chartOption = computed(() => {
             show: false,
           },
           lineStyle: {
-            color: "#f56c6c",
+            color: "rgba(245,108,108,0.5)",
             type: "solid",
             width: 1,
           },
