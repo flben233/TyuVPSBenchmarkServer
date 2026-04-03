@@ -35,6 +35,16 @@ services:
       - ./apprise/attach:/attach
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:management
+    restart: unless-stopped
+    ports:
+      - "25672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER:
+      RABBITMQ_DEFAULT_PASS:
+
   questdb:
     restart: unless-stopped
     image: questdb/questdb:latest
