@@ -4,3 +4,13 @@ services:
     restart: unless-stopped
     ports:
       - "20831:20831"
+    networks:
+      - v6net
+    volumes:
+      - type: bind
+        source: ./config.json
+        target: /app/config.json
+
+networks:
+  v6net:  # for ipv6 access
+    external: true
