@@ -1,9 +1,7 @@
 package mq
 
 import (
-	"VPSBenchmarkBackend/internal/cache"
 	"VPSBenchmarkBackend/internal/common"
-	"context"
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
@@ -26,13 +24,12 @@ func HandleQuery(taskID string) (*Task[any], error) {
 	if taskID == "" {
 		return nil, &common.InvalidParamError{Message: "Task ID is required"}
 	}
-	var task Task[any]
-	err := cache.GetJSON(context.Background(), taskID, &task)
+	task, err := GetTask[any](taskID)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, &common.InvalidParamError{Message: "Invalid task ID or task has expired"}
 		}
 		return nil, fmt.Errorf("failed to get task status from Redis: %w", err)
 	}
-	return &task, nil
+	return task, nil
 }

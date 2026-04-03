@@ -33,7 +33,7 @@ const chartOption = computed(() => {
       top: 8,
       right: 6,
       bottom: 12,
-      left: 20,
+      left: 6,
     },
     tooltip: {
       trigger: "axis",
@@ -59,6 +59,7 @@ const chartOption = computed(() => {
       axisLabel: {
         color: "#909399",
         fontSize: 11,
+        showMaxLabel: false,
       },
       axisLine: {
         lineStyle: { color: "#dcdfe6" },

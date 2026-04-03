@@ -17,7 +17,7 @@ import (
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body request.CreateHostRequest true "Host information"
+// @Param request body request.CreateHostRequest true "Host information, including target and optional monitor_type (ping|tcp|http)"
 // @Success 201 {object} common.APIResponse[any]
 // @Router /inspector/hosts/create [post]
 func CreateHost(ctx *gin.Context) {
@@ -33,7 +33,7 @@ func CreateHost(ctx *gin.Context) {
 		return
 	}
 
-	id, err := service.CreateHost(userID.(int64), req.Target, req.Name, req.Tags, req.Notify, req.NotifyTolerance)
+	id, err := service.CreateHost(userID.(int64), req.Target, req.MonitorType, req.Name, req.Tags, req.Notify, req.NotifyTolerance)
 	if err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return
@@ -50,7 +50,7 @@ func CreateHost(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "Host ID"
-// @Param request body request.UpdateHostRequest true "Host update information"
+// @Param request body request.UpdateHostRequest true "Host update information, including optional monitor_type (ping|tcp|http)"
 // @Success 200 {object} common.APIResponse[any]
 // @Router /inspector/hosts/update/{id} [post]
 func UpdateHost(ctx *gin.Context) {
@@ -72,7 +72,7 @@ func UpdateHost(ctx *gin.Context) {
 		return
 	}
 
-	err = service.UpdateHost(userID.(int64), hostID, req.Name, req.Tags, req.Target, req.Notify, req.NotifyTolerance)
+	err = service.UpdateHost(userID.(int64), hostID, req.Name, req.Tags, req.Target, req.MonitorType, req.Notify, req.NotifyTolerance)
 	if err != nil {
 		common.DefaultErrorHandler(ctx, err)
 		return
@@ -167,6 +167,7 @@ func PutData(ctx *gin.Context) {
 // QueryData
 //
 // @Summary Query Inspect Data
+// @Description Query monitor data for the current user. Supports ping, TCPing, and HTTPing based hosts.
 // @Tags inspector
 // @Accept json
 // @Produce json
@@ -201,6 +202,7 @@ func QueryData(ctx *gin.Context) {
 // GetVisitorPage
 //
 // @Summary Get Inspector Visitor Page
+// @Description Query the public visitor page data for a user's selected inspector hosts.
 // @Tags inspector
 // @Accept json
 // @Produce json

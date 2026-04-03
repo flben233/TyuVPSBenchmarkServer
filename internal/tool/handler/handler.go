@@ -14,14 +14,14 @@ type GenericMap map[string]interface{}
 
 // Traceroute handles traceroute requests.
 // @Summary Traceroute
-// @Description Perform a traceroute to a target. Supports query params `target`, `mode` (icmp|tcp), and `port`.
+// @Description Submit an asynchronous traceroute task. Supports query params `target`, `mode` (icmp|tcp), and `port`. Use `/task/status/{id}` to query the result.
 // @Tags tool
 // @Accept json
 // @Produce json
 // @Param target query string false "Target IP or domain"
 // @Param mode query string false "Mode: icmp or tcp"
 // @Param port query int false "Port for TCP mode"
-// @Success 200 {object} common.APIResponse[response.RawResponse]
+// @Success 200 {object} common.APIResponse[service.TracertResponse]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
 // @Router /tool/traceroute [get]

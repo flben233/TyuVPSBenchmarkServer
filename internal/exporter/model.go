@@ -3,21 +3,24 @@ package exporter
 import "time"
 
 const (
-	PingSentTopic    = "exporter_ping_sent"
-	PingRecvTopic    = "exporter_ping_recv"
-	TracertSentTopic = "exporter_tracert_sent"
-	TracertRecvTopic = "exporter_tracert_recv"
+	PingRoute    = "exporter_ping"
+	TracertRoute = "exporter_tracert"
+	ProbePing    = "ping"
+	ProbeTCP     = "tcp"
+	ProbeHTTP    = "http"
 )
 
 type PingResp struct {
-	HostID int64
-	Lat    float32
-	Time   time.Time
+	HostID      int64
+	Lat         float32
+	Time        time.Time
+	MonitorType string
 }
 
 type PingReq struct {
-	HostID int64
-	Target string
+	HostID      int64
+	Target      string
+	MonitorType string
 }
 
 type TracertReq struct {

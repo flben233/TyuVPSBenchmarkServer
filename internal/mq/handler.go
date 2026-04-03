@@ -7,15 +7,14 @@ import (
 )
 
 // QueryTaskStatus QueryReportTaskStatus handles GET /task/status/{id}
-// @Summary Query Report Task Status
-// @Description Query the status of an asynchronous report task by ID.
-// @Tags report
+// @Summary Query Async Task Status
+// @Description Query the status of an asynchronous task by ID. This endpoint is shared by report import and traceroute tasks.
+// @Tags mq
 // @Accept json
 // @Produce json
-// @Param id path string true "Report Task ID"
+// @Param id path string true "Task ID"
 // @Success 200 {object} common.APIResponse[Task[any]]
 // @Failure 400 {object} common.APIResponse[any]
-// @Failure 401 {object} common.APIResponse[any]
 // @Failure 500 {object} common.APIResponse[any]
 // @Router /task/status/{id} [get]
 func QueryTaskStatus(ctx *gin.Context) {

@@ -4,8 +4,8 @@ import (
 	"VPSBenchmarkBackend/internal/mq"
 	"encoding/json"
 	"fmt"
-	"github.com/segmentio/kafka-go"
-	"log"
+	"net"
+	"net/http"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -14,59 +14,107 @@ import (
 	probing "github.com/prometheus-community/pro-bing"
 )
 
-var (
-	pingWriter    *kafka.Writer
-	tracertWriter *kafka.Writer
-)
-
-func init() {
-	writer, err := mq.NewWriter(PingSentTopic)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka writer for ping topic: %v", err)
-	}
-	pingWriter = writer
-
-	writer, err = mq.NewWriter(TracertSentTopic)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka writer for tracert topic: %v", err)
-	}
-	tracertWriter = writer
-}
-
-func Ping(target string, hostID int64) error {
+func Probe(target string, hostID int64, monitorType, replyTo, msgId string) error {
 	writeErr := func(err error) error {
-		_, _ = mq.WriteJSONMessages(pingWriter, PingResp{
-			HostID: hostID,
-			Lat:    0,
-		})
+		_, err = mq.PublishJSONWithID(replyTo, "", PingResp{
+			HostID:      hostID,
+			Lat:         0,
+			MonitorType: monitorType,
+		}, msgId)
 		return err
 	}
-	// Query hosts
+
+	latency, err := measureLatency(target, monitorType)
+	if err != nil {
+		return writeErr(err)
+	}
+
+	_, err = mq.PublishJSONWithID(replyTo, "", PingResp{
+		HostID:      hostID,
+		Lat:         latency,
+		MonitorType: monitorType,
+	}, msgId)
+	if err != nil {
+		return writeErr(fmt.Errorf("failed to write probe result to Kafka: %w", err))
+	}
+	return nil
+}
+
+func measureLatency(target, monitorType string) (float32, error) {
+	switch strings.ToLower(strings.TrimSpace(monitorType)) {
+	case "", ProbePing:
+		return pingLatency(target)
+	case ProbeTCP:
+		return tcpLatency(target)
+	case ProbeHTTP:
+		return httpLatency(target)
+	default:
+		return 0, fmt.Errorf("unsupported monitor type: %s", monitorType)
+	}
+}
+
+func pingLatency(target string) (float32, error) {
 	pinger, err := probing.NewPinger(target)
 	if err != nil {
-		return writeErr(fmt.Errorf("failed to create pinger for %s: %v", target, err))
+		return 0, fmt.Errorf("failed to create pinger for %s: %v", target, err)
 	}
 	pinger.SetPrivileged(true)
 	pinger.Count = 3
 	pinger.Timeout = 1000 * time.Millisecond
 	err = pinger.Run()
 	if err != nil {
-		return writeErr(fmt.Errorf("failed to ping %s: %v", target, err))
+		return 0, fmt.Errorf("failed to ping %s: %v", target, err)
 	}
 	stats := pinger.Statistics()
-	if stats != nil {
-		_, err = mq.WriteJSONMessages(pingWriter, PingResp{
-			HostID: hostID,
-			Lat:    float32(stats.AvgRtt.Milliseconds()),
-		})
-		if err != nil {
-			return writeErr(fmt.Errorf("failed to write ping result to Kafka: %w", err))
-		}
+	if stats == nil {
+		return 0, fmt.Errorf("ping statistics is nil for %s", target)
 	}
-	return writeErr(fmt.Errorf("ping statistics is nil for %s", target))
+	return float32(stats.AvgRtt.Milliseconds()), nil
 }
 
-func Tracert(mode, target string, port uint64) error {
+func tcpLatency(target string) (float32, error) {
+	return averageProbeLatency(target, func() error {
+		conn, err := net.DialTimeout("tcp", target, 3*time.Second)
+		if err != nil {
+			return err
+		}
+		return conn.Close()
+	})
+}
+
+func httpLatency(target string) (float32, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+	return averageProbeLatency(target, func() error {
+		resp, err := client.Get(target)
+		if err != nil {
+			return err
+		}
+		_ = resp.Body.Close()
+		return nil
+	})
+}
+
+func averageProbeLatency(target string, probe func() error) (float32, error) {
+	const attempts = 3
+	var total float64
+	var success int
+	var lastErr error
+	for i := 0; i < attempts; i++ {
+		startedAt := time.Now()
+		if err := probe(); err != nil {
+			lastErr = err
+			continue
+		}
+		total += float64(time.Since(startedAt).Milliseconds())
+		success++
+	}
+	if success == 0 {
+		return 0, fmt.Errorf("failed to probe %s: %w", target, lastErr)
+	}
+	return float32(total / float64(success)), nil
+}
+
+func Tracert(mode, target string, port uint64, replyTo, msgId string) error {
 	// Needs to install nexttrace
 	var cmd *exec.Cmd
 	params := []string{"--json"}
@@ -83,21 +131,21 @@ func Tracert(mode, target string, port uint64) error {
 	cmd = exec.Command("nexttrace", params...)
 	body, err := cmd.Output()
 	if err != nil {
-		_, _ = mq.WriteJSONMessages(tracertWriter, TracertResp{})
+		_, _ = mq.PublishJSONWithID(replyTo, "", TracertResp{}, msgId)
 		return fmt.Errorf("failed to execute tracert command: %w", err)
 	}
 	bodyStr := string(body)[strings.Index(string(body), "{"):]
 	var result map[string]interface{}
 	err = json.Unmarshal([]byte(bodyStr), &result)
 	if err != nil {
-		_, _ = mq.WriteJSONMessages(tracertWriter, TracertResp{})
+		_, _ = mq.PublishJSONWithID(replyTo, "", TracertResp{}, msgId)
 		return fmt.Errorf("failed to execute tracert command: %w", err)
 	}
-	_, err = mq.WriteJSONMessages(tracertWriter, TracertResp{
+	_, err = mq.PublishJSONWithID(replyTo, "", TracertResp{
 		Result: result,
-	})
+	}, msgId)
 	if err != nil {
-		return fmt.Errorf("failed to write tracert result to Kafka: %w", err)
+		return fmt.Errorf("failed to write tracert result to MQ: %w", err)
 	}
 	return nil
 }

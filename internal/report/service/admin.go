@@ -12,32 +12,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/segmentio/kafka-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const (
-	reportTopic = "report_processing"
-	reportGroup = "report_processor_group"
-)
-
-var kafWriter *kafka.Writer
+const reportRoute = "report_processing"
 
 func init() {
-	writer, err := mq.NewWriter(reportTopic)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka writer: %v", err)
-	}
-	kafWriter = writer
-	// Subscribe to Kafka topic for report processing
-	reader, err := mq.NewReader(reportTopic, reportGroup)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka reader: %v", err)
-	}
-	mq.Subscribe(reader, context.Background(), processReports)
+	// Subscribe to mq for report processing
+	mq.LateSubscribe(reportRoute, context.Background(), processReports)
 }
 
 // generateID generates a random ID for reports
@@ -47,14 +33,14 @@ func generateID() string {
 	return hex.EncodeToString(b)
 }
 
-func processReports(msg *kafka.Message) error {
+func processReports(msg *amqp.Delivery) error {
 	var reqArr []request.AddReportRequest
-	err := json.Unmarshal(msg.Value, &reqArr)
+	err := json.Unmarshal(msg.Body, &reqArr)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal report processing request: %w", err)
 	}
 
-	task, err := mq.GetTask[model.AddReportTask](string(msg.Key))
+	task, err := mq.GetTask[model.AddReportTask](msg.MessageId)
 	if err != nil {
 		return fmt.Errorf("failed to get report task from Redis: %w", err)
 	}
@@ -248,12 +234,12 @@ func addReport(rawHTML string, monitorID *int64, otherInfo string) (string, erro
 }
 
 func AddReportsAsync(request []request.AddReportRequest) (string, error) {
-	taskIDs, err := mq.WriteJSONMessages(kafWriter, request)
+	id, err := mq.PublishJSONWithID(reportRoute, "", request, "")
 	if err != nil {
 		return "", fmt.Errorf("failed to enqueue report processing task: %w", err)
 	}
 	task := mq.Task[model.AddReportTask]{
-		ID:       taskIDs[0],
+		ID:       id,
 		Status:   mq.TaskPending,
 		Progress: 0,
 		Result:   model.AddReportTask{Failed: make([]int, 0)},
@@ -262,7 +248,7 @@ func AddReportsAsync(request []request.AddReportRequest) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal report task data: %w", err)
 	}
-	return taskIDs[0], nil
+	return id, nil
 }
 
 // DeleteReport removes a report from the database

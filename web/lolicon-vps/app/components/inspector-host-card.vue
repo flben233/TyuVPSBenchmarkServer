@@ -24,9 +24,15 @@ const emit = defineEmits(["edit", "delete"]);
 const expanded = ref(false);
 const showId = ref(false)
 const showIp = ref(false)
+const monitorTypeLabelMap = {
+  ping: "Ping",
+  tcp: "TCPing",
+  http: "HTTPing",
+};
 const isAgentActive = computed(() => Number(props.host.uptimeSeconds) > 0);
 const isOnline = computed(() => props.host.latestPing > 0);
 const latestPingText = computed(() => getLatestPingValue(props.host.ping, props.host.latestPing));
+const monitorTypeLabel = computed(() => monitorTypeLabelMap[props.host.monitorType] || "Ping");
 const packetLossRateText = computed(() => {
   return formatPercent(props.host.loss * 100);
 });
@@ -85,7 +91,7 @@ const detailItems = computed(() => {
         <div class="host-text">
           <div class="host-name">{{ host.name }}</div>
           <div class="host-subtitle">
-            {{ isAgentActive ? "Agent 已连接" : "未接入 Agent" }}
+            {{ isAgentActive ? `Agent 已连接 · ${monitorTypeLabel}` : `独立监控 · ${monitorTypeLabel}` }}
           </div>
         </div>
       </div>
@@ -110,6 +116,7 @@ const detailItems = computed(() => {
             <el-tag size="small" :type="host.notify ? 'warning' : 'info'" effect="dark" v-if="!readOnly">
               {{ host.notify ? "通知已开启" : "通知未开启" }}
             </el-tag>
+            <el-tag size="small" type="success" effect="dark">{{ monitorTypeLabel }}</el-tag>
             <el-tag size="small" type="info" effect="dark">
               {{ host.lastUpdate ? `上次上报 ${formatUptime((Date.now() - new Date(host.lastUpdate).getTime()) / 1000)} 前` : "未上报" }}
             </el-tag>
@@ -151,7 +158,7 @@ const detailItems = computed(() => {
         <div class="chart-grid" :class="{ single: !isAgentActive }">
           <InspectorTrafficChart v-if="isAgentActive" :sent="host.sent" :recv="host.recv" />
           <div class="detail-panel ping-panel">
-            <div class="panel-title">Ping 趋势</div>
+            <div class="panel-title">{{ monitorTypeLabel }} 趋势</div>
             <InspectorPingChart :points="host.ping" />
           </div>
         </div>

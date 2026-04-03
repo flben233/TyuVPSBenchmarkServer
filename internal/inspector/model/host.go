@@ -9,6 +9,7 @@ type InspectHost struct {
 	ID              int64     `gorm:"primaryKey" json:"id"`
 	UserID          int64     `json:"user_id"`
 	Target          string    `json:"target"`
+	MonitorType     string    `json:"monitor_type" gorm:"default:ping"`
 	Name            string    `json:"name"`
 	Tags            string    `json:"tags"` // json array of strings
 	Notify          bool      `json:"notify"`

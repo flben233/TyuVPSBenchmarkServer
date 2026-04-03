@@ -31,6 +31,7 @@ const dialogVisible = computed({
 const form = ref({
   name: "",
   target: "",
+  monitorType: "ping",
   tagsInput: "",
   notify: false,
   notifyTolerance: 0,
@@ -48,6 +49,7 @@ watch(
     form.value = {
       name: props.host?.name || "",
       target: props.host?.target || "",
+      monitorType: props.host?.monitorType || "ping",
       tagsInput: Array.isArray(props.host?.tags) ? props.host.tags.join(", ") : "",
       notify: Boolean(props.host?.notify),
       notifyTolerance: Math.max(0, Math.floor(Number(props.host?.notifyTolerance) || 0)),
@@ -62,9 +64,20 @@ function handleSubmit() {
     return;
   }
 
+  if (form.value.monitorType === "tcp" && !form.value.target.includes(":")) {
+    warn("TCP 监控目标请使用 host:port 格式");
+    return;
+  }
+
+  if (form.value.monitorType === "http" && !/^https?:\/\//i.test(form.value.target.trim())) {
+    warn("HTTPing 监控目标请使用 http:// 或 https:// 开头的完整 URL");
+    return;
+  }
+
   emit("submit", {
     name: form.value.name.trim(),
     target: form.value.target.trim(),
+    monitor_type: form.value.monitorType,
     tags: stringifyTagList(form.value.tagsInput),
     notify: Boolean(form.value.notify),
     notify_tolerance: Math.max(0, Math.floor(Number(form.value.notifyTolerance) || 0)),
@@ -84,7 +97,19 @@ function handleSubmit() {
         <el-input v-model="form.name" placeholder="例如：Tokyo CN2" maxlength="64" />
       </el-form-item>
       <el-form-item label="目标地址">
-        <el-input v-model="form.target" placeholder="请输入 IP 或域名" maxlength="128" />
+        <el-input
+          v-model="form.target"
+          :placeholder="form.monitorType === 'http' ? '请输入完整 URL，例如 https://example.com' : form.monitorType === 'tcp' ? '请输入 host:port，例如 1.1.1.1:443' : '请输入 IP 或域名'"
+          maxlength="256"
+        />
+      </el-form-item>
+      <el-form-item label="监控类型">
+        <el-radio-group v-model="form.monitorType">
+          <el-radio-button label="ping">Ping</el-radio-button>
+          <el-radio-button label="tcp">TCPing</el-radio-button>
+          <el-radio-button label="http">HTTPing</el-radio-button>
+        </el-radio-group>
+        <div class="field-tip">Ping 使用 ICMP；TCPing 使用 TCP 建连；HTTPing 使用 HTTP 请求首包耗时。</div>
       </el-form-item>
       <el-form-item label="标签">
         <el-input
