@@ -51,11 +51,11 @@ func DeleteHost(id int64) error {
 }
 
 func ListHostsByUser(userID int64) ([]model.InspectHost, error) {
-	return hosts.Where("user_id = ?", userID).Order("name asc").Find(context.Background())
+	return hosts.Where("user_id = ?", userID).Find(context.Background())
 }
 
 func ListAllHost() ([]model.InspectHost, error) {
-	return hosts.Order("name asc").Find(context.Background())
+	return hosts.Find(context.Background())
 }
 
 func GetHostIDByUser(userID int64) []int64 {
