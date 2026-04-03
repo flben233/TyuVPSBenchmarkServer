@@ -43,14 +43,40 @@ export function useTool() {
         query,
       });
 
-      if (resp && resp.code === 0) {
-        return resp;
+      if (resp && resp.code === 0 && resp.data?.task_id) {
+        const polled = await pollTaskStatus(resp.data.task_id);
+        if (!polled.success) {
+          return { code: -1, message: polled.message, data: null };
+        }
+
+        return { code: 0, message: "success", data: polled.data };
       }
       return { code: -1, message: "Failed to perform traceroute", data: null };
     } catch (error) {
       console.error("Failed to perform traceroute:", error);
       return { code: -1, message: error.message, data: null };
     }
+  }
+
+  async function pollTaskStatus(taskId) {
+    const maxAttempts = 120;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const resp = await $fetch(`${backendUrl}/task/status/${taskId}`, {
+        method: "GET",
+      });
+
+      if (!resp || resp.code !== 0) {
+        return { success: false, message: resp?.message || "任务状态查询失败" };
+      }
+
+      if (resp.data?.status === "done") {
+        return { success: true, data: resp.data.result };
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    return { success: false, message: "任务执行超时，请稍后重试" };
   }
 
   async function whois(target) {

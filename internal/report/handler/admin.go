@@ -12,12 +12,12 @@ import (
 
 // AddReport handles POST /report/admin/add
 // @Summary Add Report (Admin)
-// @Description Async submit reports. Request should be JSON with `html` field. Requires admin authentication.
+// @Description Submit one or more reports asynchronously. The request body must be a JSON array of report payloads. Use `/task/status/{id}` to query task progress and result.
 // @Tags report
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body []request.AddReportRequest
+// @Param request body []request.AddReportRequest true "Report payload list"
 // @Success 201 {object} common.APIResponse[response.AddReportResponse]
 // @Failure 400 {object} common.APIResponse[any]
 // @Failure 401 {object} common.APIResponse[any]
@@ -74,8 +74,8 @@ func DeleteReport(ctx *gin.Context) {
 }
 
 // UpdateReport handles POST /report/admin/update
-// @Summary Update the Monitor ID of a Report (Admin)
-// @Description Update the monitor ID of a report by ID. Requires admin authentication.
+// @Summary Update Report Metadata (Admin)
+// @Description Update the bound monitor ID and other info of a report by ID. Requires admin authentication.
 // @Tags report
 // @Accept json
 // @Produce json

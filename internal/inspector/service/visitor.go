@@ -76,6 +76,7 @@ func GetVisitorPage(ownerID, start, end int64, interval string) (*response.Visit
 			Loss:         lossRate,
 			Sent:         sent,
 			Recv:         recv,
+			MonitorType:  host.MonitorType,
 			Name:         host.Name,
 			Tags:         host.Tags,
 			LatestPing:   latestPing,

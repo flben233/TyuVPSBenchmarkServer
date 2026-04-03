@@ -9,6 +9,7 @@ import (
 	_ "VPSBenchmarkBackend/internal/inspector"
 	_ "VPSBenchmarkBackend/internal/lookingglass"
 	_ "VPSBenchmarkBackend/internal/monitor"
+	"VPSBenchmarkBackend/internal/mq"
 	_ "VPSBenchmarkBackend/internal/mq"
 	_ "VPSBenchmarkBackend/internal/report"
 	_ "VPSBenchmarkBackend/internal/tool"
@@ -37,12 +38,19 @@ func main() {
 	}
 	log.Println("Database initialized successfully at", dbPath)
 
-	// Initialize redis
 	cfg := config.Get()
+
+	// Initialize redis
 	if err := cache.InitRedis(cfg.RedisHost, cfg.RedisPasswd, 0); err != nil {
 		log.Fatalf("Failed to initialize Redis: %v", err)
 	}
 	log.Println("Redis initialized successfully at", cfg.RedisHost)
+
+	// Initialize mq
+	if err := mq.InitMQ(cfg.RabbitMQURL, cfg.RabbitMQPoolSize); err != nil {
+		log.Fatalf("Failed to initialize message queue: %v", err)
+	}
+	log.Println("Message queue initialized successfully")
 
 	// Start background cron jobs
 	common.RunCronJobs()

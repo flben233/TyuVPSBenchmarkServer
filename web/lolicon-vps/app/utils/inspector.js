@@ -191,6 +191,7 @@ export function normalizeHost(host = {}) {
   return {
     id: host.id,
     target: host.target || "",
+    monitorType: host.monitor_type || "ping",
     name: host.name || `Server ${host.id || ""}`.trim(),
     tags: parseTagList(host.tags),
     rawTags: host.tags || "",

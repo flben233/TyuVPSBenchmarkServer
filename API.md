@@ -117,10 +117,23 @@
 
 ### 4. 添加报告
 `POST /report/admin/add` (需 JWT)
-- **请求体:** `AddReportRequest` (body/HTML)
-- **返回:** `{ "code": 200, "message": "添加成功", "data": { "id": 123 } }`
+- **请求体:** `[]AddReportRequest`，支持批量异步导入
+- **返回:** `{ "code": 0, "message": "Report added successfully", "data": { "id": "task-id" } }`
 
-### 5. 更新报告对应 Monitor ID
+### 5. 查询异步任务状态
+`GET /task/status/{id}`
+- **参数:** `id` (path, string) - 异步任务 ID
+- **返回:** `Task[any]`
+  ```json
+  {
+    "id": "task-id",
+    "status": "pending|running|done",
+    "progress": 0.5,
+    "result": {}
+  }
+  ```
+
+### 6. 更新报告对应 Monitor ID
 `POST /report/admin/delete` (需 JWT)
 - **请求体:** `UpdateReportRequest` (body)
 - **返回:** `{ "code": 200, "message": "更新成功" }`
@@ -139,7 +152,8 @@
   ```json
   {
     "name": "主机名",
-    "target": "检测目标 (IP/域名)"
+    "target": "检测目标 (IP/域名、host:port 或 URL)",
+    "monitor_type": "ping|tcp|http"
   }
   ```
 - **返回:** `{ "data": { "id": 123 } }`
@@ -161,7 +175,20 @@
   - `start`: 开始时间 (纳秒时间戳)
   - `end`: 结束时间 (纳秒时间戳)
   - `interval`: 聚合间隔 (如 `1h`, `30m`)
-- **返回:** `[]response.HostData` (包含一段时间内的 Ping 和流量趋势)
+- **返回:** `[]response.HostData` (包含一段时间内的 Ping/TCPing/HTTPing 趋势；接入 Agent 的主机同时包含流量与资源数据)
+
+---
+
+## 工具模块 (Tool)
+
+### 1. 路由追踪
+`GET /tool/traceroute`
+- **参数:**
+  - `target`: 目标 IP 或域名
+  - `mode`: `icmp` 或 `tcp`
+  - `port`: TCP 模式端口，可选
+- **返回:** `{ "code": 0, "data": { "task_id": "task-id" } }`
+- **说明:** 接口已改为异步，结果需通过 `GET /task/status/{id}` 轮询获取
 
 ### 6. 上报检测数据 (Agent 使用)
 `POST /inspector/data/put`

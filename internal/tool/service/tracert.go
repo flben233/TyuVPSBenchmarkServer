@@ -5,7 +5,7 @@ import (
 	"VPSBenchmarkBackend/internal/mq"
 	"context"
 	"encoding/json"
-	"github.com/segmentio/kafka-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type TracertRequest struct {
@@ -18,29 +18,19 @@ type TracertResponse struct {
 	TaskID string `json:"task_id"`
 }
 
-var tracertWriter *kafka.Writer
+const tracertSource = "tool_tracert"
 
 func init() {
-	writer, err := mq.NewWriter(exporter.TracertSentTopic)
-	if err != nil {
-		panic(err)
-	}
-	tracertWriter = writer
-
-	reader, err := mq.NewReader(exporter.TracertRecvTopic, "tracert_processor_group")
-	if err != nil {
-		panic(err)
-	}
-	mq.Subscribe(reader, context.Background(), postTracert)
+	mq.LateSubscribe(tracertSource, context.Background(), postTracert)
 }
 
-func postTracert(msg *kafka.Message) error {
+func postTracert(msg *amqp.Delivery) error {
 	var resp exporter.TracertResp
-	if err := json.Unmarshal(msg.Value, &resp); err != nil {
+	if err := json.Unmarshal(msg.Body, &resp); err != nil {
 		return err
 	}
 	err := mq.SetTask(mq.Task[map[string]interface{}]{
-		ID:       string(msg.Key),
+		ID:       msg.MessageId,
 		Status:   mq.TaskDone,
 		Progress: 1.0,
 		Result:   resp.Result,
@@ -52,16 +42,16 @@ func postTracert(msg *kafka.Message) error {
 }
 
 func Traceroute(req *TracertRequest) (string, error) {
-	taskID, err := mq.WriteJSONMessages(tracertWriter, exporter.TracertReq{
+	taskID, err := mq.PublishJSONWithID(exporter.TracertRoute, tracertSource, exporter.TracertReq{
 		Mode:   req.Mode,
 		Target: req.Target,
 		Port:   uint64(req.Port),
-	})
+	}, "")
 	if err != nil {
 		return "", err
 	}
 	err = mq.SetTask(mq.Task[any]{
-		ID:       taskID[0],
+		ID:       taskID,
 		Status:   mq.TaskPending,
 		Progress: 0.0,
 		Result:   nil,
@@ -69,5 +59,5 @@ func Traceroute(req *TracertRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return taskID[0], nil
+	return taskID, nil
 }

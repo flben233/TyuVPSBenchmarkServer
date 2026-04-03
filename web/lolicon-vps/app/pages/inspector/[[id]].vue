@@ -435,6 +435,7 @@ async function handleUpdateHost(payload) {
   const result = await updateHost(selectedHost.value.id, {
     name: payload.name,
     target: payload.target,
+    monitor_type: payload.monitor_type,
     tags: payload.tags,
     notify: payload.notify,
     notify_tolerance: payload.notify_tolerance,

@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/segmentio/kafka-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/gorm"
 	"io"
 	"log"
@@ -27,57 +27,42 @@ import (
 	"time"
 )
 
-var (
-	putRecord = make(map[int64]time.Time)
-	kafWriter *kafka.Writer
-)
+var putRecord = make(map[int64]time.Time)
 
 const (
-	pingInterval  = 120 * time.Second
-	putInterval   = 30 * time.Second
-	putMaxLength  = 1
-	pingSentTopic = "inspector_ping_sent"
-	pingRecvGroup = "inspector_ping_group"
+	pingInterval = 120 * time.Second
+	putInterval  = 30 * time.Second
+	putMaxLength = 1
+	pingSource   = "inspector_ping"
 )
 
 func init() {
 	common.RegisterCronJob(pingInterval, pingHosts)
-	writer, err := mq.NewWriter(pingSentTopic)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka writer: %v", err)
-	}
-	reader, err := mq.NewReader(exporter.PingRecvTopic, pingRecvGroup)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka reader: %v", err)
-	}
-	kafWriter = writer
-	mq.Subscribe(reader, context.Background(), postPing)
+	mq.LateSubscribe(pingSource, context.Background(), postPing)
 }
 
-// 向Kafka提交Ping任务，由Exporter消费并执行，结果再由Exporter提交到另一个Kafka主题
+// 向mq提交Ping任务，由Exporter消费并执行，然后异步接受结果
 func pingHosts() {
 	hosts, err := store.ListAllHost()
 	if err != nil {
 		log.Printf("Failed to list all hosts for pinging: %v", err)
 		return
 	}
-	targets := make([]any, len(hosts))
-	for i, host := range hosts {
-		targets[i] = exporter.PingReq{
-			HostID: host.ID,
-			Target: host.Target,
+	for _, host := range hosts {
+		err = mq.PublishJSON(exporter.PingRoute, pingSource, exporter.PingReq{
+			HostID:      host.ID,
+			Target:      host.Target,
+			MonitorType: host.MonitorType,
+		})
+		if err != nil {
+			log.Printf("Failed to write ping messages to mq: %v", err)
 		}
-	}
-	_, err = mq.WriteJSONMessages(kafWriter, targets...)
-	if err != nil {
-		log.Printf("Failed to write ping messages to Kafka: %v", err)
-		return
 	}
 }
 
-func postPing(msg *kafka.Message) error {
+func postPing(msg *amqp.Delivery) error {
 	var resp exporter.PingResp
-	err := json.Unmarshal(msg.Value, &resp)
+	err := json.Unmarshal(msg.Body, &resp)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal ping message: %v", err)
 	}
@@ -128,7 +113,7 @@ func postPing(msg *kafka.Message) error {
 	return nil
 }
 
-func CreateHost(userID int64, target, name, tags string, notify bool, notifyTolerance int64) (int64, error) {
+func CreateHost(userID int64, target, monitorType, name, tags string, notify bool, notifyTolerance int64) (int64, error) {
 	hosts, err := store.CountUserHosts(userID)
 	if err != nil {
 		return 0, err
@@ -147,6 +132,7 @@ func CreateHost(userID int64, target, name, tags string, notify bool, notifyTole
 		ID:              id,
 		UserID:          userID,
 		Target:          target,
+		MonitorType:     monitorType,
 		Name:            name,
 		Tags:            tags,
 		Notify:          notify,
@@ -158,7 +144,7 @@ func CreateHost(userID int64, target, name, tags string, notify bool, notifyTole
 	return host.ID, nil
 }
 
-func UpdateHost(userID int64, hostID int64, name, tags, target string, notify bool, notifyTolerance int64) error {
+func UpdateHost(userID int64, hostID int64, name, tags, target, monitorType string, notify bool, notifyTolerance int64) error {
 	// 校验主机属于当前用户
 	ids := store.GetHostIDByUser(userID)
 	found := false
@@ -179,6 +165,7 @@ func UpdateHost(userID int64, hostID int64, name, tags, target string, notify bo
 	host.Name = name
 	host.Tags = tags
 	host.Target = target
+	host.MonitorType = monitorType
 	host.Notify = notify
 	host.NotifyTolerance = notifyTolerance
 
@@ -210,14 +197,16 @@ func ListHosts(userID int64) ([]response.HostListResponse, error) {
 	inspectHosts := make([]response.HostListResponse, len(hosts))
 	for i, host := range hosts {
 		inspectHosts[i] = response.HostListResponse{
-			ID:           strconv.FormatInt(host.ID, 10),
-			UserID:       host.UserID,
-			Target:       host.Target,
-			Name:         host.Name,
-			Tags:         host.Tags,
-			Notify:       host.Notify,
-			LastUpdate:   host.LastUpdate,
-			ServerStatus: host.ServerStatus,
+			ID:              strconv.FormatInt(host.ID, 10),
+			UserID:          host.UserID,
+			Target:          host.Target,
+			MonitorType:     host.MonitorType,
+			Name:            host.Name,
+			Tags:            host.Tags,
+			Notify:          host.Notify,
+			NotifyTolerance: host.NotifyTolerance,
+			LastUpdate:      host.LastUpdate,
+			ServerStatus:    host.ServerStatus,
 		}
 	}
 	return inspectHosts, nil
@@ -285,18 +274,20 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 			return nil, err
 		}
 		data[i] = &response.HostData{
-			Ping:         pingPoints,
-			Loss:         lossRate,
-			Sent:         sent,
-			Recv:         recv,
-			ID:           strconv.FormatInt(host.ID, 10),
-			Target:       host.Target,
-			Name:         host.Name,
-			Tags:         host.Tags,
-			Notify:       host.Notify,
-			LatestPing:   latestPing,
-			LastUpdate:   host.LastUpdate,
-			ServerStatus: host.ServerStatus,
+			Ping:            pingPoints,
+			Loss:            lossRate,
+			Sent:            sent,
+			Recv:            recv,
+			ID:              strconv.FormatInt(host.ID, 10),
+			Target:          host.Target,
+			MonitorType:     host.MonitorType,
+			Name:            host.Name,
+			Tags:            host.Tags,
+			Notify:          host.Notify,
+			NotifyTolerance: host.NotifyTolerance,
+			LatestPing:      latestPing,
+			LastUpdate:      host.LastUpdate,
+			ServerStatus:    host.ServerStatus,
 		}
 	}
 	return data, nil
@@ -350,33 +341,6 @@ func UpdateUserSettings(userID int64, notifyURL, bgURL *string, visitorEnabled b
 
 func TestNotify(notifyURL string) {
 	tryNotify(notifyURL, "这是一条测试通知")
-}
-
-func queryHost(target string) (float32, error) {
-	req, err := json.Marshal([]string{target})
-	if err != nil {
-		log.Printf("Failed to marshal targets: %v", err)
-		return 0, err
-	}
-	resp, err := http.Post(config.Get().ExporterURL+"/monitor", "application/json", bytes.NewReader(req))
-	if err != nil {
-		log.Printf("Failed to get exporter data: %v", err)
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Failed to read exporter response body: %v", err)
-		return 0, err
-	}
-	var data map[string]float32
-	err = json.Unmarshal(bodyBytes, &data)
-	if err != nil {
-		log.Printf("Failed to unmarshal exporter response: %v", err)
-		return 0, err
-	}
-	return data[target], nil
 }
 
 func tryNotify(notifyURL string, message string) {

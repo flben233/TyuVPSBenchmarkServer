@@ -156,7 +156,7 @@ async function handleAddReport() {
         otherInfo.value || undefined
       );
       if (result.success) {
-        success(`报告添加成功。ID: ${result.data.id}`);
+        success("报告添加成功");
         addReportDialogVisible.value = false;
         reportFile.value = null;
         selectedMonitorId.value = null;

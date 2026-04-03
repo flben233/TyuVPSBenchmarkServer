@@ -8,7 +8,7 @@ import (
 )
 
 func TestMainParser(t *testing.T) {
-	data, err := os.ReadFile("testdata/report_example.html")
+	data, err := os.ReadFile("D:\\IdeaProjects\\VPSBenchmarkBackend\\test\\testdata\\【sadidc.com】每月12元起，伤心的云美国原生IP云服务器测试.html")
 	if err != nil {
 		t.Fatalf("Failed to read test data: %v", err)
 	}

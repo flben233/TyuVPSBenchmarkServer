@@ -15,10 +15,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-var sender qdb.LineSender
+var senderPool *sync.Pool
 var pgConn *pgxpool.Pool
 var validIntervalRegex = regexp.MustCompile(`^[1-9]\d*[smhd]$`)
 
@@ -32,7 +33,7 @@ const (
 
 func init() {
 	var err error
-	sender, pgConn, err = buildQuestDB()
+	senderPool, pgConn, err = buildQuestDB()
 	if err != nil {
 		panic("failed to initialize QuestDB client: " + err.Error())
 	}
@@ -46,6 +47,8 @@ func SaveTrafficPoints(points []model.TrafficPoint) error {
 	if len(points) == 0 {
 		return nil
 	}
+	sender := senderPool.Get().(qdb.LineSender)
+	defer senderPool.Put(sender)
 	for _, point := range points {
 		err := sender.Table(TrafficMeasurement).
 			Symbol("host_id", strconv.FormatInt(point.HostID, 10)).
@@ -63,6 +66,8 @@ func SavePingPoints(points []model.PingPoint) error {
 	if len(points) == 0 {
 		return nil
 	}
+	sender := senderPool.Get().(qdb.LineSender)
+	defer senderPool.Put(sender)
 	for _, point := range points {
 		err := sender.Table(PingMeasurement).
 			Symbol("host_id", strconv.FormatInt(point.HostID, 10)).
@@ -284,7 +289,7 @@ func ensureTables() error {
 	return nil
 }
 
-func buildQuestDB() (qdb.LineSender, *pgxpool.Pool, error) {
+func buildQuestDB() (*sync.Pool, *pgxpool.Pool, error) {
 	host := getEnv("QUESTDB_HOST", "127.0.0.1")
 	httpPort := getEnv("QUESTDB_HTTP_PORT", "9000")
 	pgPort := getEnv("QUESTDB_PG_PORT", "8812")
@@ -299,12 +304,17 @@ func buildQuestDB() (qdb.LineSender, *pgxpool.Pool, error) {
 	if err = conn.Ping(ctx); err != nil {
 		return nil, nil, fmt.Errorf("failed to ping QuestDB: %w", err)
 	}
-	qdbSender, err := qdb.NewLineSender(context.Background(), qdb.WithHttp(), qdb.WithAddress(fmt.Sprintf("%s:%s", host, httpPort)), qdb.WithBasicAuth(user, pass))
-	if err != nil {
-		conn.Close()
-		return nil, nil, fmt.Errorf("failed to create QuestDB line sender: %w", err)
+	sPool := &sync.Pool{
+		New: func() any {
+			qdbSender, err := qdb.NewLineSender(context.Background(), qdb.WithHttp(), qdb.WithAddress(fmt.Sprintf("%s:%s", host, httpPort)), qdb.WithBasicAuth(user, pass))
+			if err != nil {
+				log.Printf("failed to create QuestDB line sender: %v", err)
+				return nil
+			}
+			return qdbSender
+		},
 	}
-	return qdbSender, conn, err
+	return sPool, conn, err
 }
 
 func getEnv(key string, fallback string) string {

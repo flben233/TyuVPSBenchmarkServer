@@ -44,6 +44,8 @@ export default defineNuxtConfig({
     "/slide/**": { cache: { maxAge: 300 } },
     "/inspector": { ssr: false },
     "/inspector/**": { ssr: false },
+    "/webssh": { ssr: false },
+    "/webssh/**": { ssr: false },
     "/tools/**": { prerender: true },
     "/center": { prerender: true },
     "/index": { cache: { maxAge: 300 } },

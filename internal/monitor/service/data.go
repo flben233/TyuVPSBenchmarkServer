@@ -2,22 +2,26 @@ package service
 
 import (
 	"VPSBenchmarkBackend/internal/common"
-	"VPSBenchmarkBackend/internal/config"
+	"VPSBenchmarkBackend/internal/exporter"
 	"VPSBenchmarkBackend/internal/monitor/model"
 	"VPSBenchmarkBackend/internal/monitor/response"
 	"VPSBenchmarkBackend/internal/monitor/store"
-	"bytes"
+	"VPSBenchmarkBackend/internal/mq"
+	"context"
 	"encoding/json"
-	"io"
+	"fmt"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
-	"net/http"
 	"strconv"
 	"time"
 )
 
+const pingSource = "monitor_ping"
+
 func init() {
 	interval := 120 * time.Second
 	common.RegisterCronJob(interval, queryHosts)
+	mq.LateSubscribe(pingSource, context.Background(), handlePingResult)
 }
 
 // TODO: 也记录路由追踪历史
@@ -27,44 +31,38 @@ func queryHosts() {
 	if err != nil || len(hosts) == 0 {
 		return
 	}
-	// Extract targets
-	targets := make([]string, len(hosts))
-	hostMap := make(map[string]*model.MonitorHost)
-	for i, host := range hosts {
-		targets[i] = host.Target
-		hostMap[host.Target] = &hosts[i]
-	}
-	req, err := json.Marshal(targets)
-	if err != nil {
-		log.Printf("Failed to marshal targets: %v", err)
-		return
-	}
-	resp, err := http.Post(config.Get().ExporterURL+"/monitor", "application/json", bytes.NewReader(req))
-	if err != nil {
-		log.Printf("Failed to get exporter data: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Failed to read exporter response body: %v", err)
-		return
-	}
-	var data map[string]float32
-	err = json.Unmarshal(bodyBytes, &data)
-	for addr, rtt := range data {
-		host := hostMap[addr]
-		history := append(host.History, rtt)
-		// Keep only last 720 values
-		if len(history) > 720 {
-			history = history[len(history)-720:]
-		}
-		err := store.UpdateHostHistory(host.Id, history)
+	for _, host := range hosts {
+		err = mq.PublishJSON(exporter.PingRoute, pingSource, exporter.PingReq{
+			HostID:      host.Id,
+			Target:      host.Target,
+			MonitorType: exporter.ProbePing,
+		})
 		if err != nil {
-			log.Printf("Failed to update history for %s: %v", addr, err)
+			log.Printf("Failed to enqueue monitor ping for host %d: %v", host.Id, err)
 		}
 	}
+}
+
+func handlePingResult(msg *amqp.Delivery) error {
+	var resp exporter.PingResp
+	if err := json.Unmarshal(msg.Body, &resp); err != nil {
+		return fmt.Errorf("failed to unmarshal monitor ping message: %w", err)
+	}
+	host, err := store.GetHost(resp.HostID)
+	if err != nil {
+		return err
+	}
+	if host == nil {
+		return nil
+	}
+	history := append(host.History, resp.Lat)
+	if len(history) > 720 {
+		history = history[len(history)-720:]
+	}
+	if err := store.UpdateHostHistory(host.Id, history); err != nil {
+		return fmt.Errorf("failed to update history for host %d: %w", host.Id, err)
+	}
+	return nil
 }
 
 func GetStatistics(id string) ([]response.StatisticsResponse, error) {
