@@ -1,6 +1,7 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/cache"
 	"VPSBenchmarkBackend/internal/mq"
 	"VPSBenchmarkBackend/internal/report/model"
 	"VPSBenchmarkBackend/internal/report/parser"
@@ -66,6 +67,12 @@ func processReports(msg *amqp.Delivery) error {
 			}
 		}
 	}
+
+	err = cache.PurgeSouinCache(cache.IndexKey)
+	if err != nil {
+		log.Printf("Failed to purge Souin cache after report processing: %v", err)
+	}
+
 	task.Status = mq.TaskDone
 	task.Progress = 1.0
 
@@ -271,6 +278,11 @@ func DeleteReport(reportID string) error {
 		return fmt.Errorf("failed to delete report: %w", err)
 	}
 
+	err = cache.PurgeSouinCache(cache.ReportBaseKey+reportID, cache.SlideBaseKey+reportID, cache.IndexKey)
+	if err != nil {
+		log.Printf("Failed to purge Souin cache after report deletion: %v", err)
+	}
+
 	return nil
 }
 
@@ -282,6 +294,11 @@ func UpdateReport(reportID string, monitorID *int64, otherInfo string) error {
 	err := store.UpdateReport(reportID, monitorID, otherInfo)
 	if err != nil {
 		return fmt.Errorf("failed to update report monitor ID: %w", err)
+	}
+
+	err = cache.PurgeSouinCache(cache.ReportBaseKey+reportID, cache.SlideBaseKey+reportID, cache.IndexKey)
+	if err != nil {
+		log.Printf("Failed to purge Souin cache after report updated: %v", err)
 	}
 	return nil
 }

@@ -22,6 +22,7 @@ type Config struct {
 	AppriseURL       string `json:"appriseUrl"`
 	RabbitMQURL      string `json:"rabbitMqUrl"`
 	RabbitMQPoolSize int    `json:"rabbitMqPoolSize"`
+	SouinURL         string `json:"souinUrl"`
 }
 
 var cfg *Config

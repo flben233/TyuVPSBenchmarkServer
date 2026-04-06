@@ -84,6 +84,13 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
+  souin:
+    image: "ghcr.io/flben233/souin:latest"
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+      - "12019:2019"
+
   watchtower:
     image: "containrrr/watchtower:latest-dev"
     volumes:

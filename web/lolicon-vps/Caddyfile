@@ -1,0 +1,27 @@
+:3010 {
+  @pathgroup {
+    path /index
+    path /looking-glass
+    path /report/*
+    path /slide/*
+  }
+  handle @pathgroup {
+    cache {
+      stale 1s
+      ttl 365d
+      default_cache_control "public, max-age=300"
+      api {
+        souin
+      }
+      key {
+        disable_body
+        disable_host
+        disable_method
+        disable_query
+        disable_scheme
+        disable_vary
+      }
+    }
+  }
+  reverse_proxy frontend:3000
+}
