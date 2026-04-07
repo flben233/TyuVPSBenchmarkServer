@@ -34,3 +34,28 @@ export function deleteConnection(id) {
 export function generateId() {
   return crypto.randomUUID();
 }
+
+const PASSWORD_KEY = "webssh_password";
+
+export function savePassword(password) {
+  if (!process.client) return;
+  if (password) {
+    localStorage.setItem(PASSWORD_KEY, password);
+  } else {
+    localStorage.removeItem(PASSWORD_KEY);
+  }
+}
+
+export function getPassword() {
+  if (!process.client) return null;
+  return localStorage.getItem(PASSWORD_KEY);
+}
+
+export function clearPassword() {
+  if (!process.client) return;
+  localStorage.removeItem(PASSWORD_KEY);
+}
+
+export function hasPassword() {
+  return !!getPassword();
+}
