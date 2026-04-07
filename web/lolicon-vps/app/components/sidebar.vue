@@ -118,6 +118,14 @@ const avatarNav = (command) => {
         Lolicon Monitor
       </el-menu-item>
     </el-sub-menu>
+    <el-menu-item index="/webssh" class="menu-item">
+      <el-icon size="24">
+        <img style="width: 24px; height: 24px;" src="/robot.svg" alt="WebSSH"/>
+      </el-icon>
+      <template #title>
+        <span>WebSSH</span>
+      </template>
+    </el-menu-item>
 
     <el-menu-item index="/looking-glass" class="menu-item">
       <el-icon size="24">
