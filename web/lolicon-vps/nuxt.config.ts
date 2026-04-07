@@ -50,6 +50,7 @@ export default defineNuxtConfig({
     "/looking-glass": { cache: false },
     "/monitor": { ssr: false },
     "/search": { prerender: true },
+    "/webssh": { ssr: false },
   },
   modules: ["@element-plus/nuxt", "@nuxtjs/sitemap", "@nuxtjs/robots"],
   // 手动全局引入 Element Plus 的 CSS

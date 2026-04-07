@@ -13,6 +13,7 @@ import (
 	_ "VPSBenchmarkBackend/internal/mq"
 	_ "VPSBenchmarkBackend/internal/report"
 	_ "VPSBenchmarkBackend/internal/tool"
+	_ "VPSBenchmarkBackend/internal/webssh"
 	"fmt"
 	"log"
 
@@ -39,6 +40,9 @@ func main() {
 	log.Println("Database initialized successfully at", dbPath)
 
 	cfg := config.Get()
+	if cfg.SouinURL == "" {
+		log.Println("Warning: SouinURL is not set, cache management will be disabled")
+	}
 
 	// Initialize redis
 	if err := cache.InitRedis(cfg.RedisHost, cfg.RedisPasswd, 0); err != nil {

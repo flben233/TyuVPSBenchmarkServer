@@ -2,13 +2,12 @@ module VPSBenchmarkBackend
 
 go 1.24.0
 
-toolchain go1.24.1
-
 require (
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/gin-gonic/gin v1.11.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/prometheus-community/pro-bing v0.7.0
 	github.com/questdb/go-questdb-client/v4 v4.1.0
@@ -86,7 +85,7 @@ require (
 	go.uber.org/mock v0.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.23.0 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/crypto v0.47.0
 	golang.org/x/mod v0.32.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect

@@ -15,7 +15,11 @@ const (
 var client = &http.Client{}
 
 func PurgeSouinCache(key string, keys ...string) error {
-	request, err := http.NewRequest("PURGE", config.Get().SouinURL+"/purge/"+key, nil)
+	souinURL := config.Get().SouinURL
+	if souinURL == "" {
+		return nil // No Souin URL configured, skip cache purge
+	}
+	request, err := http.NewRequest("PURGE", souinURL+"/purge/"+key, nil)
 	if err != nil {
 		return err
 	}
@@ -26,7 +30,7 @@ func PurgeSouinCache(key string, keys ...string) error {
 	}
 
 	for _, k := range keys {
-		request, err = http.NewRequest("PURGE", config.Get().SouinURL+"/purge/"+k, nil)
+		request, err = http.NewRequest("PURGE", souinURL+"/purge/"+k, nil)
 		if err != nil {
 			return err
 		}
