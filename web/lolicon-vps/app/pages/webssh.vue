@@ -6,10 +6,49 @@ useHead({
 });
 
 const { userInfo } = useAuth();
-const { status, errorMessage, connect, disconnect, sendInput, resize, onOutput } = useWebSSH();
+const {
+  status,
+  errorMessage,
+  connect,
+  disconnect,
+  sendInput,
+  resize,
+  sendAgentTask,
+  sendAgentMessage,
+  sendAgentApproval,
+  onOutput,
+  onAgentUpdate,
+  onAgentApproval,
+  onAgentError,
+  onAgentDone,
+} = useWebSSH();
 
 const terminalRef = ref(null);
 const selectedConnection = ref(null);
+const agentTimeline = ref([]);
+const pendingApproval = ref(null);
+const activeAgentTaskId = ref("");
+
+function pushAgentTimeline(label, content, taskId = "") {
+  agentTimeline.value.unshift({
+    id: crypto.randomUUID(),
+    label,
+    content,
+    taskId,
+    timestamp: Date.now(),
+  });
+}
+
+watch(
+  () => status.value,
+  (nextStatus) => {
+    if (nextStatus === "disconnected" || nextStatus === "error") {
+      pendingApproval.value = null;
+      activeAgentTaskId.value = "";
+    }
+  }
+);
+
 const statusText = computed(() => {
   switch (status.value) {
     case "connected":
@@ -72,11 +111,59 @@ function handleResize({ cols, rows }) {
   resize(cols, rows);
 }
 
+function handleAgentTaskSubmit(message) {
+  if (!sendAgentTask(message)) {
+    ElMessage.warning("当前连接不可用，无法发送任务");
+    return;
+  }
+  pushAgentTimeline("任务提交", message);
+}
+
+function handleAgentMessageSubmit({ taskId, message }) {
+  if (!sendAgentMessage(taskId, message)) {
+    ElMessage.warning("当前连接不可用，无法发送消息");
+    return;
+  }
+  activeAgentTaskId.value = taskId;
+  pushAgentTimeline("用户消息", message, taskId);
+}
+
+function handleAgentApprovalSubmit({ taskId, approved }) {
+  if (!sendAgentApproval(taskId, approved)) {
+    ElMessage.warning("当前连接不可用，无法发送审批");
+    return;
+  }
+  pushAgentTimeline("审批响应", approved ? "已批准" : "已拒绝", taskId);
+  pendingApproval.value = null;
+}
+
 onMounted(() => {
   onOutput((data) => {
     if (terminalRef.value) {
       terminalRef.value.write(data);
     }
+  });
+
+  onAgentUpdate((event) => {
+    activeAgentTaskId.value = event.taskId;
+    pushAgentTimeline("执行更新", event.message, event.taskId);
+  });
+
+  onAgentApproval((event) => {
+    activeAgentTaskId.value = event.taskId;
+    pendingApproval.value = event;
+    pushAgentTimeline("审批请求", event.question, event.taskId);
+  });
+
+  onAgentError((event) => {
+    activeAgentTaskId.value = event.taskId;
+    pushAgentTimeline("执行错误", event.message, event.taskId);
+  });
+
+  onAgentDone((event) => {
+    activeAgentTaskId.value = event.taskId;
+    pendingApproval.value = null;
+    pushAgentTimeline("执行完成", event.summary, event.taskId);
   });
 });
 </script>
@@ -118,13 +205,26 @@ onMounted(() => {
         </div>
       </div>
       <div class="webssh-terminal-area">
-        <WebsshTerminal
-          ref="terminalRef"
-          :status="status"
-          :error-message="errorMessage"
-          @input="handleInput"
-          @resize="handleResize"
-        />
+        <div class="webssh-terminal-pane">
+          <WebsshTerminal
+            ref="terminalRef"
+            :status="status"
+            :error-message="errorMessage"
+            @input="handleInput"
+            @resize="handleResize"
+          />
+        </div>
+        <div class="webssh-agent-pane">
+          <WebsshAgentPanel
+            :status="status"
+            :timeline="agentTimeline"
+            :pending-approval="pendingApproval"
+            :active-task-id="activeAgentTaskId"
+            @submit-task="handleAgentTaskSubmit"
+            @submit-message="handleAgentMessageSubmit"
+            @submit-approval="handleAgentApprovalSubmit"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -166,6 +266,18 @@ onMounted(() => {
   flex: 1;
   padding: 8px;
   overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 8px;
+}
+
+.webssh-terminal-pane {
+  min-width: 0;
+  min-height: 0;
+}
+
+.webssh-agent-pane {
+  min-height: 0;
 }
 
 @media screen and (max-width: 768px) {
@@ -177,6 +289,11 @@ onMounted(() => {
     height: 200px;
     border-right: none;
     border-bottom: 1px solid var(--el-border-color-light);
+  }
+
+  .webssh-terminal-area {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(260px, 1fr) 280px;
   }
 }
 </style>

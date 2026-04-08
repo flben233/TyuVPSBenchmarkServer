@@ -6,23 +6,27 @@ import (
 )
 
 type Config struct {
-	Port             int    `json:"port"`
-	BaseURL          string `json:"baseUrl"`
-	ClientID         string `json:"clientId"`
-	ClientSecret     string `json:"clientSecret"`
-	JwtSecret        string `json:"jwtSecret"`
-	AccessTokenExp   int    `json:"accessTokenExp"`  // in seconds
-	RefreshTokenExp  int    `json:"refreshTokenExp"` // in seconds
-	AdminID          int64  `json:"adminId"`
-	FrontendURL      string `json:"frontendUrl"`
-	GithubHttpProxy  string `json:"githubHttpsProxy"`
-	ExporterURL      string `json:"exporterUrl"`
-	RedisHost        string `json:"redisHost"`
-	RedisPasswd      string `json:"redisPasswd"`
-	AppriseURL       string `json:"appriseUrl"`
-	RabbitMQURL      string `json:"rabbitMqUrl"`
-	RabbitMQPoolSize int    `json:"rabbitMqPoolSize"`
-	SouinURL         string `json:"souinUrl"`
+	Port                int    `json:"port"`
+	BaseURL             string `json:"baseUrl"`
+	ClientID            string `json:"clientId"`
+	ClientSecret        string `json:"clientSecret"`
+	JwtSecret           string `json:"jwtSecret"`
+	AccessTokenExp      int    `json:"accessTokenExp"`  // in seconds
+	RefreshTokenExp     int    `json:"refreshTokenExp"` // in seconds
+	AdminID             int64  `json:"adminId"`
+	FrontendURL         string `json:"frontendUrl"`
+	GithubHttpProxy     string `json:"githubHttpsProxy"`
+	ExporterURL         string `json:"exporterUrl"`
+	RedisHost           string `json:"redisHost"`
+	RedisPasswd         string `json:"redisPasswd"`
+	AppriseURL          string `json:"appriseUrl"`
+	RabbitMQURL         string `json:"rabbitMqUrl"`
+	RabbitMQPoolSize    int    `json:"rabbitMqPoolSize"`
+	SouinURL            string `json:"souinUrl"`
+	AgentURL            string `json:"agentUrl"`
+	AgentInternalToken  string `json:"agentInternalToken"`
+	AgentCommandTimeout int    `json:"agentCommandTimeout"`
+	AgentMaxCommands    int    `json:"agentMaxCommands"`
 }
 
 var cfg *Config
