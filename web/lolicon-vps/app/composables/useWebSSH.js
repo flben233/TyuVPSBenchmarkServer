@@ -1,3 +1,13 @@
+import {
+  createAgentTaskMessage,
+  createAgentMessage,
+  createAgentApprovalResponse,
+  parseAgentUpdateMessage,
+  parseAgentApprovalMessage,
+  parseAgentErrorMessage,
+  parseAgentDoneMessage,
+} from "~/utils/webssh-agent-protocol";
+
 export function useWebSSH() {
   const config = useAppConfig();
   const { token } = useAuth();
@@ -8,9 +18,29 @@ export function useWebSSH() {
   let pingInterval = null;
 
   let outputCallback = null;
+  let agentUpdateCallback = null;
+  let agentApprovalCallback = null;
+  let agentErrorCallback = null;
+  let agentDoneCallback = null;
 
   function onOutput(cb) {
     outputCallback = cb;
+  }
+
+  function onAgentUpdate(cb) {
+    agentUpdateCallback = cb;
+  }
+
+  function onAgentApproval(cb) {
+    agentApprovalCallback = cb;
+  }
+
+  function onAgentError(cb) {
+    agentErrorCallback = cb;
+  }
+
+  function onAgentDone(cb) {
+    agentDoneCallback = cb;
   }
 
   function handleOutput(data) {
@@ -20,6 +50,50 @@ export function useWebSSH() {
       let decoded = decoder.decode(bytes);
       outputCallback(decoded);
     }
+  }
+
+  function sendJsonMessage(payload) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+    ws.send(JSON.stringify(payload));
+    return true;
+  }
+
+  function handleAgentEventMessage(msg) {
+    const update = parseAgentUpdateMessage(msg);
+    if (update) {
+      if (agentUpdateCallback) {
+        agentUpdateCallback(update);
+      }
+      return true;
+    }
+
+    const approval = parseAgentApprovalMessage(msg);
+    if (approval) {
+      if (agentApprovalCallback) {
+        agentApprovalCallback(approval);
+      }
+      return true;
+    }
+
+    const agentError = parseAgentErrorMessage(msg);
+    if (agentError) {
+      if (agentErrorCallback) {
+        agentErrorCallback(agentError);
+      }
+      return true;
+    }
+
+    const done = parseAgentDoneMessage(msg);
+    if (done) {
+      if (agentDoneCallback) {
+        agentDoneCallback(done);
+      }
+      return true;
+    }
+
+    return false;
   }
 
   function getWebSocketUrl() {
@@ -68,7 +142,18 @@ export function useWebSSH() {
         }
         return;
       }
-      const msg = JSON.parse(event.data);
+
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      if (handleAgentEventMessage(msg)) {
+        return;
+      }
+
       switch (msg.type) {
         case "connected":
           status.value = "connected";
@@ -126,6 +211,18 @@ export function useWebSSH() {
     }
   }
 
+  function sendAgentTask(message) {
+    return sendJsonMessage(createAgentTaskMessage(message));
+  }
+
+  function sendAgentMessage(taskId, message) {
+    return sendJsonMessage(createAgentMessage(taskId, message));
+  }
+
+  function sendAgentApproval(taskId, approved) {
+    return sendJsonMessage(createAgentApprovalResponse(taskId, approved));
+  }
+
   function disconnect() {
     stopPing();
     if (ws) {
@@ -163,6 +260,13 @@ export function useWebSSH() {
     disconnect,
     sendInput,
     resize,
+    sendAgentTask,
+    sendAgentMessage,
+    sendAgentApproval,
     onOutput,
+    onAgentUpdate,
+    onAgentApproval,
+    onAgentError,
+    onAgentDone,
   };
 }
