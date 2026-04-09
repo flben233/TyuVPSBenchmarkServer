@@ -4,13 +4,13 @@ const props = defineProps({
     type: String,
     default: "disconnected",
   },
-  timeline: {
+  messages: {
     type: Array,
     default: () => [],
   },
-  pendingApproval: {
+  pendingApprovalByMessageId: {
     type: Object,
-    default: null,
+    default: () => ({}),
   },
   activeTaskId: {
     type: String,
@@ -23,10 +23,14 @@ const emit = defineEmits(["submit-task", "submit-message", "submit-approval"]);
 const taskInput = ref("");
 const messageTaskId = ref("");
 const messageInput = ref("");
+const isTaskIdDirty = ref(false);
 
 watch(
   () => props.activeTaskId,
   (value) => {
+    if (isTaskIdDirty.value) {
+      return;
+    }
     messageTaskId.value = value || "";
   },
   { immediate: true }
@@ -50,15 +54,16 @@ function submitMessage() {
     return;
   }
   emit("submit-message", { taskId, message });
+  isTaskIdDirty.value = false;
   messageInput.value = "";
 }
 
-function submitApproval(approved) {
-  if (!props.pendingApproval?.taskId) {
+function submitApproval(taskId, approved) {
+  if (!taskId) {
     return;
   }
   emit("submit-approval", {
-    taskId: props.pendingApproval.taskId,
+    taskId,
     approved,
   });
 }
@@ -69,6 +74,32 @@ function formatTime(timestamp) {
   }
   const date = new Date(timestamp);
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString();
+}
+
+function roleLabel(role) {
+  switch (role) {
+    case "user":
+      return "你";
+    case "assistant":
+      return "Agent";
+    default:
+      return "系统";
+  }
+}
+
+function isPendingApprovalMessage(message) {
+  return Boolean(message.kind === "approval" && message.messageId && props.pendingApprovalByMessageId[message.messageId]);
+}
+
+function getPendingApprovalForMessage(message) {
+  if (!message?.messageId) {
+    return null;
+  }
+  return props.pendingApprovalByMessageId[message.messageId] || null;
+}
+
+function handleTaskIdInput() {
+  isTaskIdDirty.value = true;
 }
 </script>
 
@@ -97,7 +128,7 @@ function formatTime(timestamp) {
 
     <div class="agent-block">
       <div class="block-title">继续对话</div>
-      <el-input v-model="messageTaskId" placeholder="任务 ID" :disabled="!connected" />
+      <el-input v-model="messageTaskId" placeholder="任务 ID" :disabled="!connected" @input="handleTaskIdInput" />
       <el-input
         v-model="messageInput"
         type="textarea"
@@ -114,25 +145,32 @@ function formatTime(timestamp) {
       </el-button>
     </div>
 
-    <div v-if="pendingApproval" class="agent-block approval-block">
-      <div class="block-title">待审批</div>
-      <p class="approval-question">{{ pendingApproval.question }}</p>
-      <div class="approval-actions">
-        <el-button size="small" type="success" @click="submitApproval(true)">批准</el-button>
-        <el-button size="small" type="danger" @click="submitApproval(false)">拒绝</el-button>
-      </div>
-    </div>
-
-    <div class="agent-block timeline-block">
-      <div class="block-title">执行时间线</div>
-      <div v-if="timeline.length === 0" class="timeline-empty">暂无 Agent 事件</div>
-      <div v-else class="timeline-list">
-        <div v-for="item in timeline" :key="item.id" class="timeline-item">
-          <div class="timeline-meta">
-            <span>{{ item.label }}</span>
+    <div class="agent-block chat-block">
+      <div class="block-title">会话</div>
+      <div v-if="messages.length === 0" class="chat-empty">暂无 Agent 消息</div>
+      <div v-else class="chat-list">
+        <div
+          v-for="item in messages"
+          :key="item.id"
+          class="chat-item"
+          :class="[`role-${item.role || 'system'}`]"
+        >
+          <div class="chat-meta">
+            <span>{{ roleLabel(item.role) }}</span>
             <span>{{ formatTime(item.timestamp) }}</span>
           </div>
-          <div class="timeline-content">{{ item.content }}</div>
+          <div class="chat-bubble">
+            <div class="chat-content">{{ item.content || (item.streaming ? "正在生成..." : "") }}</div>
+            <div v-if="item.streaming" class="chat-streaming">正在生成...</div>
+            <div v-if="isPendingApprovalMessage(item)" class="approval-card">
+              <div class="approval-card-title">待审批</div>
+              <div class="approval-question">{{ getPendingApprovalForMessage(item)?.question || item.content }}</div>
+              <div class="approval-actions">
+                <el-button size="small" type="success" :disabled="!connected" @click="submitApproval(item.taskId, true)">批准</el-button>
+                <el-button size="small" type="danger" :disabled="!connected" @click="submitApproval(item.taskId, false)">拒绝</el-button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -178,14 +216,76 @@ function formatTime(timestamp) {
   align-self: flex-start;
 }
 
-.approval-block {
+.chat-block {
+  min-height: 0;
+  flex: 1;
+}
+
+.chat-empty {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.chat-list {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.chat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.chat-bubble {
+  max-width: 92%;
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--el-border-color-light);
   background: #f5f7fa;
-  padding: 8px;
-  border-radius: 4px;
+}
+
+.chat-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  color: var(--el-text-color-primary);
+}
+
+.chat-streaming {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-color-primary);
+}
+
+.approval-card {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--el-border-color);
+}
+
+.approval-card-title {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 6px;
 }
 
 .approval-question {
-  margin: 0;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
   font-size: 13px;
   color: var(--el-text-color-primary);
 }
@@ -195,43 +295,36 @@ function formatTime(timestamp) {
   gap: 8px;
 }
 
-.timeline-block {
-  min-height: 0;
-  flex: 1;
+.role-user {
+  align-items: flex-end;
 }
 
-.timeline-empty {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
+.role-user .chat-bubble {
+  background: #ecf5ff;
+  border-color: #c6e2ff;
 }
 
-.timeline-list {
-  min-height: 0;
-  height: 100%;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.role-assistant {
+  align-items: flex-start;
 }
 
-.timeline-item {
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
-  padding: 6px 8px;
+.role-assistant .chat-bubble {
+  background: #f0f9eb;
+  border-color: #d9ecff;
 }
 
-.timeline-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-bottom: 4px;
+.role-system {
+  align-items: center;
 }
 
-.timeline-content {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 13px;
-  color: var(--el-text-color-primary);
+.role-system .chat-bubble {
+  max-width: 100%;
+  background: #f4f4f5;
+}
+
+@media screen and (max-width: 768px) {
+  .chat-bubble {
+    max-width: 100%;
+  }
 }
 </style>

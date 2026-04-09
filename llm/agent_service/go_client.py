@@ -44,6 +44,9 @@ class GoToolClient:
         except httpx.RequestError as exc:
             raise RuntimeError(f"go tool request error for {url}: {exc}") from exc
 
+    async def send_stream_event(self, payload: dict[str, Any], task_id: str) -> httpx.Response:
+        return await self.post("/api/agent/stream-event", payload, task_id)
+
     def post_sync(self, path: str, payload: dict[str, Any], task_id: str) -> httpx.Response:
         url = self._build_url(path)
         headers = self._build_headers(task_id)

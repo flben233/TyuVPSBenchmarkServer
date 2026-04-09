@@ -1,19 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
+import * as protocol from "../webssh-agent-protocol.js";
+
+const {
   createAgentTaskMessage,
   createAgentMessage,
   createAgentApprovalResponse,
-  isAgentUpdateMessage,
-  isAgentApprovalMessage,
-  isAgentErrorMessage,
-  isAgentDoneMessage,
-  parseAgentUpdateMessage,
-  parseAgentApprovalMessage,
-  parseAgentErrorMessage,
-  parseAgentDoneMessage,
-} from "../webssh-agent-protocol.js";
+  parseAgentMessageStart,
+  parseAgentToken,
+  parseAgentMessageEnd,
+  parseAgentState,
+} = protocol;
 
 test("createAgentTaskMessage builds outbound payload", () => {
   assert.deepEqual(createAgentTaskMessage("check disk usage"), {
@@ -38,97 +36,83 @@ test("createAgentApprovalResponse builds outbound payload", () => {
   });
 });
 
-test("agent inbound guards identify valid payloads", () => {
-  assert.equal(isAgentUpdateMessage({ type: "agent_update", task_id: "t1", message: "step 1" }), true);
-  assert.equal(isAgentApprovalMessage({ type: "agent_approval", task_id: "t1", question: "apply reboot?" }), true);
-  assert.equal(isAgentApprovalMessage({ type: "agent_approval", task_id: "t1", message: "approval required" }), true);
-  assert.equal(isAgentErrorMessage({ type: "agent_error", task_id: "t1", message: "permission denied" }), true);
-  assert.equal(isAgentDoneMessage({ type: "agent_done", task_id: "t1", summary: "done" }), true);
-  assert.equal(isAgentDoneMessage({ type: "agent_done", task_id: "t1", message: "done" }), true);
-  assert.equal(isAgentErrorMessage({ type: "agent_error", message: "permission denied" }), true);
-});
-
-test("agent inbound parsers return normalized payload", () => {
-  assert.deepEqual(parseAgentUpdateMessage('{"type":"agent_update","task_id":"t1","message":"running"}'), {
-    type: "agent_update",
+test("parses new streaming events", () => {
+  assert.deepEqual(parseAgentMessageStart({ type: "agent_message_start", task_id: "t1", message_id: "m1" }), {
     taskId: "t1",
-    message: "running",
-    raw: {
-      type: "agent_update",
-      task_id: "t1",
-      message: "running",
-    },
+    messageId: "m1",
   });
 
-  assert.deepEqual(parseAgentApprovalMessage({ type: "agent_approval", task_id: "t2", question: "Proceed?" }), {
-    type: "agent_approval",
-    taskId: "t2",
-    question: "Proceed?",
-    raw: {
-      type: "agent_approval",
-      task_id: "t2",
-      question: "Proceed?",
-    },
+  assert.deepEqual(parseAgentToken({ type: "agent_token", task_id: "t1", message_id: "m1", delta: "he" }), {
+    taskId: "t1",
+    messageId: "m1",
+    delta: "he",
   });
 
-  assert.deepEqual(parseAgentErrorMessage({ type: "agent_error", task_id: "t2", message: "failed" }), {
-    type: "agent_error",
-    taskId: "t2",
-    message: "failed",
-    raw: {
-      type: "agent_error",
-      task_id: "t2",
-      message: "failed",
-    },
+  assert.deepEqual(parseAgentMessageEnd({ type: "agent_message_end", task_id: "t1", message_id: "m1", finish_reason: "stop" }), {
+    taskId: "t1",
+    messageId: "m1",
+    finishReason: "stop",
   });
 
-  assert.deepEqual(parseAgentErrorMessage({ type: "agent_error", message: "failed" }), {
-    type: "agent_error",
-    taskId: "",
-    message: "failed",
-    raw: {
-      type: "agent_error",
-      message: "failed",
-    },
-  });
-
-  assert.deepEqual(parseAgentDoneMessage({ type: "agent_done", task_id: "t2", summary: "all good" }), {
-    type: "agent_done",
-    taskId: "t2",
-    summary: "all good",
-    raw: {
-      type: "agent_done",
-      task_id: "t2",
-      summary: "all good",
-    },
-  });
-
-  assert.deepEqual(parseAgentApprovalMessage({ type: "agent_approval", task_id: "t2", message: "Proceed?" }), {
-    type: "agent_approval",
-    taskId: "t2",
-    question: "Proceed?",
-    raw: {
-      type: "agent_approval",
-      task_id: "t2",
-      message: "Proceed?",
-    },
-  });
-
-  assert.deepEqual(parseAgentDoneMessage({ type: "agent_done", task_id: "t2", message: "all good" }), {
-    type: "agent_done",
-    taskId: "t2",
-    summary: "all good",
-    raw: {
-      type: "agent_done",
-      task_id: "t2",
-      message: "all good",
-    },
+  assert.deepEqual(parseAgentState({ type: "agent_state", task_id: "t1", state: "thinking", message: "planning" }), {
+    taskId: "t1",
+    state: "thinking",
+    message: "planning",
   });
 });
 
-test("agent parsers return null on invalid payload", () => {
-  assert.equal(parseAgentUpdateMessage("not-json"), null);
-  assert.equal(parseAgentApprovalMessage({ type: "agent_approval", message: "missing task" }), null);
-  assert.equal(parseAgentErrorMessage({ type: "agent_error", task_id: "t1" }), null);
-  assert.equal(parseAgentDoneMessage({ type: "agent_done" }), null);
+test("does not treat legacy events as stream events", () => {
+  const legacyEventPayloads = [
+    { type: "agent_update", task_id: "t1", message: "status" },
+    { type: "agent_approval", task_id: "t1", message: "approve?" },
+    { type: "agent_error", task_id: "t1", message: "boom" },
+    { type: "agent_done", task_id: "t1", message: "done" },
+  ];
+
+  for (const payload of legacyEventPayloads) {
+    assert.equal(parseAgentMessageStart(payload), null);
+    assert.equal(parseAgentToken(payload), null);
+    assert.equal(parseAgentMessageEnd(payload), null);
+    assert.equal(parseAgentState(payload), null);
+  }
+});
+
+test("applies default values for optional fields", () => {
+  assert.deepEqual(parseAgentMessageEnd({ type: "agent_message_end", task_id: "t1", message_id: "m1" }), {
+    taskId: "t1",
+    messageId: "m1",
+    finishReason: "stop",
+  });
+
+  assert.deepEqual(parseAgentState({ type: "agent_state", task_id: "t1", state: "thinking" }), {
+    taskId: "t1",
+    state: "thinking",
+    message: "",
+  });
+});
+
+test("returns null for malformed or invalid streaming payloads", () => {
+  assert.equal(parseAgentMessageStart("not-json"), null);
+  assert.equal(parseAgentMessageStart({ type: "agent_message_start", task_id: "   ", message_id: "m1" }), null);
+  assert.equal(parseAgentMessageStart({ type: "agent_message_start", task_id: "t1", message_id: "   " }), null);
+
+  assert.equal(parseAgentToken({ type: "agent_token", task_id: "t1", message_id: "m1", delta: 12 }), null);
+  assert.equal(parseAgentToken({ type: "agent_token", task_id: "   ", message_id: "m1", delta: "x" }), null);
+  assert.equal(parseAgentToken({ type: "agent_token", task_id: "t1", message_id: "   ", delta: "x" }), null);
+
+  assert.equal(parseAgentMessageEnd({ type: "agent_message_end", task_id: "   ", message_id: "m1" }), null);
+  assert.equal(parseAgentMessageEnd({ type: "agent_message_end", task_id: "t1", message_id: "   " }), null);
+  assert.equal(parseAgentMessageEnd({ type: "agent_message_end", task_id: "t1", message_id: "m1", finish_reason: 0 }), null);
+
+  assert.equal(parseAgentState({ type: "agent_state", task_id: "   ", state: "thinking" }), null);
+  assert.equal(parseAgentState({ type: "agent_state", task_id: "t1", state: "unknown" }), null);
+  assert.equal(parseAgentState({ type: "agent_state", task_id: "t1", state: 1 }), null);
+  assert.equal(parseAgentState({ type: "agent_state", task_id: "t1", state: "done", message: 1 }), null);
+});
+
+test("does not export legacy parser symbols", () => {
+  assert.equal("parseAgentUpdateMessage" in protocol, false);
+  assert.equal("parseAgentApprovalMessage" in protocol, false);
+  assert.equal("parseAgentErrorMessage" in protocol, false);
+  assert.equal("parseAgentDoneMessage" in protocol, false);
 });

@@ -2,11 +2,16 @@ import {
   createAgentTaskMessage,
   createAgentMessage,
   createAgentApprovalResponse,
-  parseAgentUpdateMessage,
-  parseAgentApprovalMessage,
-  parseAgentErrorMessage,
-  parseAgentDoneMessage,
+  parseAgentMessageStart,
+  parseAgentToken,
+  parseAgentMessageEnd,
+  parseAgentState,
 } from "~/utils/webssh-agent-protocol";
+import {
+  createStreamingUtf8Decoder,
+  normalizeWebSSHOutputPayload,
+  extractOutputPayload,
+} from "~/utils/webssh-output";
 
 export function useWebSSH() {
   const config = useAppConfig();
@@ -16,40 +21,54 @@ export function useWebSSH() {
   const errorMessage = ref("");
   let ws = null;
   let pingInterval = null;
+  let outputDecoder = createStreamingUtf8Decoder();
 
   let outputCallback = null;
-  let agentUpdateCallback = null;
-  let agentApprovalCallback = null;
-  let agentErrorCallback = null;
-  let agentDoneCallback = null;
+  let agentMessageStartCallback = null;
+  let agentTokenCallback = null;
+  let agentMessageEndCallback = null;
+  let agentStateCallback = null;
 
   function onOutput(cb) {
     outputCallback = cb;
   }
 
-  function onAgentUpdate(cb) {
-    agentUpdateCallback = cb;
+  function onAgentMessageStart(cb) {
+    agentMessageStartCallback = cb;
   }
 
-  function onAgentApproval(cb) {
-    agentApprovalCallback = cb;
+  function onAgentToken(cb) {
+    agentTokenCallback = cb;
   }
 
-  function onAgentError(cb) {
-    agentErrorCallback = cb;
+  function onAgentMessageEnd(cb) {
+    agentMessageEndCallback = cb;
   }
 
-  function onAgentDone(cb) {
-    agentDoneCallback = cb;
+  function onAgentState(cb) {
+    agentStateCallback = cb;
   }
 
   function handleOutput(data) {
-    if (outputCallback) {
-      const bytes = new Uint8Array(data);
-      const decoder = new TextDecoder('utf-8');
-      let decoded = decoder.decode(bytes);
+    if (!outputCallback) {
+      return;
+    }
+    const decoded = normalizeWebSSHOutputPayload(data, outputDecoder);
+    if (decoded) {
       outputCallback(decoded);
     }
+  }
+
+  function flushOutputDecoder() {
+    if (!outputCallback) {
+      outputDecoder = createStreamingUtf8Decoder();
+      return;
+    }
+    const tail = outputDecoder.flush();
+    if (tail) {
+      outputCallback(tail);
+    }
+    outputDecoder = createStreamingUtf8Decoder();
   }
 
   function sendJsonMessage(payload) {
@@ -61,34 +80,34 @@ export function useWebSSH() {
   }
 
   function handleAgentEventMessage(msg) {
-    const update = parseAgentUpdateMessage(msg);
-    if (update) {
-      if (agentUpdateCallback) {
-        agentUpdateCallback(update);
+    const messageStart = parseAgentMessageStart(msg);
+    if (messageStart) {
+      if (agentMessageStartCallback) {
+        agentMessageStartCallback(messageStart);
       }
       return true;
     }
 
-    const approval = parseAgentApprovalMessage(msg);
-    if (approval) {
-      if (agentApprovalCallback) {
-        agentApprovalCallback(approval);
+    const token = parseAgentToken(msg);
+    if (token) {
+      if (agentTokenCallback) {
+        agentTokenCallback(token);
       }
       return true;
     }
 
-    const agentError = parseAgentErrorMessage(msg);
-    if (agentError) {
-      if (agentErrorCallback) {
-        agentErrorCallback(agentError);
+    const messageEnd = parseAgentMessageEnd(msg);
+    if (messageEnd) {
+      if (agentMessageEndCallback) {
+        agentMessageEndCallback(messageEnd);
       }
       return true;
     }
 
-    const done = parseAgentDoneMessage(msg);
-    if (done) {
-      if (agentDoneCallback) {
-        agentDoneCallback(done);
+    const state = parseAgentState(msg);
+    if (state) {
+      if (agentStateCallback) {
+        agentStateCallback(state);
       }
       return true;
     }
@@ -147,10 +166,19 @@ export function useWebSSH() {
       try {
         msg = JSON.parse(event.data);
       } catch {
+        if (status.value === "connected") {
+          handleOutput(event.data);
+        }
         return;
       }
 
       if (handleAgentEventMessage(msg)) {
+        return;
+      }
+
+      const outputPayload = extractOutputPayload(msg);
+      if (status.value === "connected" && outputPayload !== null) {
+        handleOutput(outputPayload);
         return;
       }
 
@@ -174,6 +202,7 @@ export function useWebSSH() {
           }
           break;
         case "closed":
+          flushOutputDecoder();
           status.value = "disconnected";
           stopPing();
           if (ws === currentWs) {
@@ -194,6 +223,7 @@ export function useWebSSH() {
       if (status.value !== "error") {
         status.value = "disconnected";
       }
+      flushOutputDecoder();
       stopPing();
       ws = null;
     };
@@ -225,6 +255,7 @@ export function useWebSSH() {
 
   function disconnect() {
     stopPing();
+    flushOutputDecoder();
     if (ws) {
       ws.close();
       ws = null;
@@ -264,9 +295,9 @@ export function useWebSSH() {
     sendAgentMessage,
     sendAgentApproval,
     onOutput,
-    onAgentUpdate,
-    onAgentApproval,
-    onAgentError,
-    onAgentDone,
+    onAgentMessageStart,
+    onAgentToken,
+    onAgentMessageEnd,
+    onAgentState,
   };
 }

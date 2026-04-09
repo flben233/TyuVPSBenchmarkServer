@@ -29,6 +29,7 @@ func RegisterRoute(base string, r *gin.Engine) {
 	{
 		agentGroup.POST("/safety-check", handler.HandleSafetyCheck)
 		agentGroup.POST("/execute", handler.HandleExecute)
+		agentGroup.POST("/stream-event", handler.HandleStreamEvent)
 		agentGroup.GET("/tools", handler.HandleTools)
 	}
 

@@ -13,6 +13,18 @@ function parseJsonMaybe(input) {
   return input;
 }
 
+const AGENT_STATES = new Set([
+  "thinking",
+  "running_command",
+  "awaiting_approval",
+  "done",
+  "error",
+]);
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 export function createAgentTaskMessage(message) {
   return {
     type: "agent_task",
@@ -36,96 +48,89 @@ export function createAgentApprovalResponse(taskId, approved) {
   };
 }
 
-export function isAgentUpdateMessage(payload) {
+function isAgentMessageStart(payload) {
   return (
     isRecord(payload) &&
-    payload.type === "agent_update" &&
-    typeof payload.task_id === "string" &&
-    typeof payload.message === "string"
+    payload.type === "agent_message_start" &&
+    isNonEmptyString(payload.task_id) &&
+    isNonEmptyString(payload.message_id)
   );
 }
 
-export function isAgentApprovalMessage(payload) {
-  const hasQuestion = typeof payload?.question === "string";
-  const hasMessageFallback = typeof payload?.message === "string";
+function isAgentToken(payload) {
   return (
     isRecord(payload) &&
-    payload.type === "agent_approval" &&
-    typeof payload.task_id === "string" &&
-    (hasQuestion || hasMessageFallback)
+    payload.type === "agent_token" &&
+    isNonEmptyString(payload.task_id) &&
+    isNonEmptyString(payload.message_id) &&
+    typeof payload.delta === "string"
   );
 }
 
-export function isAgentErrorMessage(payload) {
+function isAgentMessageEnd(payload) {
   return (
     isRecord(payload) &&
-    payload.type === "agent_error" &&
-    (typeof payload.task_id === "string" || typeof payload.task_id === "undefined") &&
-    typeof payload.message === "string"
+    payload.type === "agent_message_end" &&
+    isNonEmptyString(payload.task_id) &&
+    isNonEmptyString(payload.message_id) &&
+    (typeof payload.finish_reason === "string" || typeof payload.finish_reason === "undefined")
   );
 }
 
-export function isAgentDoneMessage(payload) {
-  const hasSummary = typeof payload?.summary === "string";
-  const hasMessageFallback = typeof payload?.message === "string";
+function isAgentState(payload) {
   return (
     isRecord(payload) &&
-    payload.type === "agent_done" &&
-    typeof payload.task_id === "string" &&
-    (hasSummary || hasMessageFallback)
+    payload.type === "agent_state" &&
+    isNonEmptyString(payload.task_id) &&
+    typeof payload.state === "string" &&
+    AGENT_STATES.has(payload.state) &&
+    (typeof payload.message === "string" || typeof payload.message === "undefined")
   );
 }
 
-export function parseAgentUpdateMessage(input) {
+export function parseAgentMessageStart(input) {
   const payload = parseJsonMaybe(input);
-  if (!isAgentUpdateMessage(payload)) {
+  if (!isAgentMessageStart(payload)) {
     return null;
   }
   return {
-    type: payload.type,
     taskId: payload.task_id,
-    message: payload.message,
-    raw: payload,
+    messageId: payload.message_id,
   };
 }
 
-export function parseAgentApprovalMessage(input) {
+export function parseAgentToken(input) {
   const payload = parseJsonMaybe(input);
-  if (!isAgentApprovalMessage(payload)) {
+  if (!isAgentToken(payload)) {
     return null;
   }
-  const question = typeof payload.question === "string" ? payload.question : payload.message;
   return {
-    type: payload.type,
     taskId: payload.task_id,
-    question,
-    raw: payload,
+    messageId: payload.message_id,
+    delta: payload.delta,
   };
 }
 
-export function parseAgentErrorMessage(input) {
+export function parseAgentMessageEnd(input) {
   const payload = parseJsonMaybe(input);
-  if (!isAgentErrorMessage(payload)) {
+  if (!isAgentMessageEnd(payload)) {
     return null;
   }
   return {
-    type: payload.type,
-    taskId: typeof payload.task_id === "string" ? payload.task_id : "",
-    message: payload.message,
-    raw: payload,
+    taskId: payload.task_id,
+    messageId: payload.message_id,
+    finishReason: typeof payload.finish_reason === "string" ? payload.finish_reason : "stop",
   };
 }
 
-export function parseAgentDoneMessage(input) {
+export function parseAgentState(input) {
   const payload = parseJsonMaybe(input);
-  if (!isAgentDoneMessage(payload)) {
+  if (!isAgentState(payload)) {
     return null;
   }
-  const summary = typeof payload.summary === "string" ? payload.summary : payload.message;
   return {
-    type: payload.type,
     taskId: payload.task_id,
-    summary,
-    raw: payload,
+    state: payload.state,
+    message: typeof payload.message === "string" ? payload.message : "",
   };
 }

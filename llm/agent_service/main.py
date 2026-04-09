@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from uuid import uuid4
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -22,6 +23,80 @@ from .schemas import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
+class GoBridgeStreamEmitter:
+    def __init__(self, go_client: GoToolClient, loop: asyncio.AbstractEventLoop) -> None:
+        self._go_client = go_client
+        self._loop = loop
+
+    def on_message_start(self, task_id: str, message_id: str) -> None:
+        self._schedule(task_id, {"type": "agent_message_start", "task_id": task_id, "message_id": message_id})
+
+    def on_token(self, task_id: str, message_id: str, delta: str) -> None:
+        self._schedule(
+            task_id,
+            {
+                "type": "agent_token",
+                "task_id": task_id,
+                "message_id": message_id,
+                "delta": delta,
+            },
+        )
+
+    def on_message_end(self, task_id: str, message_id: str, finish_reason: str) -> None:
+        self._schedule(
+            task_id,
+            {
+                "type": "agent_message_end",
+                "task_id": task_id,
+                "message_id": message_id,
+                "finish_reason": finish_reason,
+            },
+        )
+
+    def on_state(self, task_id: str, state: str, message: str) -> None:
+        self._schedule(
+            task_id,
+            {
+                "type": "agent_state",
+                "task_id": task_id,
+                "state": state,
+                "message": message,
+            },
+        )
+
+    def _schedule(self, task_id: str, payload: dict[str, Any]) -> None:
+        event_type = str(payload.get("type", "unknown"))
+        coro = self._go_client.send_stream_event(payload=payload, task_id=task_id)
+        try:
+            future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        except RuntimeError:
+            coro.close()
+            logger.warning(
+                "Failed to schedule stream event; task_id=%s event_type=%s",
+                task_id,
+                event_type,
+                exc_info=True,
+            )
+            return
+
+        def _ignore_result(done_future):
+            try:
+                done_future.result()
+            except Exception:
+                logger.warning(
+                    "Stream event delivery failed; task_id=%s event_type=%s",
+                    task_id,
+                    event_type,
+                    exc_info=True,
+                )
+                return
+
+        future.add_done_callback(_ignore_result)
+
+
 def create_checkpointer(settings: Settings):
     try:
         redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
@@ -35,15 +110,18 @@ def create_checkpointer(settings: Settings):
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = Settings.from_env()
     app.state.settings = settings
+    app.state.loop = asyncio.get_running_loop()
     app.state.go_client = GoToolClient(
         base_url=settings.go_tool_server_url,
         internal_token=settings.go_internal_token,
         timeout_seconds=settings.go_client_timeout_seconds,
     )
+    app.state.stream_emitter = GoBridgeStreamEmitter(go_client=app.state.go_client, loop=app.state.loop)
     app.state.checkpointer = create_checkpointer(settings)
     app.state.graph = build_agent_graph(
         checkpointer=app.state.checkpointer,
         go_client=app.state.go_client,
+        stream_emitter=app.state.stream_emitter,
     )
     try:
         yield

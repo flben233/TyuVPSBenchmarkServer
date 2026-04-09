@@ -1,5 +1,11 @@
 <script setup>
 import { saveConnection } from "~/utils/webssh-storage";
+import {
+  shouldDedupeAgentState,
+  setLatestPendingApproval,
+  clearPendingApprovalForTask,
+  buildApprovalsByMessageId,
+} from "~/utils/webssh-agent-chat";
 
 useHead({
   title: "WebSSH - Lolicon VPS",
@@ -17,34 +23,150 @@ const {
   sendAgentMessage,
   sendAgentApproval,
   onOutput,
-  onAgentUpdate,
-  onAgentApproval,
-  onAgentError,
-  onAgentDone,
+  onAgentMessageStart,
+  onAgentToken,
+  onAgentMessageEnd,
+  onAgentState,
 } = useWebSSH();
 
 const terminalRef = ref(null);
 const selectedConnection = ref(null);
-const agentTimeline = ref([]);
-const pendingApproval = ref(null);
-const activeAgentTaskId = ref("");
+const agentMessages = ref([]);
+const pendingApprovalByTaskId = ref({});
+const composeTaskId = ref("");
+const latestEventTaskId = ref("");
+const lastAgentStateByTaskId = ref({});
+const AGENT_STATE_DEDUPE_WINDOW_MS = 1500;
 
-function pushAgentTimeline(label, content, taskId = "") {
-  agentTimeline.value.unshift({
+function pushAgentMessage(role, content, taskId = "", options = {}) {
+  const entry = {
     id: crypto.randomUUID(),
-    label,
+    role,
     content,
     taskId,
+    messageId: options.messageId || "",
+    kind: options.kind || "text",
+    state: options.state || "",
+    streaming: options.streaming === true,
+    finishReason: options.finishReason || "",
     timestamp: Date.now(),
+  };
+  agentMessages.value.push(entry);
+  return entry;
+}
+
+function setPendingApproval(taskId, question, messageId) {
+  pendingApprovalByTaskId.value = setLatestPendingApproval(
+    pendingApprovalByTaskId.value,
+    taskId,
+    question,
+    messageId
+  );
+}
+
+function clearPendingApproval(taskId) {
+  pendingApprovalByTaskId.value = clearPendingApprovalForTask(pendingApprovalByTaskId.value, taskId);
+}
+
+function resetPendingApprovals() {
+  pendingApprovalByTaskId.value = {};
+}
+
+function upsertStateMessage(taskId, state, message) {
+  const now = Date.now();
+  const previous = lastAgentStateByTaskId.value[taskId] || null;
+  const next = {
+    taskId,
+    state,
+    message,
+    timestamp: now,
+  };
+
+  const shouldMerge = shouldDedupeAgentState(previous, next, now, AGENT_STATE_DEDUPE_WINDOW_MS);
+  if (shouldMerge && previous?.messageId) {
+    const existing = findMessageByTaskAndMessageId(taskId, previous.messageId);
+    if (existing) {
+      existing.content = message;
+      existing.timestamp = now;
+      existing.state = state;
+      lastAgentStateByTaskId.value = {
+        ...lastAgentStateByTaskId.value,
+        [taskId]: {
+          ...next,
+          messageId: previous.messageId,
+        },
+      };
+      return existing;
+    }
+  }
+
+  const created = pushAgentMessage("system", message, taskId, {
+    state,
+    messageId: `state:${taskId}:${now}`,
+    kind: state === "awaiting_approval" ? "approval" : "text",
   });
+
+  lastAgentStateByTaskId.value = {
+    ...lastAgentStateByTaskId.value,
+    [taskId]: {
+      ...next,
+      messageId: created.messageId,
+    },
+  };
+
+  return created;
+}
+
+function findMessageByTaskAndMessageId(taskId, messageId) {
+  for (let index = agentMessages.value.length - 1; index >= 0; index -= 1) {
+    const item = agentMessages.value[index];
+    if (item.taskId === taskId && item.messageId === messageId) {
+      return item;
+    }
+  }
+  return null;
+}
+
+function ensureStreamingAssistantMessage(taskId, messageId) {
+  const existing = findMessageByTaskAndMessageId(taskId, messageId);
+  if (existing) {
+    return existing;
+  }
+  return pushAgentMessage("assistant", "", taskId, {
+    messageId,
+    streaming: true,
+  });
+}
+
+function getStateMessage(state, message) {
+  if (message) {
+    return message;
+  }
+  switch (state) {
+    case "thinking":
+      return "Agent 正在思考";
+    case "running_command":
+      return "Agent 正在执行命令";
+    case "awaiting_approval":
+      return "Agent 等待审批";
+    case "done":
+      return "Agent 执行完成";
+    case "error":
+      return "Agent 执行失败";
+    default:
+      return "Agent 状态更新";
+  }
 }
 
 watch(
   () => status.value,
   (nextStatus) => {
     if (nextStatus === "disconnected" || nextStatus === "error") {
-      pendingApproval.value = null;
-      activeAgentTaskId.value = "";
+      resetPendingApprovals();
+      composeTaskId.value = "";
+      latestEventTaskId.value = "";
+      lastAgentStateByTaskId.value = {};
+      agentMessages.value = [];
     }
   }
 );
@@ -116,7 +238,7 @@ function handleAgentTaskSubmit(message) {
     ElMessage.warning("当前连接不可用，无法发送任务");
     return;
   }
-  pushAgentTimeline("任务提交", message);
+  pushAgentMessage("user", message);
 }
 
 function handleAgentMessageSubmit({ taskId, message }) {
@@ -124,8 +246,8 @@ function handleAgentMessageSubmit({ taskId, message }) {
     ElMessage.warning("当前连接不可用，无法发送消息");
     return;
   }
-  activeAgentTaskId.value = taskId;
-  pushAgentTimeline("用户消息", message, taskId);
+  composeTaskId.value = taskId;
+  pushAgentMessage("user", message, taskId);
 }
 
 function handleAgentApprovalSubmit({ taskId, approved }) {
@@ -133,8 +255,8 @@ function handleAgentApprovalSubmit({ taskId, approved }) {
     ElMessage.warning("当前连接不可用，无法发送审批");
     return;
   }
-  pushAgentTimeline("审批响应", approved ? "已批准" : "已拒绝", taskId);
-  pendingApproval.value = null;
+  pushAgentMessage("system", approved ? "审批结果: 已批准" : "审批结果: 已拒绝", taskId);
+  clearPendingApproval(taskId);
 }
 
 onMounted(() => {
@@ -144,27 +266,50 @@ onMounted(() => {
     }
   });
 
-  onAgentUpdate((event) => {
-    activeAgentTaskId.value = event.taskId;
-    pushAgentTimeline("执行更新", event.message, event.taskId);
+  onAgentMessageStart((event) => {
+    latestEventTaskId.value = event.taskId;
+    ensureStreamingAssistantMessage(event.taskId, event.messageId);
   });
 
-  onAgentApproval((event) => {
-    activeAgentTaskId.value = event.taskId;
-    pendingApproval.value = event;
-    pushAgentTimeline("审批请求", event.question, event.taskId);
+  onAgentToken((event) => {
+    latestEventTaskId.value = event.taskId;
+    const message = ensureStreamingAssistantMessage(event.taskId, event.messageId);
+    message.content += event.delta;
   });
 
-  onAgentError((event) => {
-    activeAgentTaskId.value = event.taskId;
-    pushAgentTimeline("执行错误", event.message, event.taskId);
+  onAgentMessageEnd((event) => {
+    latestEventTaskId.value = event.taskId;
+    const message = ensureStreamingAssistantMessage(event.taskId, event.messageId);
+    message.streaming = false;
+    message.finishReason = event.finishReason;
   });
 
-  onAgentDone((event) => {
-    activeAgentTaskId.value = event.taskId;
-    pendingApproval.value = null;
-    pushAgentTimeline("执行完成", event.summary, event.taskId);
+  onAgentState((event) => {
+    latestEventTaskId.value = event.taskId;
+    const stateMessage = getStateMessage(event.state, event.message);
+    if (event.state === "awaiting_approval") {
+      const approvalMessage = upsertStateMessage(event.taskId, event.state, stateMessage);
+      setPendingApproval(event.taskId, stateMessage, approvalMessage.messageId);
+      return;
+    }
+
+    if (event.state === "done" || event.state === "error") {
+      clearPendingApproval(event.taskId);
+    }
+
+    upsertStateMessage(event.taskId, event.state, stateMessage);
   });
+});
+
+const activePanelTaskId = computed(() => {
+  if (composeTaskId.value) {
+    return composeTaskId.value;
+  }
+  return latestEventTaskId.value;
+});
+
+const approvalsByMessageId = computed(() => {
+  return buildApprovalsByMessageId(agentMessages.value, pendingApprovalByTaskId.value);
 });
 </script>
 
@@ -217,9 +362,9 @@ onMounted(() => {
         <div class="webssh-agent-pane">
           <WebsshAgentPanel
             :status="status"
-            :timeline="agentTimeline"
-            :pending-approval="pendingApproval"
-            :active-task-id="activeAgentTaskId"
+            :messages="agentMessages"
+            :pending-approval-by-message-id="approvalsByMessageId"
+            :active-task-id="activePanelTaskId"
             @submit-task="handleAgentTaskSubmit"
             @submit-message="handleAgentMessageSubmit"
             @submit-approval="handleAgentApprovalSubmit"
