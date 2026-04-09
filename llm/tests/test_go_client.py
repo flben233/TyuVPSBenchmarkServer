@@ -94,3 +94,37 @@ def test_post_raises_runtime_error_on_request_failure() -> None:
         raise AssertionError("expected RuntimeError for request failure")
     except RuntimeError as exc:
         assert "request" in str(exc).lower()
+
+
+def test_send_stream_event_adds_internal_and_task_headers() -> None:
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["internal"] = request.headers.get("X-Internal-Token")
+        captured["task"] = request.headers.get("X-Task-ID")
+        return httpx.Response(200, json={"ok": True})
+
+    transport = httpx.MockTransport(handler)
+
+    async def run_test() -> None:
+        async with httpx.AsyncClient(transport=transport) as client:
+            go_client = GoToolClient(
+                base_url="http://go-tool.local",
+                internal_token="token-abc",
+                client=client,
+            )
+            await go_client.send_stream_event(
+                {
+                    "event": "state",
+                    "status": "thinking",
+                    "message": "Parsing user intent.",
+                },
+                task_id="task-stream-7",
+            )
+
+    asyncio.run(run_test())
+
+    assert captured["path"] == "/api/agent/stream-event"
+    assert captured["internal"] == "token-abc"
+    assert captured["task"] == "task-stream-7"

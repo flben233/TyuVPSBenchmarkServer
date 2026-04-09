@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from itertools import count
 import json
 from typing import Any, Callable, Protocol
 
@@ -21,6 +22,16 @@ class Checkpointer(Protocol):
     def get(self, task_id: str) -> AgentState | None: ...
 
     def get_by_key(self, key: str) -> AgentState | None: ...
+
+
+class StreamEmitter(Protocol):
+    def on_message_start(self, task_id: str, message_id: str) -> None: ...
+
+    def on_token(self, task_id: str, message_id: str, delta: str) -> None: ...
+
+    def on_message_end(self, task_id: str, message_id: str, finish_reason: str) -> None: ...
+
+    def on_state(self, task_id: str, state: str, message: str) -> None: ...
 
 
 class InMemoryCheckpointer:
@@ -117,9 +128,35 @@ def build_agent_graph(
     go_client: GoToolClient | None = None,
     command_executor: Callable[[str], str] | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    stream_emitter: StreamEmitter | None = None,
 ):
     active_checkpointer = checkpointer or InMemoryCheckpointer()
     execute_command_impl = command_executor or _default_command_executor
+    message_counter = count(1)
+
+    def _emit_state(state: AgentState, status: str, message: str) -> None:
+        if stream_emitter is None:
+            return
+        stream_emitter.on_state(state.get("task_id", ""), status, message)
+
+    def _emit_message_events(state: AgentState, text: str, finish_reason: str = "stop") -> None:
+        if stream_emitter is None:
+            return
+        task_id = state.get("task_id", "")
+        message_id = f"msg-{next(message_counter)}"
+        stream_emitter.on_message_start(task_id, message_id)
+        if text:
+            stream_emitter.on_token(task_id, message_id, text)
+        stream_emitter.on_message_end(task_id, message_id, finish_reason)
+
+    def _safe_node_call(state: AgentState, fn: Callable[[AgentState], AgentState]) -> AgentState:
+        try:
+            return fn(state)
+        except Exception as exc:
+            merged = merge_with_defaults(state)
+            _emit_state(merged, "error", str(exc))
+            _emit_message_events(merged, str(exc), finish_reason="error")
+            raise
 
     def receive_task(state: AgentState) -> AgentState:
         next_state = merge_with_defaults(state)
@@ -129,6 +166,7 @@ def build_agent_graph(
 
     def parse_intent(state: AgentState) -> AgentState:
         next_state = merge_with_defaults(state)
+        _emit_state(next_state, "thinking", "Parsing user intent.")
         latest_message = next_state.get("messages", [""])[-1] if next_state.get("messages") else ""
         intent = latest_message.strip()
         if intent.lower().startswith("run:"):
@@ -186,6 +224,7 @@ def build_agent_graph(
 
     def execute_command(state: AgentState) -> AgentState:
         next_state = merge_with_defaults(state)
+        _emit_state(next_state, "running_command", "Executing command.")
         next_state["awaiting_approval"] = False
         command = next_state.get("current_command", "")
         task_id = next_state.get("task_id", "")
@@ -245,19 +284,29 @@ def build_agent_graph(
                 next_state["final_response"] = f"Task complete: {next_state.get('command_result', '')}".strip()
         else:
             next_state["final_response"] = "Task needs another execution cycle."
+
+        if next_state.get("awaiting_approval", False):
+            _emit_state(next_state, "awaiting_approval", next_state.get("final_response", ""))
+            _emit_message_events(next_state, next_state.get("final_response", ""), finish_reason="stop")
+        elif next_state.get("task_complete", False):
+            _emit_state(next_state, "done", next_state.get("final_response", ""))
+            _emit_message_events(next_state, next_state.get("final_response", ""), finish_reason="stop")
+        else:
+            _emit_state(next_state, "thinking", next_state.get("final_response", ""))
+
         append_step(next_state, "report_result")
         _save_checkpoint(active_checkpointer, next_state)
         return next_state
 
     graph = StateGraph(AgentState)
-    graph.add_node("receive_task", receive_task)
-    graph.add_node("parse_intent", parse_intent)
-    graph.add_node("generate_command", generate_command)
-    graph.add_node("safety_check", safety_check)
-    graph.add_node("await_approval", await_approval)
-    graph.add_node("execute_command", execute_command)
-    graph.add_node("analyze_result", analyze_result)
-    graph.add_node("report_result", report_result)
+    graph.add_node("receive_task", lambda state: _safe_node_call(state, receive_task))
+    graph.add_node("parse_intent", lambda state: _safe_node_call(state, parse_intent))
+    graph.add_node("generate_command", lambda state: _safe_node_call(state, generate_command))
+    graph.add_node("safety_check", lambda state: _safe_node_call(state, safety_check))
+    graph.add_node("await_approval", lambda state: _safe_node_call(state, await_approval))
+    graph.add_node("execute_command", lambda state: _safe_node_call(state, execute_command))
+    graph.add_node("analyze_result", lambda state: _safe_node_call(state, analyze_result))
+    graph.add_node("report_result", lambda state: _safe_node_call(state, report_result))
 
     graph.add_edge(START, "receive_task")
     graph.add_edge("receive_task", "parse_intent")

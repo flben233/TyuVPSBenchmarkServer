@@ -3,21 +3,25 @@ package model
 type MessageType string
 
 const (
-	TypeConnect       MessageType = "connect"
-	TypeInput         MessageType = "input"
-	TypeResize        MessageType = "resize"
-	TypePing          MessageType = "ping"
-	TypeAgentTask     MessageType = "agent_task"
-	TypeAgentMsg      MessageType = "agent_message"
-	TypeAgentAck      MessageType = "agent_approval_response"
-	TypeOutput        MessageType = "output"
-	TypeConnected     MessageType = "connected"
-	TypeError         MessageType = "error"
-	TypeClosed        MessageType = "closed"
-	TypeAgentUpdate   MessageType = "agent_update"
-	TypeAgentApproval MessageType = "agent_approval"
-	TypeAgentError    MessageType = "agent_error"
-	TypeAgentDone     MessageType = "agent_done"
+	TypeConnect               MessageType = "connect"
+	TypeInput                 MessageType = "input"
+	TypeResize                MessageType = "resize"
+	TypePing                  MessageType = "ping"
+	TypeAgentTask             MessageType = "agent_task"
+	TypeAgentMessage          MessageType = "agent_message"
+	TypeAgentApprovalResponse MessageType = "agent_approval_response"
+	TypeOutput                MessageType = "output"
+	TypeConnected             MessageType = "connected"
+	TypeError                 MessageType = "error"
+	TypeClosed                MessageType = "closed"
+	TypeAgentMessageStart     MessageType = "agent_message_start"
+	TypeAgentToken            MessageType = "agent_token"
+	TypeAgentMessageEnd       MessageType = "agent_message_end"
+	TypeAgentState            MessageType = "agent_state"
+
+	// Backward-compatible aliases.
+	TypeAgentMsg MessageType = TypeAgentMessage
+	TypeAgentAck MessageType = TypeAgentApprovalResponse
 )
 
 type ClientMessage struct {
@@ -36,11 +40,12 @@ type ClientMessage struct {
 }
 
 type ServerMessage struct {
-	Type     MessageType `json:"type"`
-	Data     string      `json:"data,omitempty"`
-	Message  string      `json:"message,omitempty"`
-	TaskID   string      `json:"task_id,omitempty"`
-	Status   string      `json:"status,omitempty"`
-	Question string      `json:"question,omitempty"`
-	Summary  string      `json:"summary,omitempty"`
+	Type         MessageType `json:"type"`
+	Data         string      `json:"data,omitempty"`
+	Message      string      `json:"message,omitempty"`
+	TaskID       string      `json:"task_id,omitempty"`
+	MessageID    string      `json:"message_id,omitempty"`
+	Delta        string      `json:"delta,omitempty"`
+	FinishReason string      `json:"finish_reason,omitempty"`
+	State        string      `json:"state,omitempty"`
 }

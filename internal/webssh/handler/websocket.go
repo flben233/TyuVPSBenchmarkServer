@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"VPSBenchmarkBackend/internal/config"
@@ -22,6 +23,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 )
+
+var wsStreamOwnerSeq uint64
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: websocketOriginAllowed,
@@ -103,6 +106,8 @@ func HandleWebSocket(ctx *gin.Context) {
 
 func wsHandler(ctx *gin.Context, conn *websocket.Conn, userID int64, sessionID string) {
 	var writeMu sync.Mutex
+	streamOwnerID := fmt.Sprintf("ws-%d", atomic.AddUint64(&wsStreamOwnerSeq, 1))
+	registeredTaskIDs := make(map[string]struct{})
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -121,20 +126,39 @@ func wsHandler(ctx *gin.Context, conn *websocket.Conn, userID int64, sessionID s
 	}
 
 	defer func() {
+		for taskID := range registeredTaskIDs {
+			agentStreamBridge.Unregister(taskID, streamOwnerID)
+		}
 		if sshSession != nil {
 			service.UnregisterSession(sessionID)
 			sshSession.Close()
 		}
 	}()
 
+	writeJSONNoLock := func(msg model.ServerMessage) {
+		_ = conn.WriteJSON(msg)
+	}
+
 	sendMsg := func(msg *model.ServerMessage) {
-		writeTimeout(conn, &writeMu, *msg)
+		writeServerMessageLocked(&writeMu, writeJSONNoLock, *msg)
 	}
 
 	sendOutput := func(data []byte) {
 		writeMu.Lock()
 		defer writeMu.Unlock()
 		_ = conn.WriteMessage(websocket.BinaryMessage, data)
+	}
+
+	registerTaskStream := func(taskID string) {
+		taskID = strings.TrimSpace(taskID)
+		if taskID == "" {
+			return
+		}
+		if _, ok := registeredTaskIDs[taskID]; ok {
+			return
+		}
+		agentStreamBridge.Register(taskID, streamOwnerID, func(msg model.ServerMessage) { sendMsg(&msg) })
+		registeredTaskIDs[taskID] = struct{}{}
 	}
 
 	for {
@@ -222,36 +246,32 @@ func wsHandler(ctx *gin.Context, conn *websocket.Conn, userID int64, sessionID s
 				CommandCount: 0,
 			}
 			if err := saveTaskBinding(requestContext, taskID, binding); err != nil {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "failed to create task"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "failed to create task")
 				continue
 			}
-
-			sendMsg(&model.ServerMessage{Type: model.TypeAgentUpdate, TaskID: taskID, Status: status, Message: "task created"})
+			registerTaskStream(taskID)
+			sendAgentState(sendMsg, taskID, mapStatusToAgentState(status), "task created")
 
 		case model.TypeAgentMsg:
 			taskID := strings.TrimSpace(clientMsg.TaskID)
 			if taskID == "" {
-				sendMsg(&model.ServerMessage{
-					Type:    model.TypeAgentError,
-					TaskID:  unknownTaskID,
-					Status:  model.AgentStatusFailed,
-					Message: "task_id is required",
-				})
+				sendAgentState(sendMsg, unknownTaskID, mapStatusToAgentState(model.AgentStatusFailed), "task_id is required")
 				continue
 			}
 			binding, err := getTaskBinding(requestContext, taskID)
 			if err != nil {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "failed to query task"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "failed to query task")
 				continue
 			}
 			if binding == nil || binding.UserID != userID {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "task not found"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "task not found")
 				continue
 			}
+			registerTaskStream(taskID)
 
 			message := strings.TrimSpace(clientMsg.Message)
 			if message == "" {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "message is required"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "message is required")
 				continue
 			}
 
@@ -262,7 +282,7 @@ func wsHandler(ctx *gin.Context, conn *websocket.Conn, userID int64, sessionID s
 				continue
 			}
 			if !reply.OK {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "agent service rejected task message"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "agent service rejected task message")
 				continue
 			}
 
@@ -270,50 +290,29 @@ func wsHandler(ctx *gin.Context, conn *websocket.Conn, userID int64, sessionID s
 			if nextStatus != binding.Status {
 				binding.Status = nextStatus
 				if err := saveTaskBinding(requestContext, taskID, *binding); err != nil {
-					sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "failed to update task status"})
+					sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "failed to update task status")
 					continue
 				}
 			}
 
-			data := reply.Data
-			if data == nil {
-				data = map[string]any{}
-			}
-			sendMsg(&model.ServerMessage{Type: model.TypeAgentUpdate, TaskID: taskID, Status: binding.Status, Message: coalesceAgentMessage(reply.Message, "message accepted")})
-			if awaiting, _ := data["awaiting_approval"].(bool); awaiting {
-				question := extractAgentText(data["final_response"])
-				if question == "" {
-					question = coalesceAgentMessage(reply.Message, "approval required")
-				}
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentApproval, TaskID: taskID, Status: model.AgentStatusAwaitingApproval, Message: "approval required", Question: question})
-			} else if done, _ := data["task_complete"].(bool); done {
-				summary := extractAgentText(data["final_response"])
-				if summary == "" {
-					summary = coalesceAgentMessage(reply.Message, "task completed")
-				}
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentDone, TaskID: taskID, Status: model.AgentStatusCompleted, Message: summary, Summary: summary})
-			}
+			handleAgentReplyResult(sendMsg, taskID, binding.Status, reply, "message accepted")
 
 		case model.TypeAgentAck:
 			taskID := strings.TrimSpace(clientMsg.TaskID)
 			if taskID == "" {
-				sendMsg(&model.ServerMessage{
-					Type:    model.TypeAgentError,
-					TaskID:  unknownTaskID,
-					Status:  model.AgentStatusFailed,
-					Message: "task_id is required",
-				})
+				sendAgentState(sendMsg, unknownTaskID, mapStatusToAgentState(model.AgentStatusFailed), "task_id is required")
 				continue
 			}
 			binding, err := getTaskBinding(requestContext, taskID)
 			if err != nil {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "failed to query task"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "failed to query task")
 				continue
 			}
 			if binding == nil || binding.UserID != userID {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "task not found"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "task not found")
 				continue
 			}
+			registerTaskStream(taskID)
 
 			approved := false
 			if clientMsg.Approved != nil {
@@ -326,7 +325,7 @@ func wsHandler(ctx *gin.Context, conn *websocket.Conn, userID int64, sessionID s
 				continue
 			}
 			if !reply.OK {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "agent service rejected task approval"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "agent service rejected task approval")
 				continue
 			}
 
@@ -339,33 +338,16 @@ func wsHandler(ctx *gin.Context, conn *websocket.Conn, userID int64, sessionID s
 				binding.Status = model.AgentStatusFailed
 			}
 			if err := saveTaskBinding(requestContext, taskID, *binding); err != nil {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: "failed to update task approval"})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), "failed to update task approval")
 				continue
 			}
 
 			if !approved {
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentError, TaskID: taskID, Status: model.AgentStatusFailed, Message: coalesceAgentMessage(reply.Message, "approval denied")})
+				sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusFailed), coalesceAgentMessage(reply.Message, "approval denied"))
 				continue
 			}
 
-			data := reply.Data
-			if data == nil {
-				data = map[string]any{}
-			}
-			sendMsg(&model.ServerMessage{Type: model.TypeAgentUpdate, TaskID: taskID, Status: binding.Status, Message: coalesceAgentMessage(reply.Message, "approval accepted")})
-			if awaiting, _ := data["awaiting_approval"].(bool); awaiting {
-				question := extractAgentText(data["final_response"])
-				if question == "" {
-					question = coalesceAgentMessage(reply.Message, "approval required")
-				}
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentApproval, TaskID: taskID, Status: model.AgentStatusAwaitingApproval, Message: "approval required", Question: question})
-			} else if done, _ := data["task_complete"].(bool); done {
-				summary := extractAgentText(data["final_response"])
-				if summary == "" {
-					summary = coalesceAgentMessage(reply.Message, "task completed")
-				}
-				sendMsg(&model.ServerMessage{Type: model.TypeAgentDone, TaskID: taskID, Status: model.AgentStatusCompleted, Message: summary, Summary: summary})
-			}
+			handleAgentReplyResult(sendMsg, taskID, binding.Status, reply, "approval accepted")
 		}
 	}
 }
@@ -384,12 +366,80 @@ func sendAgentErrorMessage(sendMsg func(*model.ServerMessage), taskID string, er
 		message = "invalid response from agent service"
 	}
 
+	sendAgentState(sendMsg, normalizeTaskID(taskID), mapStatusToAgentState(model.AgentStatusFailed), message)
+}
+
+type agentStreamEmitter interface {
+	Register(taskID string, ownerID string, sender service.AgentStreamSender)
+	Unregister(taskID string, ownerID string)
+	EmitMessageStart(taskID string, messageID string)
+	EmitToken(taskID string, messageID string, delta string)
+	EmitMessageEnd(taskID string, messageID string, reason string)
+	EmitState(taskID string, state string, message string)
+}
+
+var agentStreamBridge agentStreamEmitter = service.NewAgentStreamBridge()
+
+func writeServerMessageLocked(writeMu *sync.Mutex, writeNoLock func(model.ServerMessage), msg model.ServerMessage) {
+	writeMu.Lock()
+	defer writeMu.Unlock()
+	writeNoLock(msg)
+}
+
+func writeAgentMessageTripletLocked(writeMu *sync.Mutex, writeNoLock func(model.ServerMessage), taskID string, messageID string, delta string) {
+	writeMu.Lock()
+	defer writeMu.Unlock()
+	writeNoLock(model.ServerMessage{Type: model.TypeAgentMessageStart, TaskID: taskID, MessageID: messageID})
+	writeNoLock(model.ServerMessage{Type: model.TypeAgentToken, TaskID: taskID, MessageID: messageID, Delta: delta})
+	writeNoLock(model.ServerMessage{Type: model.TypeAgentMessageEnd, TaskID: taskID, MessageID: messageID, FinishReason: "stop"})
+}
+
+func sendAgentState(sendMsg func(*model.ServerMessage), taskID string, state string, message string) {
 	sendMsg(&model.ServerMessage{
-		Type:    model.TypeAgentError,
+		Type:    model.TypeAgentState,
 		TaskID:  normalizeTaskID(taskID),
-		Status:  model.AgentStatusFailed,
+		State:   state,
 		Message: message,
 	})
+}
+
+func handleAgentReplyResult(sendMsg func(*model.ServerMessage), taskID string, status string, reply service.AgentReply, acceptFallback string) {
+	data := reply.Data
+	if data == nil {
+		data = map[string]any{}
+	}
+	if awaiting, _ := data["awaiting_approval"].(bool); awaiting {
+		question := extractAgentText(data["final_response"])
+		if question == "" {
+			question = coalesceAgentMessage(reply.Message, "approval required")
+		}
+		sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusAwaitingApproval), question)
+		return
+	}
+	if done, _ := data["task_complete"].(bool); done {
+		summary := extractAgentText(data["final_response"])
+		if summary == "" {
+			summary = coalesceAgentMessage(reply.Message, "task completed")
+		}
+		sendAgentState(sendMsg, taskID, mapStatusToAgentState(model.AgentStatusCompleted), summary)
+		return
+	}
+	sendAgentState(sendMsg, taskID, mapStatusToAgentState(status), coalesceAgentMessage(reply.Message, acceptFallback))
+}
+
+func mapStatusToAgentState(status string) string {
+	switch strings.TrimSpace(status) {
+	case model.AgentStatusAwaitingApproval:
+		return "awaiting_approval"
+	case model.AgentStatusCompleted:
+		return "done"
+	case model.AgentStatusFailed:
+		return "error"
+	case model.AgentStatusRunning:
+		return "running_command"
+	default:
+		return "thinking"
+	}
 }
 
 const unknownTaskID = "unknown"
@@ -419,7 +469,5 @@ func extractAgentText(value any) string {
 }
 
 func writeTimeout(conn *websocket.Conn, writeMu *sync.Mutex, msg model.ServerMessage) {
-	writeMu.Lock()
-	defer writeMu.Unlock()
-	_ = conn.WriteJSON(msg)
+	writeServerMessageLocked(writeMu, func(m model.ServerMessage) { _ = conn.WriteJSON(m) }, msg)
 }
