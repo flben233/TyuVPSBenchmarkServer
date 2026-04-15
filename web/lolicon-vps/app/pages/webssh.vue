@@ -12,6 +12,12 @@ const { status, errorMessage, sshSessionId, connect, disconnect, sendInput, resi
 const terminalRef = ref(null);
 const selectedConnection = ref(null);
 const showAgentPanel = ref(false);
+const isMobile = ref(false);
+
+function checkMobile() {
+  isMobile.value = window.innerWidth < 768;
+}
+
 const statusText = computed(() => {
   switch (status.value) {
     case "connected":
@@ -75,16 +81,22 @@ function handleResize({ cols, rows }) {
 }
 
 onMounted(() => {
+  checkMobile();
+  window.addEventListener("resize", checkMobile);
   onOutput((data) => {
     if (terminalRef.value) {
       terminalRef.value.write(data);
     }
   });
 });
+
+onUnmounted(() => {
+  window.removeEventListener("resize", checkMobile);
+});
 </script>
 
 <template>
-  <div class="webssh-page">
+  <div class="webssh-page" :class="{ 'mobile-layout': isMobile }">
     <div class="webssh-sidebar">
       <WebsshConnectionList
         :active-id="selectedConnection?.id"
@@ -139,7 +151,7 @@ onMounted(() => {
           />
         </div>
         <transition name="slide">
-          <div v-if="showAgentPanel && status === 'connected'" class="webssh-agent-panel">
+          <div v-if="status === 'connected'" v-show="showAgentPanel" class="webssh-agent-panel">
             <WebsshAgentChat
               :ssh-session-id="sshSessionId"
               :connected="status === 'connected'"
@@ -181,6 +193,7 @@ onMounted(() => {
   padding: 12px 16px;
   border-bottom: 1px solid var(--el-border-color-light);
   background: #fff;
+  flex-shrink: 0;
 }
 
 .toolbar-right {
@@ -202,10 +215,10 @@ onMounted(() => {
 }
 
 .webssh-agent-panel {
-  width: 380px;
+  width: 400px;
   flex-shrink: 0;
-  border-left: 1px solid var(--el-border-color-light);
-  background: #fafafa;
+  padding: 8px;
+  box-sizing: border-box;
 }
 
 .slide-enter-active,
@@ -220,14 +233,33 @@ onMounted(() => {
 }
 
 @media screen and (max-width: 768px) {
-  .webssh-page {
+  .webssh-page.mobile-layout {
     flex-direction: column;
   }
-  .webssh-sidebar {
+  .webssh-page.mobile-layout .webssh-sidebar {
     width: 100%;
-    height: 200px;
+    height: 180px;
+    flex-shrink: 0;
     border-right: none;
     border-bottom: 1px solid var(--el-border-color-light);
+  }
+  .webssh-page.mobile-layout .webssh-agent-panel {
+    width: 100%;
+    height: 50vh;
+    border-left: none;
+    border-top: 1px solid var(--el-border-color-light);
+  }
+  .webssh-page.mobile-layout .webssh-content {
+    flex-direction: column;
+  }
+}
+
+@media screen and (max-width: 1024px) and (min-width: 769px) {
+  .webssh-agent-panel {
+    width: 340px;
+  }
+  .webssh-sidebar {
+    width: 240px;
   }
 }
 </style>

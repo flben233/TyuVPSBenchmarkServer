@@ -50,11 +50,12 @@ export function useWebSSHAgent() {
   const pendingToolCall = ref(null);
 
   function addMessage(role, content) {
-    messages.value.push({ role, content, timestamp: Date.now() });
+    messages.value.push({ role, content, thinkingContent: "", timestamp: Date.now() });
   }
 
-  function updateAssistant(idx, content, extras = {}) {
-    messages.value[idx] = { role: "assistant", content, timestamp: Date.now(), ...extras };
+  function updateAssistant(idx, extras) {
+    const msg = { ...messages.value[idx], timestamp: Date.now(), ...extras };
+    messages.value[idx] = msg;
   }
 
   async function createConversation(sshSessionId) {
@@ -69,7 +70,7 @@ export function useWebSSHAgent() {
     throw new Error(resp?.message || "Failed to create conversation");
   }
 
-  async function streamChat(body, assistantIdx, assistantContent) {
+  async function streamChat(body, assistantIdx) {
     const resp = await fetchWithAuth("/webssh/llm/chat", {
       method: "POST",
       body: JSON.stringify(body),
@@ -79,19 +80,27 @@ export function useWebSSHAgent() {
       throw new Error(`Chat request failed: ${resp.status}`);
     }
 
+    let thinkingText = "";
+    let tokenText = "";
+
     await parseSSEStream(resp.body.getReader(), (event, payload) => {
       const inner = payload.payload || {};
       switch (event) {
-        case "token":
         case "thinking":
+          if (inner.text) {
+            thinkingText += inner.text;
+            updateAssistant(assistantIdx, { thinkingContent: thinkingText, content: tokenText });
+          }
+          break;
+        case "token":
           thinking.value = false;
           if (inner.text) {
-            assistantContent.value += inner.text;
-            updateAssistant(assistantIdx, assistantContent.value);
+            tokenText += inner.text;
+            updateAssistant(assistantIdx, { thinkingContent: thinkingText, content: tokenText });
           }
           break;
         case "error":
-          updateAssistant(assistantIdx, inner.message || "Unknown error", { isError: true });
+          updateAssistant(assistantIdx, { content: inner.message || "Unknown error", isError: true });
           break;
         case "awaiting_approval":
           awaitingApproval.value = true;
@@ -111,15 +120,13 @@ export function useWebSSHAgent() {
     awaitingApproval.value = false;
     pendingToolCall.value = null;
 
-    const assistantContent = ref("");
-    messages.value.push({ role: "assistant", content: "", timestamp: Date.now() });
+    messages.value.push({ role: "assistant", content: "", thinkingContent: "", timestamp: Date.now() });
     const assistantIdx = messages.value.length - 1;
 
     try {
       await streamChat(
         { conversationId: conversationId.value, message: text },
-        assistantIdx,
-        assistantContent
+        assistantIdx
       );
     } finally {
       streaming.value = false;
@@ -134,15 +141,13 @@ export function useWebSSHAgent() {
 
     addMessage("user", granted ? "[approved]" : "[rejected]");
 
-    const assistantContent = ref("");
-    messages.value.push({ role: "assistant", content: "", timestamp: Date.now() });
+    messages.value.push({ role: "assistant", content: "", thinkingContent: "", timestamp: Date.now() });
     const assistantIdx = messages.value.length - 1;
 
     try {
       await streamChat(
         { conversationId: conversationId.value, approval_granted: granted },
-        assistantIdx,
-        assistantContent
+        assistantIdx
       );
     } finally {
       streaming.value = false;
