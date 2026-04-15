@@ -23,7 +23,7 @@ func RegisterRoute(base string, r *gin.Engine) {
 		group2.POST("/reset", handler.HandleReset)
 	}
 	group3 := r.Group(base + "/webssh/llm")
-	//group3.Use(auth.GetJWTMiddleware())
+	group3.Use(auth.GetJWTMiddleware())
 	{
 		group3.POST("/new", handler.NewConversation)
 		group3.POST("/chat", handler.Chat)
