@@ -4,6 +4,7 @@ export function useWebSSH() {
 
   const status = ref("disconnected");
   const errorMessage = ref("");
+  const sshSessionId = ref("");
   let ws = null;
   let pingInterval = null;
 
@@ -73,6 +74,7 @@ export function useWebSSH() {
         case "connected":
           status.value = "connected";
           errorMessage.value = "";
+          sshSessionId.value = msg.message;
           startPing();
           break;
         case "output":

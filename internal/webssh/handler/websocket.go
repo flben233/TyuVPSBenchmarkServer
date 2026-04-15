@@ -135,7 +135,8 @@ func wsHandler(ctx *gin.Context, conn *websocket.Conn, userID int64) {
 				continue
 			}
 			sendMsg(&model.ServerMessage{
-				Type: model.TypeConnected,
+				Type:    model.TypeConnected,
+				Message: sshSession.ID,
 			})
 			go sshSession.ReadOutput(sendOutput, sendMsg)
 

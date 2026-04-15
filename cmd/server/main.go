@@ -14,6 +14,7 @@ import (
 	_ "VPSBenchmarkBackend/internal/report"
 	_ "VPSBenchmarkBackend/internal/tool"
 	_ "VPSBenchmarkBackend/internal/webssh"
+	"VPSBenchmarkBackend/internal/webssh/mcp"
 	"fmt"
 	"log"
 
@@ -59,6 +60,8 @@ func main() {
 	// Start background cron jobs
 	common.RunCronJobs()
 	log.Println("Background cron jobs started")
+
+	go mcp.StartMCP()
 
 	r := gin.Default()
 	r.GET("swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

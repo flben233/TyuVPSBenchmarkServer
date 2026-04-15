@@ -1,9 +1,14 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/config"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -12,7 +17,30 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+var sessions = sync.Map{} // map[int64]*SSHSession
+
+func GetSession(sessionID string) (*SSHSession, bool) {
+	if sess, ok := sessions.Load(sessionID); ok {
+		return sess.(*SSHSession), true
+	}
+	return nil, false
+}
+
+type sideReader struct {
+	Buf chan []byte
+}
+
+func (r *sideReader) Read(p []byte) (n int, err error) {
+	data, ok := <-r.Buf
+	if !ok {
+		return 0, io.EOF
+	}
+	n = copy(p, data)
+	return n, nil
+}
+
 type SSHSession struct {
+	ID        string
 	client    *ssh.Client
 	session   *ssh.Session
 	stdin     io.WriteCloser
@@ -20,11 +48,31 @@ type SSHSession struct {
 	mu        sync.Mutex
 	done      chan struct{}
 	closeOnce sync.Once
+	sideOut   *sideReader
+	sideMu    sync.Mutex
 }
 
 func NewSSHSession() *SSHSession {
 	return &SSHSession{
+		ID:   uuid.New().String(),
 		done: make(chan struct{}),
+	}
+}
+
+func (s *SSHSession) SetSideBuffer() io.Reader {
+	buf := make(chan []byte)
+	s.sideMu.Lock()
+	defer s.sideMu.Unlock()
+	s.sideOut = &sideReader{Buf: buf}
+	return s.sideOut
+}
+
+func (s *SSHSession) ClearSideBuffer() {
+	s.sideMu.Lock()
+	defer s.sideMu.Unlock()
+	if s.sideOut != nil {
+		close(s.sideOut.Buf)
+		s.sideOut = nil
 	}
 }
 
@@ -111,6 +159,7 @@ func (s *SSHSession) Connect(msg *model.ClientMessage) error {
 	s.session = session
 	s.stdin = stdin
 	s.stdout = stdout
+	sessions.Store(s.ID, s)
 	return nil
 }
 
@@ -150,6 +199,17 @@ func (s *SSHSession) ReadOutput(sendOutput func([]byte), sendMsg func(*model.Ser
 			data := make([]byte, n)
 			copy(data, buf[:n])
 			sendOutput(data)
+			// 如果侧边工具有在监听输出，也发送数据过去
+			s.sideMu.Lock()
+			ch := s.sideOut
+			s.sideMu.Unlock()
+			if ch != nil {
+				select {
+				case s.sideOut.Buf <- data:
+				default:
+					// 如果没有及时读取，丢弃数据避免阻塞
+				}
+			}
 		}
 		if err != nil {
 			if err != io.EOF {
@@ -179,4 +239,17 @@ func (s *SSHSession) Close() {
 	if s.client != nil {
 		s.client.Close()
 	}
+
+	// 通知LLM后端会话已关闭
+	closeReq := &struct {
+		SSHSessionID string `json:"ssh_session_id"`
+	}{
+		SSHSessionID: s.ID,
+	}
+	reqJson, err := json.Marshal(closeReq)
+	if err == nil {
+		_, _ = http.Post("POST", config.Get().LLMBackendURL+"/close", bytes.NewReader(reqJson))
+	}
+
+	sessions.Delete(s.ID)
 }
