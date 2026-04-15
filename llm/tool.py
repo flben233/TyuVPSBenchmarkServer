@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from langchain_core.messages import (
@@ -15,28 +16,17 @@ async def load_mcp_tools(mcp_url: str) -> list[BaseTool]:
     return await client.get_tools()
 
 
-
-def _normalize_json_schema(schema: dict[str, Any] | None) -> dict[str, Any]:
-    if not isinstance(schema, dict):
-        return {"type": "object", "properties": {}}
-
-    normalized = dict(schema)
-    normalized.pop("$schema", None)
-    if "type" not in normalized:
-        normalized["type"] = "object"
-    if normalized.get("type") == "object" and "properties" not in normalized:
-        normalized["properties"] = {}
-    return normalized
-
-
 def _tool_to_openai_function(tool: BaseTool) -> dict[str, Any]:
-    input_schema = _normalize_json_schema(tool.get_input_jsonschema())
     return {
         "type": "function",
         "function": {
             "name": tool.name,
             "description": tool.description or "",
-            "parameters": input_schema,
+            "parameters": {
+                "type": "object",
+                "properties": tool.args_schema["properties"],
+                "required": tool.args_schema.get("required", [])
+            },
         },
     }
 
@@ -57,7 +47,7 @@ def invoke_tool(tool_call: dict, tool_map: dict[str, BaseTool]) -> ToolMessage:
     args = tool_call.get("args", {})
     tool = tool_map.get(name)
     try:
-        result = tool.invoke(args) if tool else f"Error: unknown tool '{name}'"
+        result = asyncio.run(tool.ainvoke(args)) if tool else f"Error: unknown tool '{name}'"
     except Exception as e:
         result = f"Error executing {name}: {e}"
     return ToolMessage(

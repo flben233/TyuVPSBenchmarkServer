@@ -1,15 +1,17 @@
 <script setup>
 import { saveConnection } from "~/utils/webssh-storage";
+import { ChatDotRound } from "@element-plus/icons-vue";
 
 useHead({
   title: "WebSSH - Lolicon VPS",
 });
 
 const { userInfo } = useAuth();
-const { status, errorMessage, connect, disconnect, sendInput, resize, onOutput } = useWebSSH();
+const { status, errorMessage, sshSessionId, connect, disconnect, sendInput, resize, onOutput } = useWebSSH();
 
 const terminalRef = ref(null);
 const selectedConnection = ref(null);
+const showAgentPanel = ref(false);
 const statusText = computed(() => {
   switch (status.value) {
     case "connected":
@@ -101,6 +103,15 @@ onMounted(() => {
         <div class="toolbar-right">
           <el-button
             v-if="status === 'connected'"
+            :type="showAgentPanel ? 'primary' : 'default'"
+            size="small"
+            :icon="ChatDotRound"
+            @click="showAgentPanel = !showAgentPanel"
+          >
+            AI
+          </el-button>
+          <el-button
+            v-if="status === 'connected'"
             type="danger"
             size="small"
             @click="handleDisconnect"
@@ -117,14 +128,24 @@ onMounted(() => {
           </el-button>
         </div>
       </div>
-      <div class="webssh-terminal-area">
-        <WebsshTerminal
-          ref="terminalRef"
-          :status="status"
-          :error-message="errorMessage"
-          @input="handleInput"
-          @resize="handleResize"
-        />
+      <div class="webssh-content">
+        <div class="webssh-terminal-area">
+          <WebsshTerminal
+            ref="terminalRef"
+            :status="status"
+            :error-message="errorMessage"
+            @input="handleInput"
+            @resize="handleResize"
+          />
+        </div>
+        <transition name="slide">
+          <div v-if="showAgentPanel && status === 'connected'" class="webssh-agent-panel">
+            <WebsshAgentChat
+              :ssh-session-id="sshSessionId"
+              :connected="status === 'connected'"
+            />
+          </div>
+        </transition>
       </div>
     </div>
   </div>
@@ -162,10 +183,40 @@ onMounted(() => {
   background: #fff;
 }
 
+.toolbar-right {
+  display: flex;
+  gap: 8px;
+}
+
+.webssh-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
 .webssh-terminal-area {
   flex: 1;
   padding: 8px;
   overflow: hidden;
+  min-width: 0;
+}
+
+.webssh-agent-panel {
+  width: 380px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--el-border-color-light);
+  background: #fafafa;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: width 0.25s ease, opacity 0.25s ease;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  width: 0;
+  opacity: 0;
 }
 
 @media screen and (max-width: 768px) {

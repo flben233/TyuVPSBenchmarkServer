@@ -27,7 +27,8 @@ func GetSession(sessionID string) (*SSHSession, bool) {
 }
 
 type sideReader struct {
-	Buf chan []byte
+	Buf       chan []byte
+	SideClose chan struct{}
 }
 
 func (r *sideReader) Read(p []byte) (n int, err error) {
@@ -63,11 +64,12 @@ func (s *SSHSession) SetSideBuffer() io.Reader {
 	buf := make(chan []byte)
 	s.sideMu.Lock()
 	defer s.sideMu.Unlock()
-	s.sideOut = &sideReader{Buf: buf}
+	s.sideOut = &sideReader{Buf: buf, SideClose: make(chan struct{})}
 	return s.sideOut
 }
 
 func (s *SSHSession) ClearSideBuffer() {
+	close(s.sideOut.SideClose) // 发送关闭信号，不要用写入来发送信号，避免下面的select阻塞（两个都是无缓冲通道，如果sideOut.Buf没有被读取，写入会阻塞）
 	s.sideMu.Lock()
 	defer s.sideMu.Unlock()
 	if s.sideOut != nil {
@@ -94,7 +96,7 @@ func (s *SSHSession) Connect(msg *model.ClientMessage) error {
 		return fmt.Errorf("no authentication method provided")
 	}
 
-	config := &ssh.ClientConfig{
+	cfg := &ssh.ClientConfig{
 		User:            msg.Username,
 		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -102,7 +104,7 @@ func (s *SSHSession) Connect(msg *model.ClientMessage) error {
 	}
 
 	addr := fmt.Sprintf("%s:%d", msg.Host, msg.Port)
-	client, err := ssh.Dial("tcp", addr, config)
+	client, err := ssh.Dial("tcp", addr, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", addr, err)
 	}
@@ -201,15 +203,16 @@ func (s *SSHSession) ReadOutput(sendOutput func([]byte), sendMsg func(*model.Ser
 			sendOutput(data)
 			// 如果侧边工具有在监听输出，也发送数据过去
 			s.sideMu.Lock()
-			ch := s.sideOut
-			s.sideMu.Unlock()
-			if ch != nil {
+			if s.sideOut != nil {
 				select {
+				case <-s.sideOut.SideClose:
+					fmt.Println("Side buffer closed, stop sending data")
+					// 释放锁
 				case s.sideOut.Buf <- data:
-				default:
-					// 如果没有及时读取，丢弃数据避免阻塞
+					fmt.Println("Sent data to side buffer")
 				}
 			}
+			s.sideMu.Unlock()
 		}
 		if err != nil {
 			if err != io.EOF {

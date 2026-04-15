@@ -10,6 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,23 @@ func CommandTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToo
 	}
 
 	return mcp.NewToolResultText(result), nil
+}
+
+func readOutput(reader *bufio.Reader) chan string {
+	outputChan := make(chan string)
+	go func() {
+		defer close(outputChan)
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				fmt.Println("Error reading output:", err)
+				return
+			}
+			outputChan <- line
+		}
+	}()
+
+	return outputChan
 }
 
 func runToolCommand(ctx context.Context, request mcp.CallToolRequest) (string, error) {
@@ -54,27 +72,24 @@ func runToolCommand(ctx context.Context, request mcp.CallToolRequest) (string, e
 	reader := bufio.NewReader(sideBuffer)
 	result := ""
 	timer := time.After(time.Duration(timeout) * time.Second)
+	outputCh := readOutput(reader)
 	for {
 		select {
 		case <-timer:
 			return "", fmt.Errorf("Command execution timed out, the latest output is: \n%s", result)
 		case <-ctx.Done():
 			return "", fmt.Errorf("Command execution cancelled, the latest output is: \n%s", result)
-		default:
+		case line, ok := <-outputCh:
+			if !ok {
+				return result, nil
+			}
+			fmt.Println(line)
+			if strings.TrimSpace(line) == commandSentinel {
+				return result, nil
+			}
+			result += line
 		}
-
-		line, readErr := reader.ReadString('\n')
-		if readErr != nil {
-			return "", readErr
-		}
-
-		if line == commandSentinel+"\n" {
-			break
-		}
-		result += line
 	}
-
-	return result, nil
 }
 
 func StartMCP() {

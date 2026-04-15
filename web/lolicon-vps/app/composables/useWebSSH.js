@@ -34,6 +34,10 @@ export function useWebSSH() {
   }
 
   function connect(host, port, username, password, privateKey, cols, rows) {
+    doConnect(host, port, username, password, privateKey, cols, rows, false);
+  }
+
+  function doConnect(host, port, username, password, privateKey, cols, rows, isRetry) {
     if (ws) {
       ws.close();
     }
@@ -46,8 +50,11 @@ export function useWebSSH() {
     currentWs.binaryType = "arraybuffer";
     ws = currentWs;
 
+    let opened = false;
+
     currentWs.onopen = () => {
       if (ws !== currentWs) return;
+      opened = true;
       const connectMsg = {
         type: "connect",
         host,
@@ -100,8 +107,18 @@ export function useWebSSH() {
       }
     };
 
-    currentWs.onerror = () => {
+    currentWs.onerror = async (e) => {
       if (ws !== currentWs) return;
+      if (!opened && !isRetry) {
+        try {
+          const { refreshToken } = useAuth();
+          await refreshToken();
+          doConnect(host, port, username, password, privateKey, cols, rows, true);
+          return;
+        } catch {
+          // refresh failed, fall through to error
+        }
+      }
       errorMessage.value = "WebSocket connection failed";
       status.value = "error";
     };
@@ -161,6 +178,7 @@ export function useWebSSH() {
   return {
     status: readonly(status),
     errorMessage: readonly(errorMessage),
+    sshSessionId: readonly(sshSessionId),
     connect,
     disconnect,
     sendInput,
