@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -29,11 +30,11 @@ func Probe(target string, hostID int64, monitorType, replyTo, msgId string) erro
 		}, msgId)
 		return err
 	}
-	writeErr := func(err error) error {
+	writeErr := func() error {
 		if publishErr := writeLoss(); publishErr != nil {
 			return publishErr
 		}
-		return err
+		return nil
 	}
 
 	latency, err := measureLatency(target, monitorType)
@@ -41,7 +42,7 @@ func Probe(target string, hostID int64, monitorType, replyTo, msgId string) erro
 		if shouldTreatAsLoss(err) {
 			return writeLoss()
 		}
-		return writeErr(err)
+		return writeErr()
 	}
 
 	_, err = mq.PublishJSONWithID(replyTo, "", PingResp{
@@ -50,7 +51,8 @@ func Probe(target string, hostID int64, monitorType, replyTo, msgId string) erro
 		MonitorType: monitorType,
 	}, msgId)
 	if err != nil {
-		return writeErr(fmt.Errorf("failed to write probe result to Kafka: %w", err))
+		log.Printf("Failed to write probe result to MQ: %v\n", err)
+		return writeErr()
 	}
 	return nil
 }
