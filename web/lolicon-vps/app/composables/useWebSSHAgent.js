@@ -131,17 +131,22 @@ export function useWebSSHAgent() {
     persistCurrentSession();
   }
 
-  async function switchSession(id) {
+  async function switchSession(id, sshSessionId) {
     persistCurrentSession();
     const session = sessions.value[id];
     if (!session) return;
 
     currentSessionId.value = id;
     messages.value = session.messages.map((m) => ({ ...m }));
-    conversationId.value = session.conversationId;
-    activeSshSessionId = session.sshSessionId;
+    conversationId.value = null;
+    activeSshSessionId = sshSessionId || session.sshSessionId;
     awaitingApproval.value = false;
     pendingToolCall.value = null;
+
+    if (activeSshSessionId) {
+      await createBackendConversation(activeSshSessionId);
+      persistCurrentSession();
+    }
   }
 
   function removeSession(id) {

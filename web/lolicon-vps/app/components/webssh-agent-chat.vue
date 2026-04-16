@@ -118,10 +118,13 @@ async function handleNewSession() {
 }
 
 async function handleSwitchSession(id) {
+  creating.value = true;
   try {
-    await switchSession(id);
+    await switchSession(id, props.sshSessionId);
   } catch (e) {
     error("切换会话失败: " + (e.message || "unknown error"));
+  } finally {
+    creating.value = false;
   }
   showSessionList.value = false;
 }

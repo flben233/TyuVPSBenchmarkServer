@@ -209,6 +209,9 @@ def build_graph(
         last = state["messages"][-1] if state.get("messages") else None
         if isinstance(last, AIMessage) and getattr(last, "tool_calls", None):
             return "execute_tools"
+        # No more actions needed, end the graph execution until next user message
+        # 清除历史消息
+        state["messages"] = []
         return END
 
     def execute_tools(state: AgentState) -> dict:

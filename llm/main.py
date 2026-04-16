@@ -116,113 +116,77 @@ async def chat(request: ChatRequest) -> StreamingResponse:
     async def event_stream():
         message_id = str(uuid4())
         async with runtime.lock:
-            try:
-                if request.messages is not None:
-                    runtime.state = set_messages_from_dicts(
-                        runtime.state,
-                        [m.model_dump() for m in request.messages],
-                    )
-                if request.message:
-                    runtime.state = append_user_message(runtime.state, request.message)
-                    runtime.state["awaiting_approval"] = False
-                    runtime.state["pending_tool_call"] = None
-                    runtime.state["approval_granted"] = None
-                if request.approval_granted is not None:
-                    runtime.state["approval_granted"] = request.approval_granted
-
-                chunk_queue = ensure_chunk_queue(runtime.state)
-                clear_chunk_queue(runtime.state)
-                graph_task = asyncio.create_task(asyncio.to_thread(runtime.graph.invoke, runtime.state))
-
-                yield _sse(
-                    "message_start",
-                    {
-                        "conversationId": request.conversation_id,
-                        "messageId": message_id,
-                        "timestamp": _now_iso(),
-                        "payload": {},
-                    },
+            if request.messages is not None:
+                # 这里设置上，graph在处理完后会清除，保证每次请求都是全量的消息历史
+                runtime.state = set_messages_from_dicts(
+                    runtime.state,
+                    [m.model_dump() for m in request.messages],
                 )
+            if request.message:
+                runtime.state = append_user_message(runtime.state, request.message)
+            if request.approval_granted is not None:
+                runtime.state["approval_granted"] = request.approval_granted
 
+            chunk_queue = ensure_chunk_queue(runtime.state)
+            clear_chunk_queue(runtime.state)
+            graph_task = asyncio.create_task(asyncio.to_thread(runtime.graph.invoke, runtime.state))
+
+            yield _sse(
+                "message_start",
+                {
+                    "conversationId": request.conversation_id,
+                    "messageId": message_id,
+                    "timestamp": _now_iso(),
+                    "payload": {},
+                },
+            )
+
+            while True:
+                drained = False
                 while True:
-                    drained = False
-                    while True:
-                        try:
-                            token_item = chunk_queue.get_nowait()
-                            drained = True
-                        except Empty:
-                            break
-
-                        if isinstance(token_item, dict):
-                            token_kind = str(token_item.get("kind", "token"))
-                            token_text = str(token_item.get("text", ""))
-                        else:
-                            token_kind = "token"
-                            token_text = str(token_item)
-
-                        event_name = "thinking" if token_kind == "thinking" else "token"
-
-                        yield _sse(
-                            event_name,
-                            {
-                                "conversationId": request.conversation_id,
-                                "messageId": message_id,
-                                "timestamp": _now_iso(),
-                                "payload": {"text": token_text},
-                            },
-                        )
-
-                    if graph_task.done():
+                    try:
+                        token_item = chunk_queue.get_nowait()
+                        drained = True
+                    except Empty:
                         break
 
-                    if not drained:
-                        await asyncio.sleep(0.02)
+                    if isinstance(token_item, dict):
+                        token_kind = str(token_item.get("kind", "token"))
+                        token_text = str(token_item.get("text", ""))
+                    else:
+                        token_kind = "token"
+                        token_text = str(token_item)
 
-                try:
-                    runtime.state = graph_task.result()
-                except Exception as exc:
+                    event_name = "thinking" if token_kind == "thinking" else "token"
+
                     yield _sse(
-                        "error",
+                        event_name,
                         {
                             "conversationId": request.conversation_id,
                             "messageId": message_id,
                             "timestamp": _now_iso(),
-                            "payload": {"message": str(exc)},
+                            "payload": {"text": token_text},
                         },
                     )
-                    yield _sse(
-                        "done",
-                        {
-                            "conversationId": request.conversation_id,
-                            "messageId": message_id,
-                            "timestamp": _now_iso(),
-                            "payload": {},
-                        },
-                    )
-                    return
 
+                if graph_task.done():
+                    break
+
+                if not drained:
+                    await asyncio.sleep(0.02)
+
+            try:
+                runtime.state = graph_task.result()
+            except Exception as exc:
                 yield _sse(
-                    "message_end",
+                    "error",
                     {
                         "conversationId": request.conversation_id,
                         "messageId": message_id,
                         "timestamp": _now_iso(),
-                        "payload": {},
+                        "payload": {"message": str(exc)},
                     },
                 )
-
-                if runtime.state.get("awaiting_approval"):
-                    pending = runtime.state.get("pending_tool_call")
-                    yield _sse(
-                        "awaiting_approval",
-                        {
-                            "conversationId": request.conversation_id,
-                            "messageId": message_id,
-                            "timestamp": _now_iso(),
-                            "payload": pending or {},
-                        },
-                    )
-
                 yield _sse(
                     "done",
                     {
@@ -232,8 +196,39 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                         "payload": {},
                     },
                 )
-            finally:
-                runtime.state["messages"] = []
+                return
+
+            yield _sse(
+                "message_end",
+                {
+                    "conversationId": request.conversation_id,
+                    "messageId": message_id,
+                    "timestamp": _now_iso(),
+                    "payload": {},
+                },
+            )
+
+            if runtime.state.get("awaiting_approval"):
+                pending = runtime.state.get("pending_tool_call")
+                yield _sse(
+                    "awaiting_approval",
+                    {
+                        "conversationId": request.conversation_id,
+                        "messageId": message_id,
+                        "timestamp": _now_iso(),
+                        "payload": pending or {},
+                    },
+                )
+
+            yield _sse(
+                "done",
+                {
+                    "conversationId": request.conversation_id,
+                    "messageId": message_id,
+                    "timestamp": _now_iso(),
+                    "payload": {},
+                },
+            )
 
     return StreamingResponse(
         event_stream(),
