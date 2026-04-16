@@ -159,6 +159,26 @@ export function useWebSSHAgent() {
     }
   }
 
+  let streamReader = null;
+
+  function abortStream() {
+    if (streamReader) {
+      streamReader.cancel().catch(() => {});
+      streamReader = null;
+    }
+  }
+
+  async function stopChat() {
+    if (!streaming.value || !conversationId.value) return;
+    try {
+      await requestWithAuth("/webssh/llm/stop", "POST", {
+        body: { conversationId: conversationId.value },
+      });
+    } catch {
+      abortStream();
+    }
+  }
+
   async function streamChat(body, assistantIdx) {
     let resp = await fetchWithAuth("/webssh/llm/chat", {
       method: "POST",
@@ -181,7 +201,8 @@ export function useWebSSHAgent() {
     let thinkingText = "";
     let tokenText = "";
 
-    await parseSSEStream(resp.body.getReader(), (event, payload) => {
+    streamReader = resp.body.getReader();
+    await parseSSEStream(streamReader, (event, payload) => {
       const inner = payload.payload || {};
       switch (event) {
         case "thinking":
@@ -213,8 +234,11 @@ export function useWebSSHAgent() {
           awaitingApproval.value = true;
           pendingToolCall.value = inner;
           break;
+        case "stopped":
+          break;
       }
     });
+    streamReader = null;
   }
 
   async function sendMessage(text) {
@@ -306,5 +330,6 @@ export function useWebSSHAgent() {
     refreshSessions,
     sendMessage,
     sendApproval,
+    stopChat,
   };
 }

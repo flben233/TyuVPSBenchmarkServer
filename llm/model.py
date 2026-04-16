@@ -1,5 +1,6 @@
 import asyncio
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
@@ -85,8 +86,27 @@ class ChatRequest(BaseModel):
     )
 
 
+class StopRequest(BaseModel):
+    """
+    Request body for stopping an in-progress LLM response.
+    """
+    model_config = ConfigDict(populate_by_name=True)
+    conversation_id: str = Field(
+        validation_alias=AliasChoices("conversation_id", "conversationId"),
+        description="The conversation ID to stop",
+    )
+
+
+class StopResponse(BaseModel):
+    """
+    Response body returned after stopping a conversation.
+    """
+    stopped: bool = Field(description="Whether the conversation was successfully stopped")
+
+
 @dataclass
 class ConversationRuntime:
     graph: Any
     state: AgentState
     lock: asyncio.Lock
+    stop_event: threading.Event = field(default_factory=threading.Event)

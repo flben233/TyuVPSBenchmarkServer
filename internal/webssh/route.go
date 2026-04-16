@@ -27,5 +27,6 @@ func RegisterRoute(base string, r *gin.Engine) {
 	{
 		group3.POST("/new", handler.NewConversation)
 		group3.POST("/chat", handler.Chat)
+		group3.POST("/stop", handler.Stop)
 	}
 }

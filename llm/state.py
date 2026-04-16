@@ -19,6 +19,7 @@ class AgentState(TypedDict, total=False):
     pending_tool_call: dict[str, Any] | None
     awaiting_approval: bool
     approval_granted: bool | None
+    stopped: bool
 
 
 def default_agent_state(conversation_id: str, ssh_session_id: str) -> AgentState:
@@ -30,6 +31,7 @@ def default_agent_state(conversation_id: str, ssh_session_id: str) -> AgentState
         "pending_tool_call": None,
         "awaiting_approval": False,
         "approval_granted": None,
+        "stopped": False,
     }
 
 

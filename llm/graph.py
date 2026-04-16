@@ -1,4 +1,5 @@
 import json
+import threading
 import re
 from typing import Any
 
@@ -99,6 +100,7 @@ def build_graph(
     openai_client: OpenAI,
     model: str,
     tools: list[BaseTool],
+    stop_event: threading.Event | None = None,
     checkpointer=None,
 ):
     tool_map = {t.name: t for t in tools}
@@ -128,7 +130,11 @@ def build_graph(
 
         stream = openai_client.chat.completions.create(**request_kwargs)
 
+        stopped = False
         for chunk in stream:
+            if stop_event and stop_event.is_set():
+                stopped = True
+                break
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
@@ -187,7 +193,10 @@ def build_graph(
 
         response = AIMessage(content="".join(final_text_parts), tool_calls=final_tool_calls)
 
-        updates: dict[str, Any] = {"messages": [response]}
+        updates: dict[str, Any] = {"messages": [response], "stopped": stopped}
+
+        if stopped:
+            return updates
 
         if response.tool_calls:
             command = response.tool_calls[0].get("args", {}).get("command", "")
@@ -204,13 +213,13 @@ def build_graph(
         return updates
 
     def route_after_assistant(state: AgentState) -> str:
+        if state.get("stopped"):
+            return "stopped"
         if state.get("awaiting_approval"):
             return "awaiting_approval"
         last = state["messages"][-1] if state.get("messages") else None
         if isinstance(last, AIMessage) and getattr(last, "tool_calls", None):
             return "execute_tools"
-        # No more actions needed, end the graph execution until next user message
-        # 清除历史消息
         state["messages"] = []
         return END
 
@@ -281,6 +290,7 @@ def build_graph(
         {
             "execute_tools": "execute_tools",
             "awaiting_approval": END,
+            "stopped": END,
             END: END,
         },
     )

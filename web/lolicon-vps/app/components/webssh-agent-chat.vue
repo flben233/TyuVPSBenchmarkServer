@@ -1,5 +1,5 @@
 <script setup>
-import { ChatDotRound, Promotion, Loading, Plus, Check, WarnTriangleFilled, ArrowDown, Delete } from "@element-plus/icons-vue";
+import { ChatDotRound, Promotion, Loading, Plus, Check, WarnTriangleFilled, ArrowDown, Delete, CircleCloseFilled } from "@element-plus/icons-vue";
 import { error } from "~/utils/message.js";
 import { marked } from "marked";
 
@@ -27,6 +27,7 @@ const {
   removeSession,
   sendMessage,
   sendApproval,
+  stopChat,
 } = useWebSSHAgent();
 
 const inputText = ref("");
@@ -323,11 +324,19 @@ function formatTime(ts) {
           @keydown="handleKeyDown"
         />
         <el-button
+          v-if="streaming"
+          type="danger"
+          :icon="CircleCloseFilled"
+          circle
+          @click="stopChat"
+          class="stop-btn"
+        />
+        <el-button
+          v-else
           type="primary"
           :icon="Promotion"
           circle
-          :loading="streaming"
-          :disabled="!inputText.trim() || streaming || awaitingApproval"
+          :disabled="!inputText.trim() || awaitingApproval"
           @click="handleSend"
           class="send-btn"
         />
@@ -746,6 +755,11 @@ function formatTime(ts) {
 }
 
 .send-btn {
+  flex-shrink: 0;
+  margin-bottom: 1px;
+}
+
+.stop-btn {
   flex-shrink: 0;
   margin-bottom: 1px;
 }

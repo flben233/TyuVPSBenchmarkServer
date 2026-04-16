@@ -18,9 +18,23 @@ type NewConversationResponse struct {
 }
 
 type ChatRequest struct {
-	ConversationID  string `json:"conversationId,omitempty"`
-	Message         string `json:"message,omitempty"`
-	ApprovalGranted *bool  `json:"approval_granted,omitempty"`
+	ConversationID  string        `json:"conversationId,omitempty"`
+	Message         string        `json:"message,omitempty"`
+	Messages        []ChatMessage `json:"messages,omitempty"`
+	ApprovalGranted *bool         `json:"approval_granted,omitempty"`
+}
+
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type StopRequest struct {
+	ConversationID string `json:"conversationId" binding:"required"`
+}
+
+type StopResponse struct {
+	Stopped bool `json:"stopped"`
 }
 
 func proxyRequest(c *gin.Context, path string) {
@@ -64,4 +78,20 @@ func NewConversation(c *gin.Context) {
 // @Router /webssh/llm/chat [post]
 func Chat(c *gin.Context) {
 	proxyRequest(c, "/chat")
+}
+
+// Stop signals the LLM agent to stop generating the current response.
+// @Summary Stop WebSSH LLM response
+// @Description Proxy stop request to Python backend to abort an in-progress LLM response.
+// @Tags webssh
+// @Accept json
+// @Produce json
+// @Param request body StopRequest true "Stop request"
+// @Success 200 {object} StopResponse
+// @Failure 400 {object} common.APIResponse[any]
+// @Failure 404 {object} common.APIResponse[any]
+// @Failure 500 {object} common.APIResponse[any]
+// @Router /webssh/llm/stop [post]
+func Stop(c *gin.Context) {
+	proxyRequest(c, "/stop")
 }

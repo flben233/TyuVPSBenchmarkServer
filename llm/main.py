@@ -1,5 +1,6 @@
 import asyncio
 import json
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from queue import Empty
@@ -18,7 +19,7 @@ from graph import (
 from state import default_agent_state, append_user_message, clear_chunk_queue, set_messages_from_dicts
 from tool import load_mcp_tools
 from model import ConversationRuntime, NewConversationResponse, NewConversationRequest, CloseResponse, CloseRequest, \
-    ChatRequest
+    ChatRequest, StopRequest, StopResponse
 
 
 @asynccontextmanager
@@ -59,13 +60,22 @@ async def new_conversation(request: NewConversationRequest) -> NewConversationRe
     conversation_id = str(uuid4())
 
     tools = await load_mcp_tools(settings.mcp_server_url)
-    graph = build_graph(openai_client=openai_client, model=settings.openai_model, tools=tools)
-
-    conversation_runtimes[conversation_id] = ConversationRuntime(
-        graph=graph,
-        state=default_agent_state(conversation_id, request.ssh_session_id),
-        lock=asyncio.Lock(),
+    state = default_agent_state(conversation_id, request.ssh_session_id)
+    stop_event = threading.Event()
+    graph = build_graph(
+        openai_client=openai_client,
+        model=settings.openai_model,
+        tools=tools,
+        stop_event=stop_event,
     )
+    runtime = ConversationRuntime(
+        graph=graph,
+        state=state,
+        lock=asyncio.Lock(),
+        stop_event=stop_event,
+    )
+
+    conversation_runtimes[conversation_id] = runtime
     ssh_session_to_conversation_ids.setdefault(request.ssh_session_id, set()).add(
         conversation_id
     )
@@ -87,6 +97,19 @@ async def close_conversation_state(request: CloseRequest) -> CloseResponse:
     return CloseResponse(closedConversations=closed_count)
 
 
+@app.post("/stop", response_model=StopResponse, tags=["LLM Agent"], summary="Stop an in-progress LLM response")
+async def stop_chat(request: StopRequest) -> StopResponse:
+    """
+    Signal the LLM agent to stop generating the current response.
+    The graph will break out of the streaming loop and route directly to END.
+    """
+    runtime = conversation_runtimes.get(request.conversation_id)
+    if not runtime:
+        raise HTTPException(status_code=404, detail="conversation not found")
+    runtime.stop_event.set()
+    return StopResponse(stopped=True)
+
+
 @app.post("/chat", tags=["LLM Agent"], summary="Send a message and stream the LLM response")
 async def chat(request: ChatRequest) -> StreamingResponse:
     """
@@ -105,6 +128,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
     | `thinking` | AI reasoning token |
     | `token` | AI response token |
     | `message_end` | Response stream ends |
+    | `stopped` | Response was stopped by user via /stop |
     | `awaiting_approval` | AI wants to run a dangerous command, waiting for user approval |
     | `error` | An error occurred |
     | `done` | Stream finished |
@@ -116,6 +140,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
     async def event_stream():
         message_id = str(uuid4())
         async with runtime.lock:
+            runtime.stop_event.clear()
             if request.messages is not None:
                 # 这里设置上，graph在处理完后会清除，保证每次请求都是全量的消息历史
                 runtime.state = set_messages_from_dicts(
@@ -129,6 +154,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
 
             chunk_queue = ensure_chunk_queue(runtime.state)
             clear_chunk_queue(runtime.state)
+            runtime.state["stopped"] = False
             graph_task = asyncio.create_task(asyncio.to_thread(runtime.graph.invoke, runtime.state))
 
             yield _sse(
@@ -207,6 +233,17 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                     "payload": {},
                 },
             )
+
+            if runtime.state.get("stopped"):
+                yield _sse(
+                    "stopped",
+                    {
+                        "conversationId": request.conversation_id,
+                        "messageId": message_id,
+                        "timestamp": _now_iso(),
+                        "payload": {},
+                    },
+                )
 
             if runtime.state.get("awaiting_approval"):
                 pending = runtime.state.get("pending_tool_call")
