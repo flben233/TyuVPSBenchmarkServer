@@ -1,10 +1,11 @@
 from queue import Empty, Queue
-from queue import Empty, Queue
 from typing import Annotated, Any
 
 from langchain_core.messages import (
+    AIMessage,
     BaseMessage,
     HumanMessage,
+    SystemMessage,
 )
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
@@ -34,6 +35,21 @@ def default_agent_state(conversation_id: str, ssh_session_id: str) -> AgentState
 
 def append_user_message(state: AgentState, message: str) -> AgentState:
     state["messages"] = [*state.get("messages", []), HumanMessage(content=message)]
+    return state
+
+
+def set_messages_from_dicts(state: AgentState, message_dicts: list[dict]) -> AgentState:
+    messages: list[BaseMessage] = []
+    for msg in message_dicts:
+        role = msg.get("role", "user")
+        content = str(msg.get("content", ""))
+        if role == "assistant":
+            messages.append(AIMessage(content=content))
+        elif role == "system":
+            messages.append(SystemMessage(content=content))
+        else:
+            messages.append(HumanMessage(content=content))
+    state["messages"] = messages
     return state
 
 

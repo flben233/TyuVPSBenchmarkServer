@@ -1,5 +1,5 @@
 <script setup>
-import { ChatDotRound, Promotion, Loading, Plus, Check, WarnTriangleFilled, ArrowDown } from "@element-plus/icons-vue";
+import { ChatDotRound, Promotion, Loading, Plus, Check, WarnTriangleFilled, ArrowDown, Delete } from "@element-plus/icons-vue";
 import { error } from "~/utils/message.js";
 import { marked } from "marked";
 
@@ -14,16 +14,19 @@ const props = defineProps({
 });
 
 const {
+  currentSessionId,
   conversationId,
   messages,
   streaming,
   thinking,
   awaitingApproval,
   pendingToolCall,
-  createConversation,
+  sessions,
+  newSession,
+  switchSession,
+  removeSession,
   sendMessage,
   sendApproval,
-  reset,
 } = useWebSSHAgent();
 
 const inputText = ref("");
@@ -31,8 +34,18 @@ const chatContainer = ref(null);
 const autoScroll = ref(true);
 const creating = ref(false);
 const expandedThinkings = ref(new Set());
+const showSessionList = ref(false);
 
 const initialized = computed(() => !!conversationId.value);
+
+const sessionList = computed(() => {
+  return Object.values(sessions.value).sort((a, b) => b.updatedAt - a.updatedAt);
+});
+
+const currentSessionName = computed(() => {
+  if (!currentSessionId.value) return "";
+  return sessions.value[currentSessionId.value]?.name || "New Chat";
+});
 
 function toggleThinking(idx) {
   const s = new Set(expandedThinkings.value);
@@ -51,6 +64,15 @@ function isThinkingExpanded(idx) {
 function renderMarkdown(text) {
   if (!text) return "";
   return marked.parse(text);
+}
+
+function formatRelativeTime(ts) {
+  if (!ts) return "";
+  const diff = Date.now() - ts;
+  if (diff < 60000) return "刚刚";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
+  return `${Math.floor(diff / 86400000)} 天前`;
 }
 
 watch(
@@ -83,11 +105,11 @@ function handleScroll() {
   autoScroll.value = atBottom;
 }
 
-async function handleInit() {
+async function handleNewSession() {
   if (!props.sshSessionId) return;
   try {
     creating.value = true;
-    await createConversation(props.sshSessionId);
+    await newSession(props.sshSessionId);
   } catch (e) {
     error("创建对话失败: " + (e.message || "unknown error"));
   } finally {
@@ -95,9 +117,17 @@ async function handleInit() {
   }
 }
 
-async function handleNewConversation() {
-  reset();
-  await handleInit();
+async function handleSwitchSession(id) {
+  try {
+    await switchSession(id);
+  } catch (e) {
+    error("切换会话失败: " + (e.message || "unknown error"));
+  }
+  showSessionList.value = false;
+}
+
+function handleDeleteSession(id) {
+  removeSession(id);
 }
 
 async function handleSend() {
@@ -126,27 +156,84 @@ function formatTime(ts) {
 <template>
   <div class="agent-chat">
     <div class="chat-header">
-      <span class="chat-title">
+      <template v-if="initialized">
+        <el-popover
+          placement="bottom-start"
+          :width="260"
+          trigger="click"
+          v-model:visible="showSessionList"
+        >
+          <template #reference>
+            <span class="session-selector">
+              <span class="session-selector-name">{{ currentSessionName }}</span>
+              <el-icon class="session-selector-arrow"><ArrowDown /></el-icon>
+            </span>
+          </template>
+          <div class="session-popover">
+            <div class="session-popover-title">会话列表</div>
+            <div class="session-popover-list">
+              <div
+                v-for="s in sessionList"
+                :key="s.id"
+                class="session-popover-item"
+                :class="{ active: s.id === currentSessionId }"
+                @click="handleSwitchSession(s.id)"
+              >
+                <div class="session-popover-item-info">
+                  <span class="session-popover-item-name">{{ s.name }}</span>
+                  <span class="session-popover-item-time">{{ formatRelativeTime(s.updatedAt) }}</span>
+                </div>
+                <el-icon
+                  class="session-popover-item-delete"
+                  @click.stop="handleDeleteSession(s.id)"
+                >
+                  <Delete />
+                </el-icon>
+              </div>
+              <div v-if="sessionList.length === 0" class="session-popover-empty">
+                暂无保存的会话
+              </div>
+            </div>
+          </div>
+        </el-popover>
+      </template>
+      <span v-else class="chat-title">
         <el-icon><ChatDotRound /></el-icon>
         AI Assistant
       </span>
-      <el-button
-        v-if="initialized"
-        size="small"
-        text
-        :icon="Plus"
-        :loading="creating"
-        @click="handleNewConversation"
-        title="新建对话"
-      />
+      <div class="header-actions">
+        <el-button
+          v-if="connected && sshSessionId"
+          size="small"
+          text
+          :icon="Plus"
+          :loading="creating"
+          @click="handleNewSession"
+          title="新建对话"
+        />
+      </div>
     </div>
 
     <div v-if="!initialized" class="chat-placeholder">
       <template v-if="connected && sshSessionId">
-        <el-button type="primary" @click="handleInit" :loading="creating">
-          开始 AI 对话
+        <el-button type="primary" @click="handleNewSession" :loading="creating">
+          新建 AI 对话
         </el-button>
-        <p class="placeholder-hint">与 AI 助手对话，帮助管理此 SSH 会话</p>
+        <div v-if="sessionList.length > 0" class="saved-sessions">
+          <p class="saved-sessions-title">历史会话</p>
+          <div
+            v-for="s in sessionList"
+            :key="s.id"
+            class="saved-session-item"
+            @click="handleSwitchSession(s.id)"
+          >
+            <div class="saved-session-item-info">
+              <span class="saved-session-item-name">{{ s.name }}</span>
+              <span class="saved-session-item-time">{{ formatRelativeTime(s.updatedAt) }}</span>
+            </div>
+          </div>
+        </div>
+        <p v-else class="placeholder-hint">与 AI 助手对话，帮助管理此 SSH 会话</p>
       </template>
       <template v-else>
         <p class="placeholder-hint">请先连接 SSH 会话以使用 AI 助手</p>
@@ -273,6 +360,117 @@ function formatTime(ts) {
   color: #303133;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.session-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+  max-width: 280px;
+}
+
+.session-selector:hover {
+  background: #f5f7fa;
+}
+
+.session-selector-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-selector-arrow {
+  font-size: 12px;
+  color: #909399;
+  flex-shrink: 0;
+}
+
+.session-popover {
+  margin: -12px;
+}
+
+.session-popover-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.session-popover-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.session-popover-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.session-popover-item:hover {
+  background: #f5f7fa;
+}
+
+.session-popover-item.active {
+  background: var(--el-color-primary-light-9);
+}
+
+.session-popover-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.session-popover-item-name {
+  font-size: 13px;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-popover-item-time {
+  font-size: 11px;
+  color: #c0c4cc;
+}
+
+.session-popover-item-delete {
+  font-size: 14px;
+  color: #c0c4cc;
+  flex-shrink: 0;
+  margin-left: 8px;
+  transition: color 0.15s;
+}
+
+.session-popover-item-delete:hover {
+  color: #f56c6c;
+}
+
+.session-popover-empty {
+  padding: 16px 14px;
+  text-align: center;
+  font-size: 13px;
+  color: #c0c4cc;
+}
+
 .chat-placeholder {
   flex: 1;
   display: flex;
@@ -289,6 +487,52 @@ function formatTime(ts) {
   text-align: center;
   max-width: 240px;
   line-height: 1.6;
+}
+
+.saved-sessions {
+  width: 100%;
+  max-width: 300px;
+}
+
+.saved-sessions-title {
+  font-size: 12px;
+  color: #909399;
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.saved-session-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.saved-session-item:hover {
+  background: #f5f7fa;
+}
+
+.saved-session-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.saved-session-item-name {
+  font-size: 13px;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-session-item-time {
+  font-size: 11px;
+  color: #c0c4cc;
 }
 
 .chat-messages {

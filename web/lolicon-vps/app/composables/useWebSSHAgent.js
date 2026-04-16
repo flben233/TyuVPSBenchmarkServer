@@ -1,4 +1,5 @@
 import { requestWithAuth, fetchWithAuth } from "~/composables/useAuth.js";
+import { getSessions, saveSession, deleteSession as deleteStoredSession, createSessionId } from "~/utils/webssh-agent-session.js";
 
 function parseSSEStream(reader, onEvent) {
   const decoder = new TextDecoder();
@@ -42,15 +43,61 @@ function parseSSEStream(reader, onEvent) {
 }
 
 export function useWebSSHAgent() {
+  const currentSessionId = ref(null);
   const conversationId = ref(null);
   const messages = ref([]);
   const streaming = ref(false);
   const thinking = ref(false);
   const awaitingApproval = ref(false);
   const pendingToolCall = ref(null);
+  const sessions = ref({});
+
+  let activeSshSessionId = null;
+
+  sessions.value = getSessions();
+
+  function getSessionName() {
+    const userMsg = messages.value.find(
+      (m) => m.role === "user" && m.content && !m.content.startsWith("[")
+    );
+    if (userMsg) {
+      const text = userMsg.content;
+      return text.length > 30 ? text.slice(0, 30) + "..." : text;
+    }
+    return "New Chat";
+  }
+
+  function persistCurrentSession() {
+    if (!currentSessionId.value) return;
+    saveSession({
+      id: currentSessionId.value,
+      conversationId: conversationId.value,
+      messages: messages.value.map((m) => ({
+        role: m.role,
+        content: m.content,
+        isError: m.isError || false,
+        timestamp: m.timestamp,
+      })),
+      name: getSessionName(),
+      sshSessionId: activeSshSessionId,
+      createdAt:
+        sessions.value[currentSessionId.value]?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    });
+    sessions.value = getSessions();
+  }
+
+  function refreshSessions() {
+    sessions.value = getSessions();
+  }
 
   function addMessage(role, content) {
-    messages.value.push({ role, content, thinkingContent: "", timestamp: Date.now() });
+    messages.value.push({
+      role,
+      content,
+      thinkingContent: "",
+      timestamp: Date.now(),
+    });
   }
 
   function updateAssistant(idx, extras) {
@@ -58,23 +105,69 @@ export function useWebSSHAgent() {
     messages.value[idx] = msg;
   }
 
-  async function createConversation(sshSessionId) {
+  async function createBackendConversation(sshSessionId) {
+    activeSshSessionId = sshSessionId;
     const resp = await requestWithAuth("/webssh/llm/new", "POST", {
       body: { sshSessionId },
     });
     if (resp && resp.conversationId) {
       conversationId.value = resp.conversationId;
-      messages.value = [];
       return resp.conversationId;
     }
     throw new Error(resp?.message || "Failed to create conversation");
   }
 
+  async function newSession(sshSessionId) {
+    persistCurrentSession();
+    currentSessionId.value = createSessionId();
+    messages.value = [];
+    conversationId.value = null;
+    awaitingApproval.value = false;
+    pendingToolCall.value = null;
+    activeSshSessionId = sshSessionId;
+
+    await createBackendConversation(sshSessionId);
+
+    persistCurrentSession();
+  }
+
+  async function switchSession(id) {
+    persistCurrentSession();
+    const session = sessions.value[id];
+    if (!session) return;
+
+    currentSessionId.value = id;
+    messages.value = session.messages.map((m) => ({ ...m }));
+    conversationId.value = session.conversationId;
+    activeSshSessionId = session.sshSessionId;
+    awaitingApproval.value = false;
+    pendingToolCall.value = null;
+  }
+
+  function removeSession(id) {
+    deleteStoredSession(id);
+    sessions.value = getSessions();
+    if (currentSessionId.value === id) {
+      currentSessionId.value = null;
+      messages.value = [];
+      conversationId.value = null;
+    }
+  }
+
   async function streamChat(body, assistantIdx) {
-    const resp = await fetchWithAuth("/webssh/llm/chat", {
+    let resp = await fetchWithAuth("/webssh/llm/chat", {
       method: "POST",
       body: JSON.stringify(body),
     });
+
+    if (resp.status === 404 && activeSshSessionId) {
+      await createBackendConversation(activeSshSessionId);
+      body = { ...body, conversationId: conversationId.value };
+      resp = await fetchWithAuth("/webssh/llm/chat", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    }
 
     if (!resp.ok) {
       throw new Error(`Chat request failed: ${resp.status}`);
@@ -89,18 +182,27 @@ export function useWebSSHAgent() {
         case "thinking":
           if (inner.text) {
             thinkingText += inner.text;
-            updateAssistant(assistantIdx, { thinkingContent: thinkingText, content: tokenText });
+            updateAssistant(assistantIdx, {
+              thinkingContent: thinkingText,
+              content: tokenText,
+            });
           }
           break;
         case "token":
           thinking.value = false;
           if (inner.text) {
             tokenText += inner.text;
-            updateAssistant(assistantIdx, { thinkingContent: thinkingText, content: tokenText });
+            updateAssistant(assistantIdx, {
+              thinkingContent: thinkingText,
+              content: tokenText,
+            });
           }
           break;
         case "error":
-          updateAssistant(assistantIdx, { content: inner.message || "Unknown error", isError: true });
+          updateAssistant(assistantIdx, {
+            content: inner.message || "Unknown error",
+            isError: true,
+          });
           break;
         case "awaiting_approval":
           awaitingApproval.value = true;
@@ -114,65 +216,90 @@ export function useWebSSHAgent() {
     if (!conversationId.value) {
       throw new Error("No active conversation");
     }
+
+    const history = messages.value.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
     addMessage("user", text);
     streaming.value = true;
     thinking.value = true;
     awaitingApproval.value = false;
     pendingToolCall.value = null;
 
-    messages.value.push({ role: "assistant", content: "", thinkingContent: "", timestamp: Date.now() });
+    messages.value.push({
+      role: "assistant",
+      content: "",
+      thinkingContent: "",
+      timestamp: Date.now(),
+    });
     const assistantIdx = messages.value.length - 1;
 
     try {
       await streamChat(
-        { conversationId: conversationId.value, message: text },
+        {
+          conversationId: conversationId.value,
+          message: text,
+          messages: history,
+        },
         assistantIdx
       );
     } finally {
       streaming.value = false;
       thinking.value = false;
+      persistCurrentSession();
     }
   }
 
   async function sendApproval(granted) {
     if (!conversationId.value) return;
+
+    addMessage("user", granted ? "[approved]" : "[rejected]");
+    const history = messages.value.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
     streaming.value = true;
     awaitingApproval.value = false;
 
-    addMessage("user", granted ? "[approved]" : "[rejected]");
-
-    messages.value.push({ role: "assistant", content: "", thinkingContent: "", timestamp: Date.now() });
+    messages.value.push({
+      role: "assistant",
+      content: "",
+      thinkingContent: "",
+      timestamp: Date.now(),
+    });
     const assistantIdx = messages.value.length - 1;
 
     try {
       await streamChat(
-        { conversationId: conversationId.value, approval_granted: granted },
+        {
+          conversationId: conversationId.value,
+          approval_granted: granted,
+          messages: history,
+        },
         assistantIdx
       );
     } finally {
       streaming.value = false;
+      persistCurrentSession();
     }
   }
 
-  function reset() {
-    conversationId.value = null;
-    messages.value = [];
-    streaming.value = false;
-    thinking.value = false;
-    awaitingApproval.value = false;
-    pendingToolCall.value = null;
-  }
-
   return {
+    currentSessionId: readonly(currentSessionId),
     conversationId: readonly(conversationId),
     messages,
     streaming: readonly(streaming),
     thinking: readonly(thinking),
     awaitingApproval: readonly(awaitingApproval),
     pendingToolCall: readonly(pendingToolCall),
-    createConversation,
+    sessions: readonly(sessions),
+    newSession,
+    switchSession,
+    removeSession,
+    refreshSessions,
     sendMessage,
     sendApproval,
-    reset,
   };
 }
