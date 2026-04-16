@@ -15,6 +15,7 @@ const emit = defineEmits(["input", "resize"]);
 const terminalRef = ref(null);
 let terminal = null;
 let fitAddon = null;
+let resizeObserver = null;
 
 onMounted(async () => {
   terminal = new Terminal({
@@ -61,6 +62,8 @@ onMounted(async () => {
   });
 
   window.addEventListener("resize", handleResize);
+  resizeObserver = new ResizeObserver(handleResize);
+  resizeObserver.observe(terminalRef.value);
 });
 
 function handleResize() {
@@ -95,6 +98,9 @@ onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   if (terminal) {
     terminal.dispose();
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect();
   }
 });
 </script>

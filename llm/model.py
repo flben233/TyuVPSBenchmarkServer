@@ -8,6 +8,27 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from graph import AgentState
 
 
+class LLMAPIConfig(BaseModel):
+    """
+    Optional user-provided OpenAI-compatible API config.
+    """
+    model_config = ConfigDict(populate_by_name=True)
+    api_base: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("api_base", "apiBase"),
+        description="OpenAI-compatible API base URL",
+    )
+    api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("api_key", "apiKey"),
+        description="API key for the custom LLM endpoint",
+    )
+    model: str | None = Field(
+        default=None,
+        description="Model name for the custom endpoint",
+    )
+
+
 class NewConversationRequest(BaseModel):
     """
     Request body for creating a new LLM agent conversation.
@@ -16,6 +37,11 @@ class NewConversationRequest(BaseModel):
     ssh_session_id: str = Field(
         alias="sshSessionId",
         description="The SSH session ID to associate with this conversation",
+    )
+    llm_api: LLMAPIConfig | None = Field(
+        default=None,
+        validation_alias=AliasChoices("llm_api", "llmApi"),
+        description="Optional custom OpenAI-compatible API settings",
     )
 
 

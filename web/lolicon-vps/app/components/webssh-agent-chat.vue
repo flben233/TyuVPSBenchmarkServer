@@ -1,6 +1,8 @@
 <script setup>
-import { ChatDotRound, Promotion, Loading, Plus, Check, WarnTriangleFilled, ArrowDown, Delete, CircleCloseFilled } from "@element-plus/icons-vue";
-import { error } from "~/utils/message.js";
+import { ChatDotRound, Promotion, Loading, Plus, Check, WarnTriangleFilled, ArrowDown, Delete, CircleCloseFilled, Setting } from "@element-plus/icons-vue";
+import { error, success, warn } from "~/utils/message.js";
+import { getPassword } from "~/utils/webssh-storage";
+import { decryptData } from "~/utils/webssh-crypto";
 import { marked } from "marked";
 
 marked.setOptions({
@@ -25,10 +27,14 @@ const {
   newSession,
   switchSession,
   removeSession,
+  llmSettings,
+  updateLLMSettings,
   sendMessage,
   sendApproval,
   stopChat,
 } = useWebSSHAgent();
+
+const { downloadEncryptedData } = useWebsshCloud();
 
 const inputText = ref("");
 const chatContainer = ref(null);
@@ -36,6 +42,8 @@ const autoScroll = ref(true);
 const creating = ref(false);
 const expandedThinkings = ref(new Set());
 const showSessionList = ref(false);
+const showSettingsDialog = ref(false);
+const settingsSubmitting = ref(false);
 
 const initialized = computed(() => !!conversationId.value);
 
@@ -155,6 +163,59 @@ function handleKeyDown(e) {
 function formatTime(ts) {
   return new Date(ts).toLocaleTimeString();
 }
+
+async function handleSaveLLMSettings(nextSettings) {
+  if (nextSettings.enabled) {
+    if (!nextSettings.apiBase || !nextSettings.apiKey || !nextSettings.model) {
+      warn("启用自定义 API 时必须填写 API Base、API Key 和 Model");
+      return;
+    }
+  }
+
+  if (!getPassword()) {
+    warn("请先在连接列表中设置密钥，再进行云端同步");
+    updateLLMSettings(nextSettings);
+    showSettingsDialog.value = false;
+    return;
+  }
+
+  settingsSubmitting.value = true;
+  try {
+    updateLLMSettings(nextSettings);
+    success("LLM 设置已保存，可手动点击连接列表顶部的 ↑ 同步至云端");
+    showSettingsDialog.value = false;
+  } catch (e) {
+    error("保存失败: " + (e.message || e.data?.message || "未知错误"));
+  } finally {
+    settingsSubmitting.value = false;
+  }
+}
+
+async function handleLoadLLMSettingsFromCloud() {
+  if (!getPassword()) return;
+  try {
+    const resp = await downloadEncryptedData();
+    if (!resp.data || !resp.data.encrypted_data) return;
+    const decrypted = await decryptData(resp.data.encrypted_data, getPassword());
+    const parsed = JSON.parse(decrypted);
+    const cloudSettings = parsed?.llmSettings || parsed;
+    if (
+      cloudSettings &&
+      Object.prototype.hasOwnProperty.call(cloudSettings, "enabled") &&
+      Object.prototype.hasOwnProperty.call(cloudSettings, "apiBase") &&
+      Object.prototype.hasOwnProperty.call(cloudSettings, "apiKey") &&
+      Object.prototype.hasOwnProperty.call(cloudSettings, "model")
+    ) {
+      updateLLMSettings(cloudSettings);
+    }
+  } catch {
+    // ignore cloud parse failure to avoid blocking chat usage
+  }
+}
+
+onMounted(() => {
+  handleLoadLLMSettingsFromCloud();
+});
 </script>
 
 <template>
@@ -206,6 +267,13 @@ function formatTime(ts) {
         AI Assistant
       </span>
       <div class="header-actions">
+        <el-button
+          size="small"
+          text
+          :icon="Setting"
+          @click="showSettingsDialog = true"
+          title="LLM API 设置"
+        />
         <el-button
           v-if="connected && sshSessionId"
           size="small"
@@ -343,6 +411,13 @@ function formatTime(ts) {
       </div>
     </template>
   </div>
+
+  <WebsshLlmSettingsDialog
+    v-model="showSettingsDialog"
+    :settings="llmSettings"
+    :submitting="settingsSubmitting"
+    @save="handleSaveLLMSettings"
+  />
 </template>
 
 <style scoped>

@@ -1,5 +1,6 @@
 import { requestWithAuth, fetchWithAuth } from "~/composables/useAuth.js";
 import { getSessions, saveSession, deleteSession as deleteStoredSession, createSessionId } from "~/utils/webssh-agent-session.js";
+import { getLLMSettings, saveLLMSettings } from "~/utils/webssh-llm-settings.js";
 
 function parseSSEStream(reader, onEvent) {
   const decoder = new TextDecoder();
@@ -51,6 +52,7 @@ export function useWebSSHAgent() {
   const awaitingApproval = ref(false);
   const pendingToolCall = ref(null);
   const sessions = ref({});
+  const llmSettings = ref(getLLMSettings());
 
   let activeSshSessionId = null;
 
@@ -107,8 +109,20 @@ export function useWebSSHAgent() {
 
   async function createBackendConversation(sshSessionId) {
     activeSshSessionId = sshSessionId;
+    const custom = llmSettings.value;
+    const requestBody = { sshSessionId };
+    if (custom.enabled) {
+      if (!custom.apiBase || !custom.apiKey || !custom.model) {
+        throw new Error("Custom LLM API requires API Base, API Key and Model");
+      }
+      requestBody.llmApi = {
+        apiBase: custom.apiBase,
+        apiKey: custom.apiKey,
+        model: custom.model,
+      };
+    }
     const resp = await requestWithAuth("/webssh/llm/new", "POST", {
-      body: { sshSessionId },
+      body: requestBody,
     });
     if (resp && resp.conversationId) {
       conversationId.value = resp.conversationId;
@@ -157,6 +171,11 @@ export function useWebSSHAgent() {
       messages.value = [];
       conversationId.value = null;
     }
+  }
+
+  function updateLLMSettings(nextSettings) {
+    saveLLMSettings(nextSettings);
+    llmSettings.value = getLLMSettings();
   }
 
   let streamReader = null;
@@ -324,9 +343,11 @@ export function useWebSSHAgent() {
     awaitingApproval: readonly(awaitingApproval),
     pendingToolCall: readonly(pendingToolCall),
     sessions: readonly(sessions),
+    llmSettings: readonly(llmSettings),
     newSession,
     switchSession,
     removeSession,
+    updateLLMSettings,
     refreshSessions,
     sendMessage,
     sendApproval,

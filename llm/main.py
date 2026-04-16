@@ -59,12 +59,27 @@ async def new_conversation(request: NewConversationRequest) -> NewConversationRe
 
     conversation_id = str(uuid4())
 
+    selected_client = openai_client
+    selected_model = settings.openai_model
+    if request.llm_api is not None:
+        api_base = (request.llm_api.api_base or "").strip()
+        api_key = (request.llm_api.api_key or "").strip()
+        model = (request.llm_api.model or "").strip()
+        if api_base or api_key or model:
+            if not api_base or not api_key or not model:
+                raise HTTPException(
+                    status_code=400,
+                    detail="custom llm api requires apiBase, apiKey and model",
+                )
+            selected_client = OpenAI(base_url=api_base, api_key=api_key)
+            selected_model = model
+
     tools = await load_mcp_tools(settings.mcp_server_url)
     state = default_agent_state(conversation_id, request.ssh_session_id)
     stop_event = threading.Event()
     graph = build_graph(
-        openai_client=openai_client,
-        model=settings.openai_model,
+        openai_client=selected_client,
+        model=selected_model,
         tools=tools,
         stop_event=stop_event,
     )

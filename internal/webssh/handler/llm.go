@@ -10,7 +10,14 @@ import (
 )
 
 type NewConversationRequest struct {
-	SSHSessionID string `json:"sshSessionId" binding:"required"`
+	SSHSessionID string           `json:"sshSessionId" binding:"required"`
+	LLMAPI       *NewLLMAPIConfig `json:"llmApi,omitempty"`
+}
+
+type NewLLMAPIConfig struct {
+	APIBase string `json:"apiBase,omitempty"`
+	APIKey  string `json:"apiKey,omitempty"`
+	Model   string `json:"model,omitempty"`
 }
 
 type NewConversationResponse struct {

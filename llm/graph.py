@@ -85,10 +85,87 @@ def _to_openai_messages(messages: list[BaseMessage]) -> list[dict[str, Any]]:
     return result
 
 
-def _extract_delta_texts(delta: Any) -> tuple[str, str]:
-    content = getattr(delta, "content", None) or ""
-    reasoning = getattr(delta, "reasoning_content", None) or ""
-    return str(content), str(reasoning)
+class _ThoughtParser:
+    """Stateful streaming parser that splits <thought>...</thought> tags in content.
+
+    Some OpenAI-compatible APIs (e.g. certain GLM / Qwen deployments) embed the
+    model's reasoning inside ``<thought>...</thought>`` within the regular
+    ``content`` field instead of using a dedicated ``reasoning_content`` field.
+    Because streaming deltas can split a tag across chunks (e.g. ``"<thou"`` in
+    one delta and ``"ght>"`` in the next), a naive ``str.replace`` approach is
+    insufficient.
+
+    This parser maintains two pieces of state:
+      * ``_in_thought`` – whether we are currently inside a ``<thought>`` block.
+      * ``_buf`` – a small buffer for the tail of the current chunk that *might*
+        be the beginning of an opening or closing tag.  On the next ``feed()``
+        call the buffer is prepended to the new text so the tag can be matched
+        in full.
+
+    Returns ``(content_text, thinking_text)`` from both ``feed()`` and
+    ``flush()``, where *content_text* is everything outside the tags and
+    *thinking_text* is everything inside.
+    """
+
+    _OPEN = "<thought>"
+    _CLOSE = "</thought>"
+    _MAX_TAG = max(len(_OPEN), len(_CLOSE))
+
+    def __init__(self) -> None:
+        self._in_thought = False
+        self._buf = ""
+
+    def feed(self, text: str) -> tuple[str, str]:
+        """Process one streaming delta and return ``(content, thinking)``.
+
+        Prepend the leftover buffer from the previous call, then scan for tag
+        boundaries.  Any text that cannot yet be classified (because it might be
+        the start of a tag) is stored back into ``_buf`` for the next call.
+        """
+        if not text:
+            return "", ""
+        # Prepend leftover from the previous delta that may be a partial tag
+        text = self._buf + text
+        self._buf = ""
+        content_parts: list[str] = []
+        thinking_parts: list[str] = []
+        i = 0
+        while i < len(text):
+            if self._in_thought:
+                # Look for the closing tag
+                idx = text.find(self._CLOSE, i)
+                if idx == -1:
+                    thinking_parts.append(text[i:])
+                    break
+                # Found closing tag – emit the thinking text up to it
+                thinking_parts.append(text[i:idx])
+                self._in_thought = False
+                i = idx + len(self._CLOSE)
+            else:
+                # Look for the opening tag
+                idx = text.find(self._OPEN, i)
+                if idx == -1:
+                    content_parts.append(text[i:])
+                    break
+                # Found opening tag – emit the content text up to it
+                content_parts.append(text[i:idx])
+                self._in_thought = True
+                i = idx + len(self._OPEN)
+        return "".join(content_parts), "".join(thinking_parts)
+
+    def flush(self) -> tuple[str, str]:
+        """Drain the buffer after the stream ends.
+
+        Any remaining buffered text is classified according to the current
+        state: still inside ``<thought>`` → thinking; otherwise → content.
+        """
+        remaining = self._buf
+        self._buf = ""
+        if not remaining:
+            return "", ""
+        if self._in_thought:
+            return "", remaining
+        return remaining, ""
 
 
 def is_dangerous_command(command: str) -> bool:
@@ -130,6 +207,9 @@ def build_graph(
 
         stream = openai_client.chat.completions.create(**request_kwargs)
 
+        # Stateful parser for <thought>...</thought> tags in content deltas.
+        # Only used when the API does NOT provide a dedicated reasoning_content field.
+        thought_parser = _ThoughtParser()
         stopped = False
         for chunk in stream:
             if stop_event and stop_event.is_set():
@@ -138,15 +218,30 @@ def build_graph(
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
-            token_text, thinking_text = _extract_delta_texts(delta)
 
-            if thinking_text:
-                chunk_queue.put({"kind": "thinking", "text": thinking_text})
+            raw_reasoning = getattr(delta, "reasoning_content", None) or ""
+            raw_content = getattr(delta, "content", None) or ""
+            raw_reasoning = str(raw_reasoning)
+            raw_content = str(raw_content)
 
-            if token_text:
-                final_text_parts.append(token_text)
-                chunk_queue.put({"kind": "token", "text": token_text})
+            # Branch 1: API provides a dedicated reasoning_content field
+            # (e.g. DeepSeek).  Use it directly as thinking; content is content.
+            if raw_reasoning:
+                chunk_queue.put({"kind": "thinking", "text": raw_reasoning})
+                if raw_content:
+                    final_text_parts.append(raw_content)
+                    chunk_queue.put({"kind": "token", "text": raw_content})
+            # Branch 2: No reasoning_content – parse <thought> tags from content.
+            # Some APIs (e.g. certain GLM/Qwen) embed reasoning inside these tags.
+            elif raw_content:
+                content_text, thinking_text = thought_parser.feed(raw_content)
+                if thinking_text:
+                    chunk_queue.put({"kind": "thinking", "text": thinking_text})
+                if content_text:
+                    final_text_parts.append(content_text)
+                    chunk_queue.put({"kind": "token", "text": content_text})
 
+            # Accumulate tool call deltas (id / name / arguments arrive piecemeal)
             delta_tool_calls = getattr(delta, "tool_calls", None) or []
             for delta_tool_call in delta_tool_calls:
                 index = int(getattr(delta_tool_call, "index", 0) or 0)
@@ -171,6 +266,14 @@ def build_graph(
                     args_part = getattr(function, "arguments", None)
                     if args_part:
                         tool_builder["arguments"] += args_part
+
+        # Flush any remaining buffered text from the thought parser
+        content_text, thinking_text = thought_parser.flush()
+        if thinking_text:
+            chunk_queue.put({"kind": "thinking", "text": thinking_text})
+        if content_text:
+            final_text_parts.append(content_text)
+            chunk_queue.put({"kind": "token", "text": content_text})
 
         for index in sorted(tool_call_builders.keys()):
             tool_builder = tool_call_builders[index]

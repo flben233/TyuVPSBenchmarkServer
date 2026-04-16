@@ -7,6 +7,7 @@ import {
   getPassword,
   clearPassword,
 } from "~/utils/webssh-storage";
+import { getLLMSettings, saveLLMSettings } from "~/utils/webssh-llm-settings";
 import { encryptData, decryptData } from "~/utils/webssh-crypto";
 import { error, success, warn } from "~/utils/message.js";
 
@@ -90,7 +91,10 @@ async function handleUpload() {
 
   uploading.value = true;
   try {
-    const plainText = JSON.stringify(conns);
+    const plainText = JSON.stringify({
+      connections: conns,
+      llmSettings: getLLMSettings(),
+    });
     const encrypted = await encryptData(plainText, getPassword());
     await uploadEncryptedData(encrypted);
     success("上传成功");
@@ -117,7 +121,15 @@ async function handleDownload() {
     }
 
     const decrypted = await decryptData(resp.data.encrypted_data, getPassword());
-    const cloudConnections = JSON.parse(decrypted);
+    const cloudPayload = JSON.parse(decrypted);
+    const cloudConnections = Array.isArray(cloudPayload)
+      ? cloudPayload
+      : Array.isArray(cloudPayload?.connections)
+        ? cloudPayload.connections
+        : [];
+    if (cloudPayload && !Array.isArray(cloudPayload) && cloudPayload.llmSettings) {
+      saveLLMSettings(cloudPayload.llmSettings);
+    }
 
     if (!Array.isArray(cloudConnections) || cloudConnections.length === 0) {
       warn("云端暂无数据");
