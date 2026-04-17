@@ -563,6 +563,8 @@ async function handleSaveWhitelist(commands) {
 .saved-sessions {
   width: 100%;
   max-width: 300px;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .saved-sessions-title {
