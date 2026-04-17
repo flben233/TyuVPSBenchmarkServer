@@ -38,6 +38,11 @@ class NewConversationRequest(BaseModel):
         alias="sshSessionId",
         description="The SSH session ID to associate with this conversation",
     )
+    user_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("user_id", "userId"),
+        description="The user ID for rate limiting the free API pool",
+    )
     llm_api: LLMAPIConfig | None = Field(
         default=None,
         validation_alias=AliasChoices("llm_api", "llmApi"),
@@ -146,3 +151,4 @@ class ConversationRuntime:
     state: AgentState
     lock: asyncio.Lock
     stop_event: threading.Event = field(default_factory=threading.Event)
+    user_id: str = ""

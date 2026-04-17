@@ -411,6 +411,7 @@ async function handleSaveWhitelist(commands) {
   background: #fff;
   border-radius: 6px;
   border: 1px solid var(--el-border-color-lighter);
+  box-sizing: border-box;
 }
 
 .chat-header {

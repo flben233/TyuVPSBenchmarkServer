@@ -5,35 +5,23 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Settings:
     mcp_server_url: str
-    openai_api_base: str
-    openai_api_key: str
-    openai_model: str
+    redis_url: str
+    daily_limit: int
+    apis_config_path: str
 
     @classmethod
     def from_env(cls) -> "Settings":
         mcp_server_url = os.getenv("MCP_SERVER_URL", "").strip()
-        openai_api_base = os.getenv("OPENAI_API_BASE", "").strip()
-        openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
-        openai_model = os.getenv("OPENAI_MODEL", "").strip()
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0").strip()
+        daily_limit = int(os.getenv("FREE_API_DAILY_LIMIT", "500"))
+        apis_config_path = os.getenv("APIS_CONFIG_PATH", "apis.json").strip()
 
-        missing = []
         if not mcp_server_url:
-            missing.append("MCP_SERVER_URL")
-        if not openai_api_base:
-            missing.append("OPENAI_API_BASE")
-        if not openai_api_key:
-            missing.append("OPENAI_API_KEY")
-        if not openai_model:
-            missing.append("OPENAI_MODEL")
-
-        if missing:
-            raise RuntimeError(
-                "Missing required environment variables: " + ", ".join(missing)
-            )
+            raise RuntimeError("Missing required environment variable: MCP_SERVER_URL")
 
         return cls(
             mcp_server_url=mcp_server_url,
-            openai_api_base=openai_api_base,
-            openai_api_key=openai_api_key,
-            openai_model=openai_model,
+            redis_url=redis_url,
+            daily_limit=daily_limit,
+            apis_config_path=apis_config_path,
         )

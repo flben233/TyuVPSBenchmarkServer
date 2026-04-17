@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 from openai import OpenAI
 
 from config import Settings
+from free_api_pool import FreeAPIPool, FailoverClient, FreeAPIExhaustedError
 from graph import (
     build_graph,
     ensure_chunk_queue,
@@ -33,7 +34,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="WebSSH LLM Agent", lifespan=lifespan)
 settings: Settings | None = None
-openai_client: OpenAI | None = None
+pool: FreeAPIPool | None = None
 conversation_runtimes: dict[str, ConversationRuntime] = {}
 ssh_session_to_conversation_ids: dict[str, set[str]] = {}
 
@@ -46,21 +47,23 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-@app.post("/new", response_model=NewConversationResponse, tags=["LLM Agent"], summary="Create a new conversation")
-async def new_conversation(request: NewConversationRequest) -> NewConversationResponse:
-    global settings, openai_client
+def _ensure_settings():
+    global settings, pool
     if settings is None:
         settings = Settings.from_env()
-    if openai_client is None:
-        openai_client = OpenAI(
-            base_url=settings.openai_api_base,
-            api_key=settings.openai_api_key,
-        )
+    if pool is None:
+        pool = FreeAPIPool()
+
+
+@app.post("/new", response_model=NewConversationResponse, tags=["LLM Agent"], summary="Create a new conversation")
+async def new_conversation(request: NewConversationRequest) -> NewConversationResponse:
+    _ensure_settings()
 
     conversation_id = str(uuid4())
+    selected_client: Any
+    selected_model: str
+    user_id = request.user_id or "anonymous"
 
-    selected_client = openai_client
-    selected_model = settings.openai_model
     if request.llm_api is not None:
         api_base = (request.llm_api.api_base or "").strip()
         api_key = (request.llm_api.api_key or "").strip()
@@ -73,6 +76,28 @@ async def new_conversation(request: NewConversationRequest) -> NewConversationRe
                 )
             selected_client = OpenAI(base_url=api_base, api_key=api_key)
             selected_model = model
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="llmApi provided but all fields are empty",
+            )
+    else:
+        try:
+            failover = FailoverClient(pool, user_id)
+            failover.acquire()
+        except FreeAPIExhaustedError:
+            if pool.has_endpoints:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Free API rate limit exceeded or all endpoints are in cooldown. "
+                           "Please provide your own API key or try again later.",
+                )
+            raise HTTPException(
+                status_code=503,
+                detail="No free API endpoints configured. Please provide your own API key.",
+            )
+        selected_client = failover
+        selected_model = ""
 
     tools = await load_mcp_tools(settings.mcp_server_url)
     state = default_agent_state(conversation_id, request.ssh_session_id)
@@ -88,6 +113,7 @@ async def new_conversation(request: NewConversationRequest) -> NewConversationRe
         state=state,
         lock=asyncio.Lock(),
         stop_event=stop_event,
+        user_id=user_id,
     )
 
     conversation_runtimes[conversation_id] = runtime
