@@ -1,6 +1,5 @@
 import json
 import threading
-import re
 from typing import Any
 
 from langchain_core.messages import (
@@ -16,15 +15,7 @@ from openai import OpenAI
 
 from state import AgentState, ensure_chunk_queue
 from tool import build_openai_tools, inject_session_id, invoke_tool
-
-DANGEROUS_PATTERNS = [
-    re.compile(r"\brm\s+.*-.*f", re.IGNORECASE),
-    re.compile(r"\bshutdown\b", re.IGNORECASE),
-    re.compile(r"\breboot\b", re.IGNORECASE),
-    re.compile(r"\bmkfs\b", re.IGNORECASE),
-    re.compile(r"\bdd\s+if=", re.IGNORECASE),
-    re.compile(r">\s*/dev/sd", re.IGNORECASE),
-]
+from command_checker import CommandChecker
 
 SYSTEM_PROMPT = (
     "You are a server operations assistant connected to a remote server via SSH. "
@@ -168,10 +159,6 @@ class _ThoughtParser:
         return remaining, ""
 
 
-def is_dangerous_command(command: str) -> bool:
-    return any(p.search(command) for p in DANGEROUS_PATTERNS)
-
-
 def build_graph(
     *,
     openai_client: OpenAI,
@@ -303,14 +290,22 @@ def build_graph(
 
         if response.tool_calls:
             command = response.tool_calls[0].get("args", {}).get("command", "")
-            if is_dangerous_command(command):
+            checker = CommandChecker(
+                user_allowed=state.get("allowed_commands"),
+                session_allowed=state.get("session_allowed_commands"),
+            )
+            check_result = checker.check(command)
+            if not check_result.all_allowed:
                 updates["pending_tool_call"] = response.tool_calls[0]
+                updates["disallowed_commands"] = check_result.disallowed
                 updates["awaiting_approval"] = True
             else:
                 updates["pending_tool_call"] = None
+                updates["disallowed_commands"] = []
                 updates["awaiting_approval"] = False
         else:
             updates["pending_tool_call"] = None
+            updates["disallowed_commands"] = []
             updates["awaiting_approval"] = False
 
         return updates

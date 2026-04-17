@@ -25,10 +25,12 @@ type NewConversationResponse struct {
 }
 
 type ChatRequest struct {
-	ConversationID  string        `json:"conversationId,omitempty"`
-	Message         string        `json:"message,omitempty"`
-	Messages        []ChatMessage `json:"messages,omitempty"`
-	ApprovalGranted *bool         `json:"approval_granted,omitempty"`
+	ConversationID         string        `json:"conversationId,omitempty"`
+	Message                string        `json:"message,omitempty"`
+	Messages               []ChatMessage `json:"messages,omitempty"`
+	ApprovalGranted        *bool         `json:"approval_granted,omitempty"`
+	AllowedCommands        []string      `json:"allowed_commands,omitempty"`
+	SessionAllowedCommands []string      `json:"session_allowed_commands,omitempty"`
 }
 
 type ChatMessage struct {

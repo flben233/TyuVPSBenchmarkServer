@@ -53,6 +53,8 @@ export function useWebSSHAgent() {
   const pendingToolCall = ref(null);
   const sessions = ref({});
   const llmSettings = ref(getLLMSettings());
+  const permanentAllowedCommands = ref([]);
+  const sessionAllowedCommands = ref([]);
 
   let activeSshSessionId = null;
 
@@ -107,6 +109,39 @@ export function useWebSSHAgent() {
     messages.value[idx] = msg;
   }
 
+  async function fetchWhitelist() {
+    try {
+      const resp = await requestWithAuth("/webssh/llm/whitelist/get", "GET");
+      if (resp && resp.data && Array.isArray(resp.data.commands)) {
+        permanentAllowedCommands.value = resp.data.commands;
+      }
+    } catch {
+      // ignore – defaults will be used
+    }
+  }
+
+  async function saveWhitelist(commands) {
+    await requestWithAuth("/webssh/llm/whitelist/save", "POST", {
+      body: { commands },
+    });
+    permanentAllowedCommands.value = commands;
+  }
+
+  function allowCommandsForSession(commands) {
+    const current = new Set(sessionAllowedCommands.value);
+    for (const cmd of commands) {
+      current.add(cmd);
+    }
+    sessionAllowedCommands.value = [...current];
+  }
+
+  function _buildWhitelistBody() {
+    return {
+      allowed_commands: permanentAllowedCommands.value,
+      session_allowed_commands: sessionAllowedCommands.value,
+    };
+  }
+
   async function createBackendConversation(sshSessionId) {
     activeSshSessionId = sshSessionId;
     const custom = llmSettings.value;
@@ -138,8 +173,10 @@ export function useWebSSHAgent() {
     conversationId.value = null;
     awaitingApproval.value = false;
     pendingToolCall.value = null;
+    sessionAllowedCommands.value = [];
     activeSshSessionId = sshSessionId;
 
+    await fetchWhitelist();
     await createBackendConversation(sshSessionId);
 
     persistCurrentSession();
@@ -156,8 +193,10 @@ export function useWebSSHAgent() {
     activeSshSessionId = sshSessionId || session.sshSessionId;
     awaitingApproval.value = false;
     pendingToolCall.value = null;
+    sessionAllowedCommands.value = [];
 
     if (activeSshSessionId) {
+      await fetchWhitelist();
       await createBackendConversation(activeSshSessionId);
       persistCurrentSession();
     }
@@ -289,6 +328,7 @@ export function useWebSSHAgent() {
           conversationId: conversationId.value,
           message: text,
           messages: history,
+          ..._buildWhitelistBody(),
         },
         assistantIdx
       );
@@ -299,8 +339,12 @@ export function useWebSSHAgent() {
     }
   }
 
-  async function sendApproval(granted) {
+  async function sendApproval(granted, addToSession = false) {
     if (!conversationId.value) return;
+
+    if (addToSession && pendingToolCall.value?.disallowed_commands) {
+      allowCommandsForSession(pendingToolCall.value.disallowed_commands);
+    }
 
     addMessage("user", granted ? "[approved]" : "[rejected]");
     const history = messages.value.map((m) => ({
@@ -325,6 +369,7 @@ export function useWebSSHAgent() {
           conversationId: conversationId.value,
           approval_granted: granted,
           messages: history,
+          ..._buildWhitelistBody(),
         },
         assistantIdx
       );
@@ -344,10 +389,15 @@ export function useWebSSHAgent() {
     pendingToolCall: readonly(pendingToolCall),
     sessions: readonly(sessions),
     llmSettings: readonly(llmSettings),
+    permanentAllowedCommands: readonly(permanentAllowedCommands),
+    sessionAllowedCommands: readonly(sessionAllowedCommands),
     newSession,
     switchSession,
     removeSession,
     updateLLMSettings,
+    fetchWhitelist,
+    saveWhitelist,
+    allowCommandsForSession,
     refreshSessions,
     sendMessage,
     sendApproval,

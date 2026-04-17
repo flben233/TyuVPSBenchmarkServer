@@ -166,6 +166,10 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                 runtime.state = append_user_message(runtime.state, request.message)
             if request.approval_granted is not None:
                 runtime.state["approval_granted"] = request.approval_granted
+            if request.allowed_commands is not None:
+                runtime.state["allowed_commands"] = request.allowed_commands
+            if request.session_allowed_commands is not None:
+                runtime.state["session_allowed_commands"] = request.session_allowed_commands
 
             chunk_queue = ensure_chunk_queue(runtime.state)
             clear_chunk_queue(runtime.state)
@@ -261,14 +265,18 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                 )
 
             if runtime.state.get("awaiting_approval"):
-                pending = runtime.state.get("pending_tool_call")
+                pending = runtime.state.get("pending_tool_call") or {}
+                disallowed = runtime.state.get("disallowed_commands") or []
                 yield _sse(
                     "awaiting_approval",
                     {
                         "conversationId": request.conversation_id,
                         "messageId": message_id,
                         "timestamp": _now_iso(),
-                        "payload": pending or {},
+                        "payload": {
+                            **pending,
+                            "disallowed_commands": disallowed,
+                        },
                     },
                 )
 

@@ -110,6 +110,16 @@ class ChatRequest(BaseModel):
         description="Whether the user approved a pending dangerous command. "
                     "True=approve, False=reject, None=not an approval response.",
     )
+    allowed_commands: list[str] | None = Field(
+        default=None,
+        description="User's persistent command whitelist (from Go DB). "
+                    "Base commands that are permitted to execute without approval.",
+    )
+    session_allowed_commands: list[str] | None = Field(
+        default=None,
+        description="Ephemeral session-level additions to the whitelist. "
+                    "Not persisted; only valid for the current conversation.",
+    )
 
 
 class StopRequest(BaseModel):

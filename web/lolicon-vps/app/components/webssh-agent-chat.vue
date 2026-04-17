@@ -1,8 +1,6 @@
 <script setup>
-import { ChatDotRound, Promotion, Loading, Plus, Check, WarnTriangleFilled, ArrowDown, Delete, CircleCloseFilled, Setting } from "@element-plus/icons-vue";
+import { ChatDotRound, Promotion, Loading, Plus, Check, Close, WarnTriangleFilled, ArrowDown, Delete, CircleCloseFilled, Setting } from "@element-plus/icons-vue";
 import { error, success, warn } from "~/utils/message.js";
-import { getPassword } from "~/utils/webssh-storage";
-import { decryptData } from "~/utils/webssh-crypto";
 import { marked } from "marked";
 
 marked.setOptions({
@@ -29,12 +27,12 @@ const {
   removeSession,
   llmSettings,
   updateLLMSettings,
+  permanentAllowedCommands,
+  saveWhitelist,
   sendMessage,
   sendApproval,
   stopChat,
 } = useWebSSHAgent();
-
-const { downloadEncryptedData } = useWebsshCloud();
 
 const inputText = ref("");
 const chatContainer = ref(null);
@@ -172,18 +170,11 @@ async function handleSaveLLMSettings(nextSettings) {
     }
   }
 
-  if (!getPassword()) {
-    warn("请先在连接列表中设置密钥，再进行云端同步");
-    updateLLMSettings(nextSettings);
-    showSettingsDialog.value = false;
-    return;
-  }
-
   settingsSubmitting.value = true;
   try {
     updateLLMSettings(nextSettings);
-    success("LLM 设置已保存，可手动点击连接列表顶部的 ↑ 同步至云端");
     showSettingsDialog.value = false;
+    success("设置已保存");
   } catch (e) {
     error("保存失败: " + (e.message || e.data?.message || "未知错误"));
   } finally {
@@ -191,31 +182,13 @@ async function handleSaveLLMSettings(nextSettings) {
   }
 }
 
-async function handleLoadLLMSettingsFromCloud() {
-  if (!getPassword()) return;
+async function handleSaveWhitelist(commands) {
   try {
-    const resp = await downloadEncryptedData();
-    if (!resp.data || !resp.data.encrypted_data) return;
-    const decrypted = await decryptData(resp.data.encrypted_data, getPassword());
-    const parsed = JSON.parse(decrypted);
-    const cloudSettings = parsed?.llmSettings || parsed;
-    if (
-      cloudSettings &&
-      Object.prototype.hasOwnProperty.call(cloudSettings, "enabled") &&
-      Object.prototype.hasOwnProperty.call(cloudSettings, "apiBase") &&
-      Object.prototype.hasOwnProperty.call(cloudSettings, "apiKey") &&
-      Object.prototype.hasOwnProperty.call(cloudSettings, "model")
-    ) {
-      updateLLMSettings(cloudSettings);
-    }
-  } catch {
-    // ignore cloud parse failure to avoid blocking chat usage
+    await saveWhitelist(commands);
+  } catch (e) {
+    error("白名单保存失败: " + (e.message || "未知错误"));
   }
 }
-
-onMounted(() => {
-  handleLoadLLMSettingsFromCloud();
-});
 </script>
 
 <template>
@@ -367,17 +340,25 @@ onMounted(() => {
       </div>
 
       <div v-if="awaitingApproval && pendingToolCall" class="approval-bar">
+        <el-icon color="#e6a23c"><WarnTriangleFilled /></el-icon>
         <div class="approval-info">
-          <el-icon color="#e6a23c"><WarnTriangleFilled /></el-icon>
-          <span>AI 请求执行命令: <strong>{{ pendingToolCall.name || 'command' }}</strong></span>
-        </div>
-        <div class="approval-actions">
-          <el-button type="success" size="small" :icon="Check" @click="sendApproval(true)" :disabled="streaming">
-            允许
-          </el-button>
-          <el-button type="danger" size="small" :icon="Plus" @click="sendApproval(false)" :disabled="streaming">
-            拒绝
-          </el-button>
+          <div class="approval-text">
+            <span>以下指令需要审批: <strong>{{ (pendingToolCall.disallowed_commands || []).join(', ') }}</strong></span>
+            <span class="approval-cmd" v-if="pendingToolCall.args?.command">
+              完整命令: <code>{{ pendingToolCall.args.command }}</code>
+            </span>
+          </div>
+          <div class="approval-actions">
+            <el-button type="success" size="small" :icon="Check" @click="sendApproval(true)" :disabled="streaming">
+              允许一次
+            </el-button>
+            <el-button type="warning" size="small" :icon="Check" @click="sendApproval(true, true)" :disabled="streaming">
+              本次会话允许
+            </el-button>
+            <el-button type="danger" size="small" :icon="Close" @click="sendApproval(false)" :disabled="streaming">
+              拒绝
+            </el-button>
+          </div>
         </div>
       </div>
 
@@ -415,8 +396,10 @@ onMounted(() => {
   <WebsshLlmSettingsDialog
     v-model="showSettingsDialog"
     :settings="llmSettings"
+    :allowed-commands="permanentAllowedCommands"
     :submitting="settingsSubmitting"
     @save="handleSaveLLMSettings"
+    @save-whitelist="handleSaveWhitelist"
   />
 </template>
 
@@ -796,8 +779,6 @@ onMounted(() => {
 }
 
 .approval-info {
-  display: flex;
-  align-items: center;
   gap: 6px;
   font-size: 13px;
   color: #606266;
@@ -805,10 +786,26 @@ onMounted(() => {
   min-width: 0;
 }
 
+.approval-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.approval-cmd code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  word-break: break-all;
+}
+
 .approval-actions {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+  margin-top: 6px;
 }
 
 .chat-input-area {

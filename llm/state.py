@@ -20,6 +20,9 @@ class AgentState(TypedDict, total=False):
     awaiting_approval: bool
     approval_granted: bool | None
     stopped: bool
+    disallowed_commands: list[str]
+    allowed_commands: list[str]
+    session_allowed_commands: list[str]
 
 
 def default_agent_state(conversation_id: str, ssh_session_id: str) -> AgentState:
