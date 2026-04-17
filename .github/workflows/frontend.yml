@@ -8,10 +8,12 @@ on:
     branches: [ "master" ]
     paths:
       - 'web/lolicon-vps/**'
+      - '.github/workflows/frontend.yml'
   pull_request:
     branches: [ "master" ]
     paths:
       - 'web/lolicon-vps/**'
+      - '.github/workflows/frontend.yml'
   workflow_dispatch:
 
 env:

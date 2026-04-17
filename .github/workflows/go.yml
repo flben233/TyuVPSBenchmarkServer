@@ -8,12 +8,18 @@ on:
     branches: [ "master" ]
     paths-ignore:
       - 'web/lolicon-vps/**'
+      - 'llm/**'
       - '.github/workflows/frontend.yml'
+      - '.github/workflows/python-llm.yml'
+      - '.github/workflows/souin.yml'
   pull_request:
     branches: [ "master" ]
     paths-ignore:
       - 'web/lolicon-vps/**'
+      - 'llm/**'
       - '.github/workflows/frontend.yml'
+      - '.github/workflows/python-llm.yml'
+      - '.github/workflows/souin.yml'
   workflow_dispatch:
 
 env:
