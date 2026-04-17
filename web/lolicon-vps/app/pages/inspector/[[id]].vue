@@ -30,6 +30,8 @@ const RELATIVE_RANGE_OPTIONS = [
   { label: "过去 6 小时", value: 6 * 60 * 60 * 1000 },
   { label: "过去 24 小时", value: 24 * 60 * 60 * 1000 },
   { label: "过去 7 天", value: 7 * 24 * 60 * 60 * 1000 },
+  { label: "过去 15 天", value: 15 * 24 * 60 * 60 * 1000 },
+  { label: "过去 30 天", value: 30 * 24 * 60 * 60 * 1000 },
 ];
 
 const { token, fetchUserInfo, userInfo } = useAuth();
@@ -327,6 +329,12 @@ function applyPresetRange(preset) {
   } else if (preset === "7d") {
     queryRelativeRange.value = 7 * 24 * 60 * 60 * 1000;
     queryInterval.value = "6h";
+  } else if (preset === "15d") {
+    queryRelativeRange.value = 15 * 24 * 60 * 60 * 1000;
+    queryInterval.value = "12h";
+  } else if (preset === "30d") {
+    queryRelativeRange.value = 30 * 24 * 60 * 60 * 1000;
+    queryInterval.value = "1d";
   } else {
     queryRelativeRange.value = DEFAULT_RANGE_MS;
     queryInterval.value = defaultQuery.interval;
