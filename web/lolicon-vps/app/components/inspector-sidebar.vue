@@ -149,9 +149,11 @@ const overviewItems = computed(() => [
       </div>
 
       <div class="preset-row">
-        <el-button link @click="emit('preset', '6h')">近 6 小时</el-button>
-        <el-button link @click="emit('preset', '24h')">近 24 小时</el-button>
-        <el-button link @click="emit('preset', '7d')">近 7 天</el-button>
+        <el-button link @click="emit('preset', '6h')">6 小时</el-button>
+        <el-button link @click="emit('preset', '24h')">24 小时</el-button>
+        <el-button link @click="emit('preset', '7d')">7 天</el-button>
+        <el-button link @click="emit('preset', '15d')">15 天</el-button>
+        <el-button link @click="emit('preset', '30d')">30 天</el-button>
       </div>
 
       <el-form label-position="top">

@@ -34,6 +34,9 @@
     #app {
       flex-direction: column;
     }
+    .el-dialog {
+      width: 95% !important;
+    }
   }
   #app {
     display: flex;

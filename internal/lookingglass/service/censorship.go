@@ -1,6 +1,7 @@
 package service
 
 import (
+	"VPSBenchmarkBackend/internal/cache"
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/lookingglass/response"
 	"VPSBenchmarkBackend/internal/lookingglass/store"
@@ -22,7 +23,11 @@ func ListPendingRecords() ([]response.LookingGlassResponse, error) {
 
 // ApproveRecord approves a record for public display (admin only)
 func ApproveRecord(id int64) error {
-	return store.UpdateReviewStatus(id, common.ReviewStatusApproved)
+	err := store.UpdateReviewStatus(id, common.ReviewStatusApproved)
+	if err != nil {
+		return err
+	}
+	return cache.PurgeSouinCache(cache.LookingGlassKey)
 }
 
 // RejectRecord rejects a record (admin only)

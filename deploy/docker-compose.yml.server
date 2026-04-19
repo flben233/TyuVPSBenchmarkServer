@@ -72,6 +72,25 @@ services:
       - ./redis/data/redis:/data
     command: redis-server /etc/redis/redis.conf
 
+  llm:
+    image: ghcr.io/flben233/lolicon-vps/llm:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18000:18000"
+    volumes:
+      - ./llm/apis.json:/app/apis.json
+    environment:
+      - MCP_SERVER_URL=http://host.docker.internal:19000
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_PASS=
+      - FREE_API_DAILY_LIMIT=20
+      - APIS_CONFIG_PATH=apis.json
+      - TZ=Asia/Shanghai
+    depends_on:
+      - redis
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
   frontend:
     image: ghcr.io/flben233/lolicon-vps/frontend:latest
     restart: unless-stopped
@@ -83,6 +102,13 @@ services:
       - NUXT_BACKEND_URL=http://backend:12345/api
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
+
+  souin:
+    image: "ghcr.io/flben233/souin:latest"
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+      - "12019:2019"
 
   watchtower:
     image: "containrrr/watchtower:latest-dev"

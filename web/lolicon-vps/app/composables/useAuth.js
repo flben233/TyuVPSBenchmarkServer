@@ -27,22 +27,60 @@ async function doRequest(url, method, options = {}) {
   });
 }
 
+async function ensureTokenRefresh() {
+  if (refreshingToken) {
+    return new Promise((resolve, reject) => {
+      failQueue.push({ resolve, reject });
+    });
+  }
+  const { refreshToken } = useAuth();
+  await refreshToken();
+  console.log("Token refreshed, retrying request...");
+}
+
 export async function requestWithAuth(url, method, options = {}) {
   try {
     return await doRequest(url, method, options);
   } catch (error) {
     if (error.statusCode === 401) {
-      if (refreshingToken) {
-        return new Promise((resolve, reject) => {
-          failQueue.push({ resolve, reject });
-        }).then(() => doRequest(url, method, options));
-      }
-      const { refreshToken } = useAuth();
-      await refreshToken();
-      console.log("Token refreshed, retrying request...");
+      await ensureTokenRefresh();
       return await doRequest(url, method, options);
     }
   }
+}
+
+export async function fetchWithAuth(url, options = {}) {
+  const { backendUrl } = useAppConfig();
+
+  if (!token.value) {
+    const err = new Error("No auth token found. Please log in.");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token.value}`,
+    ...options.headers,
+  };
+  if (options.body && typeof options.body === "string") {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const resp = await fetch(`${backendUrl}${url}`, { ...options, headers });
+
+  if (resp.status === 401) {
+    await ensureTokenRefresh();
+    const retryHeaders = {
+      Authorization: `Bearer ${token.value}`,
+      ...options.headers,
+    };
+    if (options.body && typeof options.body === "string") {
+      retryHeaders["Content-Type"] = "application/json";
+    }
+    return fetch(`${backendUrl}${url}`, { ...options, headers: retryHeaders });
+  }
+
+  return resp;
 }
 
 export function useAuth() {

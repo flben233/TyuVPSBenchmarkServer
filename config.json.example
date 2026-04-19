@@ -1,0 +1,21 @@
+{
+    "port": 12345,
+    "baseUrl": "/api",
+    "clientId": "",
+    "clientSecret": "",
+    "jwtSecret": "",
+    "accessTokenExp": 900,
+    "refreshTokenExp": 2592000,
+    "adminId": ,
+    "frontendUrl": "http://souin:3010",
+    "githubHttpsProxy": "http://127.0.0.1:10808",
+    "exporterUrl": "",
+    "redisHost": "redis:6379",
+    "redisPasswd": "",
+    "appriseUrl": "http://apprise:8000/notify",
+    "rabbitMqUrl": "amqp://username:password@rabbitmq:5672/",
+    "rabbitMqPoolSize": 20,
+    "souinUrl": "http://souin:2019",
+    "mcpPort": 12346,
+    "llmBackendUrl": "http://llm:18000"
+}

@@ -1,62 +1,111 @@
-<html>
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-  <title>隐私政策</title>
-</head>
-<body>
-  <h1 data-line="0" id="Lolicon VPS 隐私协议">Lolicon VPS 隐私协议</h1>
-  <p data-line="2"><strong>生效日期：2026年3月14日</strong></p>
-  <p data-line="4">欢迎使用 Lolicon
-    VPS。我们非常重视您的隐私，本协议旨在向您说明我们在您使用我们的服务时，如何收集、使用、存储和保护您的个人信息。</p>
-  <hr data-line="6">
-  <h2 data-line="8" id="1. 我们收集的信息">1. 我们收集的信息</h2>
-  <p data-line="10">为了提供核心服务（探针、报告查看、网络链路质量分析等），我们会收集以下类型的信息：</p>
-  <h3 data-line="12" id="1.1 账号信息">1.1 账号信息</h3>
-  <ul data-line="13">
-    <li><strong>GitHub 授权信息</strong>：当您使用 GitHub 登录时，我们会获取您的 GitHub
-      ID、用户名（Login）、昵称和头像。这些信息仅用于创建您的账户、标识您的数据上报权限以及在管理界面显示。
-    </li>
-    <li><strong>JWT Token</strong>：我们会生成 JWT Token 用于验证您的登录状态。</li>
-  </ul>
-  <h3 data-line="16" id="1.2 探测与检测数据">1.2 探测与检测数据</h3>
-  <ul data-line="17">
-    <li><strong>检测目标信息</strong>：包括您在 Lolicon Monitor (Loli 探针) 中创建的主机名、目标 IP 或域名、系统类型。</li>
-    <li><strong>性能指标</strong>：由 Agent 或 Server 探测产生的 CPU 使用率、内存使用情况、磁盘 IO、系统运行时间（Uptime）。</li>
-    <li><strong>网络链路数据</strong>：包括实时的上行/下行带宽、Ping 延迟、丢包率、回程路由追踪结果以及网络波动趋势。</li>
-  </ul>
-  <h3 data-line="21" id="1.3 日志信息">1.3 日志信息</h3>
-  <ul data-line="22">
-    <li>当您访问我们的 API 时，我们的服务器可能会自动记录您的 IP 地址、浏览器类型、访问时间及请求路径。</li>
-  </ul>
-  <h2 data-line="24" id="2. 信息的使用方式">2. 信息的使用方式</h2>
-  <p data-line="26">我们收集的信息主要用于：</p>
-  <ul data-line="27">
-    <li><strong>探测与分析服务</strong>：展示实时的性能监控图表、生成网络质量统计报告。</li>
-    <li><strong>安全性保障</strong>：通过 JWT 验证您的身份，确保只有授权用户能管理其探测目标。</li>
-    <li><strong>数据共享</strong>：未经您同意，我们不会将您的个人信息出售或出租给第三方。</li>
-  </ul>
-  <h2 data-line="31" id="3. 信息的存储与安全">3. 信息的存储与安全</h2>
-  <ul data-line="33">
-    <li><strong>数据存储</strong>：您的数据存储在受保护的数据库中。</li>
-    <li><strong>数据加密</strong>：敏感的操作（如登录校验）采用 JWT 签名机制。</li>
-    <li><strong>访问控制</strong>：我们通过严格的角色权限管理（如管理员、普通用户、Agent Token）确保数据仅在授权范围内被访问。
-    </li>
-  </ul>
-  <h2 data-line="37" id="4. 信息的共享与披露">4. 信息的共享与披露</h2>
-  <p data-line="39">除非按照法律法规规定或本协议说明，我们不会向第三方出售或出租您的个人信息。以下情况除外：</p>
-  <ul data-line="40">
-    <li><strong>公开展示</strong>：经您申请并通过审核的 Looking Glass 记录、Monitor 数据将对公众可见。</li>
-    <li><strong>法律要求</strong>：在收到传票、法院命令或根据适用的法律法规要求时。</li>
-  </ul>
-  <h2 data-line="43" id="5. 您的权利">5. 您的权利</h2>
-  <ul data-line="45">
-    <li><strong>访问与更新</strong>：您可以通过 API 获取您的个人资料和主机列表。</li>
-    <li><strong>删除数据</strong>：您可以随时通过相关接口删除您上报的主机、检测记录和报告。</li>
-    <li><strong>撤销授权</strong>：您可以随时在 GitHub 设置中取消对本应用的 OAuth 授权。</li>
-  </ul>
-  <h2 data-line="49" id="6. 隐私协议的变更">6. 隐私协议的变更</h2>
-  <p data-line="51">我们可能会不时更新本隐私协议。对于重大变更，我们会通过更新本文件的“生效日期”或在项目页面发布说明。</p>
-  <h2 data-line="53" id="7. 联系我们">7. 联系我们</h2>
-  <p data-line="55">如果您对本隐私协议有任何疑问，请通过开源仓库的 Issue 系统与我们联系。</p>
-</body>
-</html>
+<h1 data-line="0" id="Lolicon VPS 隐私协议">Lolicon VPS 隐私协议</h1>
+<p data-line="2">
+  <strong>生效日期：2026年4月17日</strong>
+</p>
+<p data-line="4">
+  欢迎使用 Lolicon VPS。我们非常重视您的隐私，本协议旨在向您说明我们在您使用我们的服务时，如何收集、使用、存储和保护您的个人信息。
+</p>
+<hr data-line="6">
+<h2 data-line="8" id="1. 我们收集的信息">
+  1. 我们收集的信息
+</h2>
+<p data-line="10">
+  为了提供核心服务（探针、报告查看、网络链路质量分析、WebSSH 远程管理、AI 智能助手等），我们会收集以下类型的信息：
+</p>
+<h3 data-line="12" id="1.1 账号信息">
+  1.1 账号信息
+</h3>
+<ul data-line="13">
+  <li>
+    <strong>GitHub 授权信息</strong>：当您使用 GitHub 登录时，我们会获取您的 GitHub
+    ID、用户名（Login）、昵称和头像。这些信息仅用于创建您的账户、标识您的数据上报权限以及在管理界面显示。
+  </li>
+  <li>
+    <strong>JWT Token</strong>：我们会生成 JWT Token 用于验证您的登录状态。
+  </li>
+</ul>
+<h3 data-line="16" id="1.2 探测与检测数据">
+  1.2 探测与检测数据
+</h3>
+<ul data-line="17">
+  <li><strong>检测目标信息</strong>：包括您在 Lolicon Monitor (Loli 探针) 中创建的主机名、目标 IP 或域名、系统类型。</li>
+  <li><strong>性能指标</strong>：由 Agent 或 Server 探测产生的 CPU 使用率、内存使用情况、磁盘 IO、系统 运行时间（Uptime）。
+  </li>
+  <li><strong>网络链路数据</strong>：包括实时的上行/下行带宽、Ping 延迟、丢包率、回程路由追踪结果以及网络波动趋势。</li>
+</ul>
+<h3 data-line="21" id="1.3 WebSSH 相关数据">
+  1.3 WebSSH 相关数据
+</h3>
+<ul data-line="22">
+  <li><strong>SSH 连接信息</strong>：您通过 WebSSH 功能保存的连接配置（主机地址、端口、用户名）会经过您本地设置的密钥进行 AES
+    加密后存储在服务器数据库中。我们无法解密您的连接配置。
+  </li>
+  <li><strong>SSH 会话数据</strong>：通过 WebSocket 传输的 SSH 终端输入/输出数据仅存在于实时会话中，不会在服务器端持久化存储。
+  </li>
+</ul> <h3 data-line="25" id="1.4 AI 智能助手相关数据">1.4 AI 智能助手相关数据</h3>
+<ul data-line="26">
+  <li><strong>对话历史</strong>：您与 AI 助手的对话消息（包括 AI
+    生成的回复、执行的命令及结果）仅保存在您的浏览器本地存储（localStorage）中，不会上传至服务器持久化保存。
+  </li>
+  <li><strong>命令白名单</strong>：您自定义的允许命令白名单存储在服务器数据库中，用于在 AI 执行命令前进行安全检查。</li>
+  <li><strong>LLM API 配置</strong>：如果您选择使用自定义 LLM API，您填写的 API Base、API Key
+    和模型名称仅保存在您的浏览器本地存储中，仅在请求消息时会上传至服务器，该信息仅用于代理请求到您指定的 LLM API
+    端点，不会用于其他目的。
+  </li>
+  <li><strong>免费 API 使用量</strong>：当您使用系统提供的免费 LLM API 时，我们会在 Redis 中记录您的每日请求次数（以用户 ID
+    + 日期为标识），用于公平的速率限制。此计数每日自动重置。
+  </li>
+</ul> <h3 data-line="31" id="1.5 日志信息">1.5 日志信息</h3>
+<ul data-line="32">
+  <li>当您访问我们的 API 时，我们的服务器可能会自动记录您的 IP 地址、浏览器类型、访问时间及请求路径。</li>
+</ul>
+<hr data-line="34"> <h2 data-line="36" id="2. 信息的使用方式">2. 信息的使用方式</h2> <p data-line="38">
+  我们收集的信息主要用于：</p>
+<ul data-line="39">
+  <li><strong>探测与分析服务</strong>：展示实时的性能监控图表、生成网络质量统计报告。</li>
+  <li><strong>WebSSH 远程管理</strong>：提供基于浏览器的 SSH 终端连接功能。</li>
+  <li><strong>AI 智能助手</strong>：通过 LLM 帮助您分析和操作远程服务器。对话上下文在每次请求完成后从服务器内存中清除。
+  </li>
+  <li><strong>安全性保障</strong>：通过 JWT 验证您的身份，确保只有授权用户能管理其探测目标和 SSH 会话。</li>
+  <li><strong>命令安全检查</strong>：通过白名单机制防止 AI 助手执行未授权的危险操作。</li>
+  <li><strong>公平资源分配</strong>：通过每日请求限制确保免费 LLM API 资源在所有用户间公平分配。</li>
+  <li><strong>数据共享</strong>：未经您同意，我们不会将您的个人信息出售或出租给第三方。</li>
+</ul>
+<hr data-line="47"> <h2 data-line="49" id="3. 信息的存储与安全">3. 信息的存储与安全</h2>
+<ul data-line="51">
+  <li><strong>数据存储</strong>：您的数据存储在受保护的数据库中。</li>
+  <li><strong>数据加密</strong>：
+    <ul>
+      <li>SSH 连接配置使用您本地生成的密钥进行 AES 加密后存储，服务器端无法解密。</li>
+      <li>敏感的操作（如登录校验）采用 JWT 签名机制。</li>
+      <li>AI 对话历史仅存储在您的浏览器本地，使用 LRU 策略管理存储空间。</li>
+    </ul>
+  </li>
+  <li><strong>访问控制</strong>：我们通过严格的角色权限管理（如管理员、普通用户、Agent Token）确保数据仅在授权范围内被访问。
+  </li>
+  <li><strong>内存数据清除</strong>：AI 对话的完整消息上下文仅在请求处理期间存在于服务器内存中，请求完成后立即清除。</li>
+</ul>
+<hr data-line="59"> <h2 data-line="61" id="4. 信息的共享与披露">4. 信息的共享与披露</h2> <p data-line="63">
+  除非按照法律法规规定或本协议说明，我们不会向第三方出售或出租您的个人信息。以下情况除外：</p>
+<ul data-line="64">
+  <li><strong>公开展示</strong>：经您申请并通过审核的 Looking Glass 记录、Monitor 数据将对公众可见。</li>
+  <li><strong>第三方 LLM 服务</strong>：当您使用 AI 助手功能时，您的对话内容会发送至相应的 LLM API 提供商进行处理。如果您使用系统免费
+    API，数据将发送至我们配置的 LLM 服务商；如果您使用自定义 API，数据将发送至您指定的 API 端点。
+  </li>
+  <li><strong>MCP 工具调用</strong>：AI 助手在执行 SSH 命令时，会通过内部的 MCP 协议调用 SSH 工具，命令和结果在服务器内部网络中传输。
+  </li>
+  <li><strong>法律要求</strong>：在收到传票、法院命令或根据适用的法律法规要求时。</li>
+</ul>
+<hr data-line="69"> <h2 data-line="71" id="5. 您的权利">5. 您的权利</h2>
+<ul data-line="73">
+  <li><strong>访问与更新</strong>：您可以通过 API 获取您的个人资料和主机列表。</li>
+  <li><strong>删除数据</strong>：您可以随时通过相关接口删除您上报的主机、检测记录和报告。</li>
+  <li><strong>撤销授权</strong>：您可以随时在 GitHub 设置中取消对本应用的 OAuth 授权。</li>
+  <li><strong>清除 AI 对话历史</strong>：您可以在浏览器中手动清除本地存储（localStorage）来删除所有 AI 对话记录。</li>
+  <li><strong>管理命令白名单</strong>：您可以随时通过设置面板添加或移除允许的命令。</li>
+  <li><strong>使用自定义 API</strong>：您可以选择使用自己的 LLM API 密钥，避免对话内容经过第三方。</li>
+</ul>
+<hr data-line="80"> <h2 data-line="82" id="6. 隐私协议的变更">6. 隐私协议的变更</h2> <p data-line="84">
+  我们可能会不时更新本隐私协议。对于重大变更，我们会通过更新本文件的&quot;生效日期&quot;或在项目页面发布说明。</p>
+<hr data-line="86"> <h2 data-line="88" id="7. 联系我们">7. 联系我们</h2> <p data-line="90">如果您对本隐私协议有任何疑问，请通过开源仓库的
+  Issue 系统与我们联系。</p>
