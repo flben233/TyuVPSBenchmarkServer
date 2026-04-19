@@ -7,4 +7,5 @@ FROM caddy:2.11.2-alpine
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 COPY Caddyfile /etc/caddy/Caddyfile
-EXPOSE [3010,2019]
+EXPOSE 3010
+EXPOSE 2019
