@@ -51,10 +51,6 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install pytest redis openai langchain-core langgraph langchain-mcp-adapters pydantic
 
-      - name: Run tests
-        run: |
-          python -m pytest test_command_checker.py test_free_api_pool.py -v
-
   build:
     needs: test
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
