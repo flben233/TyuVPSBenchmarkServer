@@ -18,4 +18,5 @@
     "souinUrl": "http://souin:2019",
     "mcpPort": 12346,
     "llmBackendUrl": "http://llm:18000"
+    "sshProxy": "socks5://user:password@proxy.example.com:1080"
 }

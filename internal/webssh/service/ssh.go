@@ -9,12 +9,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"VPSBenchmarkBackend/internal/webssh/model"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/net/proxy"
 )
 
 var sessions = sync.Map{} // map[int64]*SSHSession
@@ -104,9 +106,49 @@ func (s *SSHSession) Connect(msg *model.ClientMessage) error {
 	}
 
 	addr := fmt.Sprintf("%s:%d", msg.Host, msg.Port)
-	client, err := ssh.Dial("tcp", addr, cfg)
-	if err != nil {
-		return fmt.Errorf("failed to connect to %s: %w", addr, err)
+
+	var client *ssh.Client
+	sshProxy := config.Get().SSHProxy
+
+	if sshProxy != "" {
+		proxyURL, err := url.Parse(sshProxy)
+		if err != nil {
+			return fmt.Errorf("invalid SSH proxy URL: %w", err)
+		}
+
+		var auth *proxy.Auth
+		if proxyURL.User != nil {
+			auth = &proxy.Auth{
+				User:     proxyURL.User.Username(),
+				Password: "",
+			}
+			if p, ok := proxyURL.User.Password(); ok {
+				auth.Password = p
+			}
+		}
+
+		dialer, err := proxy.SOCKS5("tcp", proxyURL.Host, auth, proxy.Direct)
+		if err != nil {
+			return fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
+		}
+
+		conn, err := dialer.Dial("tcp", addr)
+		if err != nil {
+			return fmt.Errorf("failed to connect to %s via proxy %s: %w", addr, sshProxy, err)
+		}
+
+		sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, cfg)
+		if err != nil {
+			conn.Close()
+			return fmt.Errorf("failed to establish SSH connection to %s via proxy: %w", addr, err)
+		}
+		client = ssh.NewClient(sshConn, chans, reqs)
+	} else {
+		var err error
+		client, err = ssh.Dial("tcp", addr, cfg)
+		if err != nil {
+			return fmt.Errorf("failed to connect to %s: %w", addr, err)
+		}
 	}
 
 	session, err := client.NewSession()
