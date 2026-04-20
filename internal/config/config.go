@@ -25,6 +25,7 @@ type Config struct {
 	SouinURL         string `json:"souinUrl"`
 	MCPPort          int    `json:"mcpPort"`
 	LLMBackendURL    string `json:"llmBackendUrl"`
+	SSHProxy         string `json:"sshProxy"` // format: socks5://user:password@proxy.example.com:1080
 }
 
 var cfg *Config
