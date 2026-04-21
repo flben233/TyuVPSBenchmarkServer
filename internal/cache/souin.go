@@ -19,7 +19,7 @@ func PurgeSouinCache(key string, keys ...string) error {
 	if souinURL == "" {
 		return nil // No Souin URL configured, skip cache purge
 	}
-	request, err := http.NewRequest("PURGE", souinURL+"/$"+key, nil)
+	request, err := http.NewRequest("PURGE", souinURL+key, nil)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func PurgeSouinCache(key string, keys ...string) error {
 	}
 
 	for _, k := range keys {
-		request, err = http.NewRequest("PURGE", souinURL+"/$"+k, nil)
+		request, err = http.NewRequest("PURGE", souinURL+k, nil)
 		if err != nil {
 			return err
 		}
