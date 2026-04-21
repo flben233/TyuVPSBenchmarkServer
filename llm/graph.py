@@ -187,6 +187,7 @@ def build_graph(
             "model": model,
             "messages": openai_messages,
             "stream": True,
+            "stream_options": {"include_usage": True},
         }
         if openai_tools:
             request_kwargs["tools"] = openai_tools
@@ -198,10 +199,26 @@ def build_graph(
         # Only used when the API does NOT provide a dedicated reasoning_content field.
         thought_parser = _ThoughtParser()
         stopped = False
+        last_usage: dict[str, int] = {}
         for chunk in stream:
             if stop_event and stop_event.is_set():
                 stopped = True
                 break
+            usage = getattr(chunk, "usage", None)
+            if usage is not None:
+                usage_dict = getattr(usage, "model_dump", None)
+                if callable(usage_dict):
+                    last_usage = {
+                        key: int(value)
+                        for key, value in usage.model_dump().items()
+                        if isinstance(value, (int, float))
+                    }
+                elif isinstance(usage, dict):
+                    last_usage = {
+                        key: int(value)
+                        for key, value in usage.items()
+                        if isinstance(value, (int, float))
+                    }
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
@@ -283,7 +300,11 @@ def build_graph(
 
         response = AIMessage(content="".join(final_text_parts), tool_calls=final_tool_calls)
 
-        updates: dict[str, Any] = {"messages": [response], "stopped": stopped}
+        updates: dict[str, Any] = {
+            "messages": [response],
+            "stopped": stopped,
+            "last_usage": last_usage,
+        }
 
         if stopped:
             return updates

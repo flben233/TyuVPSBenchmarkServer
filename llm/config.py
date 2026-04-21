@@ -8,6 +8,8 @@ class Settings:
     redis_url: str
     daily_limit: int
     apis_config_path: str
+    context_tail_keep: int
+    compress_threshold_tokens: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -15,6 +17,8 @@ class Settings:
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0").strip()
         daily_limit = int(os.getenv("FREE_API_DAILY_LIMIT", "500"))
         apis_config_path = os.getenv("APIS_CONFIG_PATH", "apis.json").strip()
+        context_tail_keep = int(os.getenv("CONTEXT_TAIL_KEEP", "6"))
+        compress_threshold_tokens = int(os.getenv("COMPRESS_THRESHOLD_TOKENS", "6000"))
 
         if not mcp_server_url:
             raise RuntimeError("Missing required environment variable: MCP_SERVER_URL")
@@ -24,4 +28,6 @@ class Settings:
             redis_url=redis_url,
             daily_limit=daily_limit,
             apis_config_path=apis_config_path,
+            context_tail_keep=max(1, context_tail_keep),
+            compress_threshold_tokens=max(1, compress_threshold_tokens),
         )

@@ -47,6 +47,7 @@ export function useWebSSHAgent() {
   const currentSessionId = ref(null);
   const conversationId = ref(null);
   const messages = ref([]);
+  const contextMessages = ref([]);
   const streaming = ref(false);
   const thinking = ref(false);
   const awaitingApproval = ref(false);
@@ -82,6 +83,10 @@ export function useWebSSHAgent() {
         isError: m.isError || false,
         timestamp: m.timestamp,
       })),
+      contextMessages: contextMessages.value.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
       name: getSessionName(),
       sshSessionId: activeSshSessionId,
       createdAt:
@@ -104,9 +109,25 @@ export function useWebSSHAgent() {
     });
   }
 
+  function addContextMessage(role, content) {
+    contextMessages.value.push({ role, content });
+  }
+
   function updateAssistant(idx, extras) {
     const msg = { ...messages.value[idx], timestamp: Date.now(), ...extras };
     messages.value[idx] = msg;
+  }
+
+  function updateContextAssistant(content) {
+    for (let i = contextMessages.value.length - 1; i >= 0; i -= 1) {
+      if (contextMessages.value[i].role === "assistant") {
+        contextMessages.value[i] = {
+          ...contextMessages.value[i],
+          content,
+        };
+        return;
+      }
+    }
   }
 
   async function fetchWhitelist() {
@@ -170,6 +191,7 @@ export function useWebSSHAgent() {
     persistCurrentSession();
     currentSessionId.value = createSessionId();
     messages.value = [];
+    contextMessages.value = [];
     conversationId.value = null;
     awaitingApproval.value = false;
     pendingToolCall.value = null;
@@ -189,6 +211,10 @@ export function useWebSSHAgent() {
 
     currentSessionId.value = id;
     messages.value = session.messages.map((m) => ({ ...m }));
+    contextMessages.value = (session.contextMessages || session.messages || []).map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
     conversationId.value = null;
     activeSshSessionId = sshSessionId || session.sshSessionId;
     awaitingApproval.value = false;
@@ -208,6 +234,7 @@ export function useWebSSHAgent() {
     if (currentSessionId.value === id) {
       currentSessionId.value = null;
       messages.value = [];
+      contextMessages.value = [];
       conversationId.value = null;
     }
   }
@@ -270,6 +297,7 @@ export function useWebSSHAgent() {
               thinkingContent: thinkingText,
               content: tokenText,
             });
+            updateContextAssistant(tokenText);
           }
           break;
         case "token":
@@ -280,6 +308,7 @@ export function useWebSSHAgent() {
               thinkingContent: thinkingText,
               content: tokenText,
             });
+            updateContextAssistant(tokenText);
           }
           break;
         case "error":
@@ -287,10 +316,20 @@ export function useWebSSHAgent() {
             content: inner.message || "Unknown error",
             isError: true,
           });
+          updateContextAssistant(inner.message || "Unknown error");
           break;
         case "awaiting_approval":
           awaitingApproval.value = true;
           pendingToolCall.value = inner;
+          break;
+        case "done":
+          console.log(inner)
+          if (Array.isArray(inner.contextMessages) && inner.contextMessages.length > 0) {
+            contextMessages.value = inner.contextMessages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            }));
+          }
           break;
         case "stopped":
           break;
@@ -304,11 +343,12 @@ export function useWebSSHAgent() {
       throw new Error("No active conversation");
     }
 
-    const history = messages.value.map((m) => ({
+    const history = contextMessages.value.map((m) => ({
       role: m.role,
       content: m.content,
     }));
     addMessage("user", text);
+    addContextMessage("user", text);
     streaming.value = true;
     thinking.value = true;
     awaitingApproval.value = false;
@@ -320,6 +360,7 @@ export function useWebSSHAgent() {
       thinkingContent: "",
       timestamp: Date.now(),
     });
+    addContextMessage("assistant", "");
     const assistantIdx = messages.value.length - 1;
 
     try {
@@ -347,7 +388,8 @@ export function useWebSSHAgent() {
     }
 
     addMessage("user", granted ? "[approved]" : "[rejected]");
-    const history = messages.value.map((m) => ({
+    addContextMessage("user", granted ? "[approved]" : "[rejected]");
+    const history = contextMessages.value.map((m) => ({
       role: m.role,
       content: m.content,
     }));
@@ -361,6 +403,7 @@ export function useWebSSHAgent() {
       thinkingContent: "",
       timestamp: Date.now(),
     });
+    addContextMessage("assistant", "");
     const assistantIdx = messages.value.length - 1;
 
     try {
@@ -383,6 +426,7 @@ export function useWebSSHAgent() {
     currentSessionId: readonly(currentSessionId),
     conversationId: readonly(conversationId),
     messages,
+    contextMessages: readonly(contextMessages),
     streaming: readonly(streaming),
     thinking: readonly(thinking),
     awaitingApproval: readonly(awaitingApproval),

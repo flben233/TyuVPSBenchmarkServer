@@ -27,7 +27,7 @@ function handleWidthChange() {
     mode.value = "vertical";
   }
 
-  ellipse.value = window.innerWidth < 384;
+  ellipse.value = window.innerWidth < 512;
 }
 
 watch(userInfo, (newVal) => {

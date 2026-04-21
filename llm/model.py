@@ -152,3 +152,7 @@ class ConversationRuntime:
     lock: asyncio.Lock
     stop_event: threading.Event = field(default_factory=threading.Event)
     user_id: str = ""
+    openai_client: Any = None
+    model: str = ""
+    context_tail_keep: int = 6
+    compress_threshold_tokens: int = 6000

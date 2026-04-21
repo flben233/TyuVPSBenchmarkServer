@@ -6,6 +6,9 @@ from langchain_core.messages import (
 )
 from langchain_core.tools import BaseTool
 
+MAX_TOOL_MESSAGE_CHARS = 4000
+TOOL_MESSAGE_TRUNCATED_NOTICE = "\n\n[ToolMessage truncated]"
+
 
 async def load_mcp_tools(mcp_url: str) -> list[BaseTool]:
     from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -42,6 +45,14 @@ def inject_session_id(tool_call: dict, ssh_session_id: str) -> dict:
     return {**tool_call, "args": args}
 
 
+def truncate_tool_message_content(content: Any) -> str:
+    text = str(content)
+    if len(text) <= MAX_TOOL_MESSAGE_CHARS:
+        return text
+    limit = max(0, MAX_TOOL_MESSAGE_CHARS - len(TOOL_MESSAGE_TRUNCATED_NOTICE))
+    return text[:limit] + TOOL_MESSAGE_TRUNCATED_NOTICE
+
+
 def invoke_tool(tool_call: dict, tool_map: dict[str, BaseTool]) -> ToolMessage:
     name = tool_call["name"]
     args = tool_call.get("args", {})
@@ -51,7 +62,7 @@ def invoke_tool(tool_call: dict, tool_map: dict[str, BaseTool]) -> ToolMessage:
     except Exception as e:
         result = f"Error executing {name}: {e}"
     return ToolMessage(
-        content=str(result),
+        content=truncate_tool_message_content(result),
         tool_call_id=tool_call["id"],
         name=name,
     )

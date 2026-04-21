@@ -12,6 +12,11 @@ from fastapi.responses import StreamingResponse
 from openai import OpenAI
 
 from config import Settings
+from context_compression import (
+    build_candidate_context_messages,
+    compress_context_messages,
+    to_message_dicts,
+)
 from free_api_pool import FreeAPIPool, FailoverClient, FreeAPIExhaustedError
 from graph import (
     build_graph,
@@ -114,6 +119,10 @@ async def new_conversation(request: NewConversationRequest) -> NewConversationRe
         lock=asyncio.Lock(),
         stop_event=stop_event,
         user_id=user_id,
+        openai_client=selected_client,
+        model=selected_model,
+        context_tail_keep=settings.context_tail_keep,
+        compress_threshold_tokens=settings.compress_threshold_tokens,
     )
 
     conversation_runtimes[conversation_id] = runtime
@@ -180,6 +189,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
 
     async def event_stream():
         message_id = str(uuid4())
+        streamed_response_text = ""
         async with runtime.lock:
             runtime.stop_event.clear()
             if request.messages is not None:
@@ -229,6 +239,8 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                         token_text = str(token_item)
 
                     event_name = "thinking" if token_kind == "thinking" else "token"
+                    if event_name == "token" and token_text:
+                        streamed_response_text += token_text
 
                     yield _sse(
                         event_name,
@@ -268,6 +280,42 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                     },
                 )
                 return
+
+            assistant_response = streamed_response_text
+
+            done_payload: dict[str, Any] = {}
+            candidate_context_messages = build_candidate_context_messages(
+                request_messages=to_message_dicts(request.messages),
+                request_message=request.message,
+                assistant_response=assistant_response,
+            )
+
+            compressed_context_messages = None
+            if candidate_context_messages:
+                try:
+                    compression_model = runtime.model or getattr(runtime.openai_client, "_model", "")
+                    usage_total_tokens = None
+                    last_usage = runtime.state.get("last_usage") or {}
+                    if isinstance(last_usage, dict):
+                        raw_total = last_usage.get("total_tokens")
+                        if raw_total is not None:
+                            usage_total_tokens = int(raw_total)
+                    compressed_context_messages = compress_context_messages(
+                        openai_client=runtime.openai_client,
+                        model=compression_model,
+                        context_messages=candidate_context_messages,
+                        tail_keep=runtime.context_tail_keep,
+                        compress_threshold_tokens=runtime.compress_threshold_tokens,
+                        usage_total_tokens=usage_total_tokens,
+                    )
+                except Exception:
+                    compressed_context_messages = None
+
+            if compressed_context_messages:
+                done_payload = {
+                    "contextCompressed": True,
+                    "contextMessages": compressed_context_messages,
+                }
 
             yield _sse(
                 "message_end",
@@ -312,7 +360,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                     "conversationId": request.conversation_id,
                     "messageId": message_id,
                     "timestamp": _now_iso(),
-                    "payload": {},
+                    "payload": done_payload,
                 },
             )
 

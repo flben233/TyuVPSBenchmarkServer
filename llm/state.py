@@ -23,6 +23,7 @@ class AgentState(TypedDict, total=False):
     disallowed_commands: list[str]
     allowed_commands: list[str]
     session_allowed_commands: list[str]
+    last_usage: dict[str, int]
 
 
 def default_agent_state(conversation_id: str, ssh_session_id: str) -> AgentState:
@@ -35,6 +36,7 @@ def default_agent_state(conversation_id: str, ssh_session_id: str) -> AgentState
         "awaiting_approval": False,
         "approval_granted": None,
         "stopped": False,
+        "last_usage": {},
     }
 
 
