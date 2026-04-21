@@ -8,14 +8,14 @@
 
 :3010 {
   @pathgroup {
-    path /index
+    path /
     path /looking-glass
     path /report/*
     path /slide/*
   }
   handle @pathgroup {
     cache {
-      stale 1s
+      stale 60s
       ttl 365d
       default_cache_control "public, max-age=300"
       key {
@@ -27,6 +27,7 @@
         disable_vary
       }
     }
+    reverse_proxy frontend:3000
   }
   reverse_proxy frontend:3000
 }

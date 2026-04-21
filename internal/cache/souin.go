@@ -7,7 +7,7 @@ import (
 
 const (
 	LookingGlassKey = "/looking-glass"
-	IndexKey        = "/index"
+	IndexKey        = "/"
 	ReportBaseKey   = "/report/"
 	SlideBaseKey    = "/slide/"
 )
