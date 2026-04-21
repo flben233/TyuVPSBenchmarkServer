@@ -28,6 +28,20 @@ from model import ConversationRuntime, NewConversationResponse, NewConversationR
     ChatRequest, StopRequest, StopResponse
 
 
+def _validate_chat_message_lengths(request: ChatRequest, max_chars: int) -> None:
+    if request.message and len(request.message) > max_chars:
+        raise HTTPException(
+            status_code=400,
+            detail=f"message too long: max {max_chars} characters",
+        )
+    for message in request.messages or []:
+        if len(message.content or "") > max_chars:
+            raise HTTPException(
+                status_code=400,
+                detail=f"message too long: max {max_chars} characters",
+            )
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     try:
@@ -123,6 +137,7 @@ async def new_conversation(request: NewConversationRequest) -> NewConversationRe
         model=selected_model,
         context_tail_keep=settings.context_tail_keep,
         compress_threshold_tokens=settings.compress_threshold_tokens,
+        max_chat_message_chars=settings.max_chat_message_chars,
     )
 
     conversation_runtimes[conversation_id] = runtime
@@ -130,7 +145,10 @@ async def new_conversation(request: NewConversationRequest) -> NewConversationRe
         conversation_id
     )
 
-    return NewConversationResponse(conversationId=conversation_id)
+    return NewConversationResponse(
+        conversationId=conversation_id,
+        maxChatMessageChars=settings.max_chat_message_chars,
+    )
 
 
 @app.post("/close", response_model=CloseResponse, tags=["LLM Agent"], summary="Close all conversations for an SSH session")
@@ -156,6 +174,7 @@ async def stop_chat(request: StopRequest) -> StopResponse:
     runtime = conversation_runtimes.get(request.conversation_id)
     if not runtime:
         raise HTTPException(status_code=404, detail="conversation not found")
+    _validate_chat_message_lengths(request, runtime.max_chat_message_chars)
     runtime.stop_event.set()
     return StopResponse(stopped=True)
 
@@ -300,6 +319,16 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                         raw_total = last_usage.get("total_tokens")
                         if raw_total is not None:
                             usage_total_tokens = int(raw_total)
+                    if usage_total_tokens is not None and usage_total_tokens >= runtime.compress_threshold_tokens:
+                        yield _sse(
+                            "compressing",
+                            {
+                                "conversationId": request.conversation_id,
+                                "messageId": message_id,
+                                "timestamp": _now_iso(),
+                                "payload": {},
+                            },
+                        )
                     compressed_context_messages = compress_context_messages(
                         openai_client=runtime.openai_client,
                         model=compression_model,

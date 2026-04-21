@@ -2,6 +2,8 @@ import { requestWithAuth, fetchWithAuth } from "~/composables/useAuth.js";
 import { getSessions, saveSession, deleteSession as deleteStoredSession, createSessionId } from "~/utils/webssh-agent-session.js";
 import { getLLMSettings, saveLLMSettings } from "~/utils/webssh-llm-settings.js";
 
+const DEFAULT_MAX_CHAT_MESSAGE_CHARS = 4000;
+
 function parseSSEStream(reader, onEvent) {
   const decoder = new TextDecoder();
   let buffer = "";
@@ -50,6 +52,8 @@ export function useWebSSHAgent() {
   const contextMessages = ref([]);
   const streaming = ref(false);
   const thinking = ref(false);
+  const compressingContext = ref(false);
+  const maxChatMessageChars = ref(DEFAULT_MAX_CHAT_MESSAGE_CHARS);
   const awaitingApproval = ref(false);
   const pendingToolCall = ref(null);
   const sessions = ref({});
@@ -87,6 +91,7 @@ export function useWebSSHAgent() {
         role: m.role,
         content: m.content,
       })),
+      maxChatMessageChars: maxChatMessageChars.value,
       name: getSessionName(),
       sshSessionId: activeSshSessionId,
       createdAt:
@@ -111,6 +116,13 @@ export function useWebSSHAgent() {
 
   function addContextMessage(role, content) {
     contextMessages.value.push({ role, content });
+  }
+
+  function validateChatMessageLength(text) {
+    const limit = Number(maxChatMessageChars.value) || DEFAULT_MAX_CHAT_MESSAGE_CHARS;
+    if ((text || "").length > limit) {
+      throw new Error(`消息过长，最多允许 ${limit} 个字符`);
+    }
   }
 
   function updateAssistant(idx, extras) {
@@ -182,6 +194,7 @@ export function useWebSSHAgent() {
     });
     if (resp && resp.conversationId) {
       conversationId.value = resp.conversationId;
+      maxChatMessageChars.value = resp.maxChatMessageChars || DEFAULT_MAX_CHAT_MESSAGE_CHARS;
       return resp.conversationId;
     }
     throw new Error(resp?.message || "Failed to create conversation");
@@ -193,8 +206,10 @@ export function useWebSSHAgent() {
     messages.value = [];
     contextMessages.value = [];
     conversationId.value = null;
+    maxChatMessageChars.value = DEFAULT_MAX_CHAT_MESSAGE_CHARS;
     awaitingApproval.value = false;
     pendingToolCall.value = null;
+    compressingContext.value = false;
     sessionAllowedCommands.value = [];
     activeSshSessionId = sshSessionId;
 
@@ -216,9 +231,11 @@ export function useWebSSHAgent() {
       content: m.content,
     }));
     conversationId.value = null;
+    maxChatMessageChars.value = session.maxChatMessageChars || DEFAULT_MAX_CHAT_MESSAGE_CHARS;
     activeSshSessionId = sshSessionId || session.sshSessionId;
     awaitingApproval.value = false;
     pendingToolCall.value = null;
+    compressingContext.value = false;
     sessionAllowedCommands.value = [];
 
     if (activeSshSessionId) {
@@ -236,6 +253,8 @@ export function useWebSSHAgent() {
       messages.value = [];
       contextMessages.value = [];
       conversationId.value = null;
+      maxChatMessageChars.value = DEFAULT_MAX_CHAT_MESSAGE_CHARS;
+      compressingContext.value = false;
     }
   }
 
@@ -280,68 +299,94 @@ export function useWebSSHAgent() {
     }
 
     if (!resp.ok) {
-      throw new Error(`Chat request failed: ${resp.status}`);
+      abortStream();
+      let errorMessage = `Chat request failed: ${resp.status}`;
+      try {
+        const payload = await resp.json();
+        errorMessage = payload?.detail || payload?.message || payload?.error || errorMessage;
+      } catch {
+        // ignore body parse failures
+      }
+      throw new Error(errorMessage);
+    }
+
+    if (!resp.body) {
+      abortStream();
+      throw new Error("Chat response body is empty");
     }
 
     let thinkingText = "";
     let tokenText = "";
+    compressingContext.value = false;
 
     streamReader = resp.body.getReader();
-    await parseSSEStream(streamReader, (event, payload) => {
-      const inner = payload.payload || {};
-      switch (event) {
-        case "thinking":
-          if (inner.text) {
-            thinkingText += inner.text;
+    try {
+      await parseSSEStream(streamReader, (event, payload) => {
+        const inner = payload.payload || {};
+        switch (event) {
+          case "thinking":
+            if (inner.text) {
+              thinkingText += inner.text;
+              updateAssistant(assistantIdx, {
+                thinkingContent: thinkingText,
+                content: tokenText,
+              });
+              updateContextAssistant(tokenText);
+            }
+            break;
+          case "token":
+            thinking.value = false;
+            if (inner.text) {
+              tokenText += inner.text;
+              updateAssistant(assistantIdx, {
+                thinkingContent: thinkingText,
+                content: tokenText,
+              });
+              updateContextAssistant(tokenText);
+            }
+            break;
+          case "error":
             updateAssistant(assistantIdx, {
-              thinkingContent: thinkingText,
-              content: tokenText,
+              content: inner.message || "Unknown error",
+              isError: true,
             });
-            updateContextAssistant(tokenText);
-          }
-          break;
-        case "token":
-          thinking.value = false;
-          if (inner.text) {
-            tokenText += inner.text;
-            updateAssistant(assistantIdx, {
-              thinkingContent: thinkingText,
-              content: tokenText,
-            });
-            updateContextAssistant(tokenText);
-          }
-          break;
-        case "error":
-          updateAssistant(assistantIdx, {
-            content: inner.message || "Unknown error",
-            isError: true,
-          });
-          updateContextAssistant(inner.message || "Unknown error");
-          break;
-        case "awaiting_approval":
-          awaitingApproval.value = true;
-          pendingToolCall.value = inner;
-          break;
-        case "done":
-          console.log(inner)
-          if (Array.isArray(inner.contextMessages) && inner.contextMessages.length > 0) {
-            contextMessages.value = inner.contextMessages.map((m) => ({
-              role: m.role,
-              content: m.content,
-            }));
-          }
-          break;
-        case "stopped":
-          break;
-      }
-    });
-    streamReader = null;
+            updateContextAssistant(inner.message || "Unknown error");
+            break;
+          case "awaiting_approval":
+            awaitingApproval.value = true;
+            pendingToolCall.value = inner;
+            break;
+          case "compressing":
+            compressingContext.value = true;
+            break;
+          case "done":
+            compressingContext.value = false;
+            if (Array.isArray(inner.contextMessages) && inner.contextMessages.length > 0) {
+              contextMessages.value = inner.contextMessages.map((m) => ({
+                role: m.role,
+                content: m.content,
+              }));
+            }
+            break;
+          case "stopped":
+            compressingContext.value = false;
+            break;
+        }
+      });
+    } catch (error) {
+      abortStream();
+      compressingContext.value = false;
+      throw error;
+    } finally {
+      streamReader = null;
+    }
   }
 
   async function sendMessage(text) {
     if (!conversationId.value) {
       throw new Error("No active conversation");
     }
+    validateChatMessageLength(text);
 
     const history = contextMessages.value.map((m) => ({
       role: m.role,
@@ -351,6 +396,7 @@ export function useWebSSHAgent() {
     addContextMessage("user", text);
     streaming.value = true;
     thinking.value = true;
+    compressingContext.value = false;
     awaitingApproval.value = false;
     pendingToolCall.value = null;
 
@@ -395,6 +441,7 @@ export function useWebSSHAgent() {
     }));
 
     streaming.value = true;
+    compressingContext.value = false;
     awaitingApproval.value = false;
 
     messages.value.push({
@@ -429,6 +476,8 @@ export function useWebSSHAgent() {
     contextMessages: readonly(contextMessages),
     streaming: readonly(streaming),
     thinking: readonly(thinking),
+    compressingContext: readonly(compressingContext),
+    maxChatMessageChars: readonly(maxChatMessageChars),
     awaitingApproval: readonly(awaitingApproval),
     pendingToolCall: readonly(pendingToolCall),
     sessions: readonly(sessions),

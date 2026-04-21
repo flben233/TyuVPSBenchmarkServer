@@ -10,6 +10,7 @@ class Settings:
     apis_config_path: str
     context_tail_keep: int
     compress_threshold_tokens: int
+    max_chat_message_chars: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -19,6 +20,7 @@ class Settings:
         apis_config_path = os.getenv("APIS_CONFIG_PATH", "apis.json").strip()
         context_tail_keep = int(os.getenv("CONTEXT_TAIL_KEEP", "6"))
         compress_threshold_tokens = int(os.getenv("COMPRESS_THRESHOLD_TOKENS", "6000"))
+        max_chat_message_chars = int(os.getenv("MAX_CHAT_MESSAGE_CHARS", "4000"))
 
         if not mcp_server_url:
             raise RuntimeError("Missing required environment variable: MCP_SERVER_URL")
@@ -30,4 +32,5 @@ class Settings:
             apis_config_path=apis_config_path,
             context_tail_keep=max(1, context_tail_keep),
             compress_threshold_tokens=max(1, compress_threshold_tokens),
+            max_chat_message_chars=max(1, max_chat_message_chars),
         )

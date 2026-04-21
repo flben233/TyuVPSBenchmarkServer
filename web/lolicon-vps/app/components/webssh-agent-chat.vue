@@ -19,6 +19,7 @@ const {
   messages,
   streaming,
   thinking,
+  compressingContext,
   awaitingApproval,
   pendingToolCall,
   sessions,
@@ -143,9 +144,9 @@ function handleDeleteSession(id) {
 async function handleSend() {
   const text = inputText.value.trim();
   if (!text || streaming.value) return;
-  inputText.value = "";
   try {
     await sendMessage(text);
+    inputText.value = "";
   } catch (e) {
     error("发送失败: " + (e.message || "unknown error"));
   }
@@ -287,6 +288,10 @@ async function handleSaveWhitelist(commands) {
 
     <template v-else>
       <div ref="chatContainer" class="chat-messages" @scroll="handleScroll">
+        <div v-if="compressingContext" class="context-compressing-banner">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span>正在压缩上下文...</span>
+        </div>
         <div
           v-for="(msg, idx) in messages"
           :key="idx"
@@ -615,6 +620,19 @@ async function handleSaveWhitelist(commands) {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.context-compressing-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #ecf5ff;
+  color: #409eff;
+  border: 1px solid #d9ecff;
+  font-size: 13px;
+  align-self: flex-start;
 }
 
 .chat-message {

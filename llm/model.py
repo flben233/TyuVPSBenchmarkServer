@@ -58,6 +58,10 @@ class NewConversationResponse(BaseModel):
         alias="conversationId",
         description="The unique identifier for the newly created conversation",
     )
+    max_chat_message_chars: int = Field(
+        alias="maxChatMessageChars",
+        description="Maximum allowed characters for each chat message",
+    )
 
 
 class CloseRequest(BaseModel):
@@ -127,6 +131,10 @@ class ChatRequest(BaseModel):
     )
 
 
+class ValidationErrorResponse(BaseModel):
+    detail: str = Field(description="Validation error message")
+
+
 class StopRequest(BaseModel):
     """
     Request body for stopping an in-progress LLM response.
@@ -156,3 +164,4 @@ class ConversationRuntime:
     model: str = ""
     context_tail_keep: int = 6
     compress_threshold_tokens: int = 6000
+    max_chat_message_chars: int = 4000
