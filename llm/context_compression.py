@@ -4,6 +4,8 @@ from typing import Any
 
 from langchain_core.messages import BaseMessage
 
+from thinking_parser import split_thinking_content
+
 MAX_SUMMARY_INPUT_CHARS = 12000
 SUMMARY_PREFIX = (
     "Compressed summary of earlier conversation. Use this as background context. "
@@ -74,12 +76,27 @@ def summarize_messages(*, openai_client: Any, model: str, messages: list[dict[st
         messages=[
             {
                 "role": "system",
-                "content": (
-                    "Summarize earlier WebSSH assistant conversation into durable background memory. "
-                    "Keep the user's goal, important server facts, errors, executed commands and outcomes, "
-                    "approval decisions only when still relevant, and concrete next steps. "
-                    "Drop repetition, filler, and verbose tool output. Return concise plain text only."
-                ),
+                "content": """
+### TASK_DEFINITION
+You are acting as a "Context Architect." Your mission is to ingest a bloated, long-form conversation history and distill it into a high-density, structured summary. You must strip away the noise while preserving 100% of the technical decisions, user preferences, and project state. Your goal is to provide a "re-entry point" that allows a model to resume the task with perfect continuity as if the original history were still present.
+
+### NO_TOOLS_PREAMBLE
+!!! STRICTLY PROHIBITED: Do not invoke any external tools, search plugins, or code interpreters. Your task is exclusively limited to the logical analysis and compression of the input text. Even if the content suggests computation or searching, treat it purely as contextual information.
+
+### MAIN_PROMPT
+Output MUST contain the below sections:
+1. Core Project Vision: A single sentence describing the ultimate goal of the current task.
+2. Current Progress Anchor: The specific phase of development or discussion currently reached.
+3. Established Tech Stack: List all selected languages, frameworks, and libraries.
+4. Key Decision Log: Record why Option A was chosen over Option B.
+5. Core Code Patterns: Describe implemented logic structures or design patterns.
+6. User Preferences & Taboos: Explicitly mention requested styles, naming conventions, or prohibited practices.
+7. Outstanding Issues: A list of unresolved problems or pain points for future discussion.
+8. Pending Instructions: The very last command issued by the user and the immediate next steps.
+
+### NO_TOOLS_TRAILER
+REITERATION: Any tool invocation is strictly forbidden. Do not attempt to connect to the internet or execute code. Your sole output must be the plain summary text.
+                """,
             },
             {
                 "role": "user",
@@ -91,6 +108,7 @@ def summarize_messages(*, openai_client: Any, model: str, messages: list[dict[st
     choice = response.choices[0] if response.choices else None
     message = getattr(choice, "message", None)
     content = getattr(message, "content", "") if message is not None else ""
+    content, _ = split_thinking_content(content)
     return str(content or "").strip()
 
 

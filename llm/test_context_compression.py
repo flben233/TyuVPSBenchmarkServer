@@ -4,6 +4,7 @@ from context_compression import (
     build_candidate_context_messages,
     compress_context_messages,
 )
+from thinking_parser import ThoughtParser, split_thinking_content
 from tool import TOOL_MESSAGE_TRUNCATED_NOTICE, truncate_tool_message_content
 
 
@@ -62,6 +63,19 @@ def test_build_candidate_context_messages_appends_latest_round():
     ]
 
 
+def test_build_candidate_context_messages_removes_thinking_content():
+    candidate = build_candidate_context_messages(
+        request_messages=[{"role": "assistant", "content": "visible<thought>hidden</thought>reply"}],
+        request_message=None,
+        assistant_response="answer<thought>internal</thought>done",
+    )
+
+    assert candidate == [
+        {"role": "assistant", "content": "visiblereply"},
+        {"role": "assistant", "content": "answerdone"},
+    ]
+
+
 def test_compress_context_messages_uses_usage_tokens_when_provided():
     mock_client = MagicMock()
     mock_response = MagicMock()
@@ -89,3 +103,19 @@ def test_compress_context_messages_uses_usage_tokens_when_provided():
 
     assert compressed is not None
     assert compressed[0]["role"] == "system"
+
+
+def test_split_thinking_content_separates_complete_text():
+    content, thinking = split_thinking_content("hello<thought>secret</thought>world")
+
+    assert content == "helloworld"
+    assert thinking == "secret"
+
+
+def test_thought_parser_handles_split_tags_across_chunks():
+    parser = ThoughtParser()
+
+    assert parser.feed("hello<thou") == ("hello", "")
+    assert parser.feed("ght>secret</th") == ("", "secret")
+    assert parser.feed("ought>world") == ("world", "")
+    assert parser.flush() == ("", "")

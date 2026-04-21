@@ -357,6 +357,7 @@ export function useWebSSHAgent() {
             pendingToolCall.value = inner;
             break;
           case "compressing":
+            console.log("Compressing context...");
             compressingContext.value = true;
             break;
           case "done":

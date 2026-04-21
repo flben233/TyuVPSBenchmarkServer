@@ -288,10 +288,6 @@ async function handleSaveWhitelist(commands) {
 
     <template v-else>
       <div ref="chatContainer" class="chat-messages" @scroll="handleScroll">
-        <div v-if="compressingContext" class="context-compressing-banner">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          <span>正在压缩上下文...</span>
-        </div>
         <div
           v-for="(msg, idx) in messages"
           :key="idx"
@@ -341,6 +337,10 @@ async function handleSaveWhitelist(commands) {
               <span>{{ msg.content }}</span>
             </div>
           </div>
+        </div>
+        <div v-if="compressingContext" class="context-compressing-banner">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span>正在压缩上下文...</span>
         </div>
       </div>
 
@@ -464,6 +464,7 @@ async function handleSaveWhitelist(commands) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: 200px
 }
 
 .session-selector-arrow {
@@ -626,12 +627,12 @@ async function handleSaveWhitelist(commands) {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #ecf5ff;
-  color: #409eff;
-  border: 1px solid #d9ecff;
-  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #f9fafb;
+  border: 1px solid var(--el-border-color-lighter);
+  color: #303133;
+  font-size: 12px;
   align-self: flex-start;
 }
 
@@ -710,7 +711,7 @@ async function handleSaveWhitelist(commands) {
   background: var(--el-color-primary-light-9);
   border: 1px solid var(--el-color-primary-light-7);
   padding: 6px 12px;
-  border-radius: 6px 6px 2px 6px;
+  border-radius: 6px 2px 6px 6px;
   display: inline-block;
   word-break: break-word;
 }
@@ -719,7 +720,7 @@ async function handleSaveWhitelist(commands) {
   background: #f9fafb;
   border: 1px solid var(--el-border-color-lighter);
   padding: 8px 12px;
-  border-radius: 6px 6px 6px 2px;
+  border-radius: 2px 6px 6px 6px;
   word-break: break-word;
 }
 
