@@ -100,14 +100,9 @@ func postPing(msg *amqp.Delivery) error {
 				}
 			}
 		} else {
-			points, err := store.QueryLatestNPingPoints(host.ID, host.NotifyTolerance*2)
-			if err != nil {
-				return fmt.Errorf("failed to query latest ping for host %d: %v", host.ID, err)
-			}
-			// 如果之前的 NotifyTolerance 条数据都是 0，且最近的 NotifyTolerance 条数据不是 0，才通知用户主机上线，避免偶尔的网络波动导致误报
-			if int64(len(points)) == host.NotifyTolerance*2 &&
-				batch.IsAllTrue(points[:host.NotifyTolerance], func(p model.PingPoint) bool { return p.Latency == 0 }) &&
-				!batch.IsAllTrue(points[int(host.NotifyTolerance):], func(p model.PingPoint) bool { return p.Latency > 0 }) {
+			// 如果主机之前被标记为离线了，现在恢复了，就通知用户主机上线了，并删除离线通知的标记
+			exists, _ := cache.GetClient().Exists(context.Background(), offlineNotifyKey).Result()
+			if exists > 0 {
 				cache.GetClient().Del(context.Background(), offlineNotifyKey)
 				tryNotify(*setting.NotifyURL, fmt.Sprintf("主机 %s (%s) 上线", host.Name, host.Target))
 			}
