@@ -8,6 +8,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"os"
@@ -19,7 +21,13 @@ import (
 )
 
 var senderPool *util.QDBPool
-var pgConn *pgxpool.Pool
+
+type questDBConn interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
+var pgConn questDBConn
 var validIntervalRegex = regexp.MustCompile(`^[1-9]\d*[smhd]$`)
 
 const (
@@ -31,6 +39,9 @@ const (
 )
 
 func init() {
+	if os.Getenv("SKIP_QUESTDB_INIT") == "1" {
+		return
+	}
 	var err error
 	senderPool, pgConn, err = buildQuestDB()
 	if err != nil {
@@ -158,20 +169,22 @@ func QueryLossRate(hostID int64, start, end int64) (float64, error) {
 	return float64(loss.Int64) / total, nil
 }
 
-func QueryPingPoints(hostID int64, start, end int64, interval string) ([]model.PingPoint, error) {
+func QueryPingPoints(hostID int64, start, end int64, interval string, withLossPoints bool) ([]model.PingPoint, error) {
 	match := validIntervalRegex.Match([]byte(interval))
 	if !match {
 		return nil, fmt.Errorf("invalid interval format: %s", interval)
 	}
-	latencyPoints, err := queryLatencyPoints(hostID, start, end, interval)
+	points, err := queryLatencyPoints(hostID, start, end, interval)
 	if err != nil {
 		return nil, err
 	}
-	lossPoints, err := queryLossPoints(hostID, start, end)
-	if err != nil {
-		return nil, err
+	if withLossPoints {
+		lossPoints, err := queryLossPoints(hostID, start, end)
+		if err != nil {
+			return nil, err
+		}
+		points = append(points, lossPoints...)
 	}
-	points := append(latencyPoints, lossPoints...)
 	sort.Slice(points, func(i, j int) bool {
 		return points[i].Time.Before(points[j].Time)
 	})
@@ -183,7 +196,7 @@ func QueryLatestNPingPoints(hostID int64, n int64) ([]model.PingPoint, error) {
 		return []model.PingPoint{}, nil
 	}
 	rows, err := pgConn.Query(context.Background(),
-		fmt.Sprintf("SELECT latency, ts FROM %s WHERE host_id = $1 ORDER BY ts ASC LIMIT %d", PingMeasurement, n),
+		fmt.Sprintf("SELECT latency, ts FROM %s WHERE host_id = $1 ORDER BY ts DESC LIMIT %d", PingMeasurement, n),
 		strconv.FormatInt(hostID, 10),
 	)
 	if err != nil {

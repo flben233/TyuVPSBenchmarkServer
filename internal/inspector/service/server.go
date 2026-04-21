@@ -255,7 +255,8 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 	}
 	data := make([]*response.HostData, len(hosts))
 	for i, host := range hosts {
-		rawPingPoints, err := store.QueryPingPoints(host.ID, start, end, interval)
+		withLossPoints := (end - start) <= 24*3600*1000000000
+		rawPingPoints, err := store.QueryPingPoints(host.ID, start, end, interval, withLossPoints)
 		if err != nil {
 			return nil, err
 		}

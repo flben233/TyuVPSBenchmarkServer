@@ -50,8 +50,8 @@ func GetVisitorPage(ownerID, start, end int64, interval string) (*response.Visit
 		if _, ok := allowedHostSet[host.ID]; !ok {
 			continue
 		}
-
-		rawPingPoints, err := store.QueryPingPoints(host.ID, start, end, interval)
+		withLossPoints := (end - start) <= 24*3600*1000000000
+		rawPingPoints, err := store.QueryPingPoints(host.ID, start, end, interval, withLossPoints)
 		if err != nil {
 			return nil, err
 		}
