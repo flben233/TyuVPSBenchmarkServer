@@ -1,9 +1,10 @@
 {
   cache {
     api {
-        souin
+      souin
     }
   }
+  admin :2019
 }
 
 :3010 {
