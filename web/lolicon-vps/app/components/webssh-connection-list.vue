@@ -3,6 +3,7 @@ import { Plus, Edit, Delete, Link, Upload, Download, Key } from "@element-plus/i
 import {
   getConnections,
   saveConnection,
+  saveConnections,
   deleteConnection,
   getPassword,
   clearPassword,
@@ -30,6 +31,47 @@ const showKeyDialog = ref(false);
 const keyDialogMode = ref("set");
 const uploading = ref(false);
 const downloading = ref(false);
+const showDiffDialog = ref(false);
+const diffItems = ref([]);
+const localOnlyItems = ref([]);
+const pendingCloudConnections = ref([]);
+const pendingNewConns = ref([]);
+
+function isConnectionEqual(a, b) {
+  const keys = ["name", "host", "port", "username", "authType", "password", "privateKey"];
+  return keys.every((k) => a[k] === b[k]);
+}
+
+const FIELD_LABELS = {
+  name: "名称",
+  host: "主机",
+  port: "端口",
+  username: "用户名",
+  authType: "认证方式",
+  password: "密码",
+  privateKey: "私钥",
+};
+
+function maskValue(key, val) {
+  if ((key === "password" || key === "privateKey") && val) return "******";
+  if ((key === "password" || key === "privateKey") && !val) return "无";
+  return val ?? "";
+}
+
+function getConnectionDiffs(local, cloud) {
+  const keys = ["name", "host", "port", "username", "authType", "password", "privateKey"];
+  const diffs = [];
+  for (const k of keys) {
+    if (local[k] !== cloud[k]) {
+      diffs.push({
+        label: FIELD_LABELS[k],
+        localValue: maskValue(k, local[k]),
+        cloudValue: maskValue(k, cloud[k]),
+      });
+    }
+  }
+  return diffs;
+}
 
 function loadConnections() {
   connections.value = getConnections();
@@ -137,34 +179,42 @@ async function handleDownload() {
     }
 
     const localConnections = getConnections();
-    const localIds = new Set(localConnections.map((c) => c.id));
+    const localMap = new Map(localConnections.map((c) => [c.id, c]));
     const localNames = new Set(localConnections.map((c) => c.name));
+    const cloudIds = new Set(cloudConnections.map((c) => c.id));
 
-    let added = 0;
-    let skipped = 0;
+    const newConns = [];
+    const conflicts = [];
+    const localOnly = localConnections.filter((c) => !cloudIds.has(c.id));
 
     for (const conn of cloudConnections) {
-      if (localIds.has(conn.id)) {
-        skipped++;
-        continue;
+      const local = localMap.get(conn.id);
+      if (local) {
+        if (!isConnectionEqual(local, conn)) {
+          conflicts.push({ local, cloud: conn, diffs: getConnectionDiffs(local, conn) });
+        }
+      } else if (!localNames.has(conn.name)) {
+        newConns.push(conn);
       }
-      if (localNames.has(conn.name)) {
-        skipped++;
-        continue;
-      }
-      localConnections.push(conn);
-      added++;
     }
 
-    for (const conn of localConnections) {
+    for (const conn of newConns) {
       saveConnection(conn);
     }
 
-    let msg = `下载完成`;
-    if (added > 0) msg += `，新增 ${added} 个连接`;
-    if (skipped > 0) msg += `，跳过 ${skipped} 个已存在连接`;
-    success(msg);
+    if (conflicts.length === 0 && localOnly.length === 0) {
+      let msg = `下载完成`;
+      if (newConns.length > 0) msg += `，新增 ${newConns.length} 个连接`;
+      success(msg);
+      loadConnections();
+      return;
+    }
 
+    diffItems.value = conflicts;
+    localOnlyItems.value = localOnly;
+    pendingCloudConnections.value = cloudConnections;
+    pendingNewConns.value = newConns;
+    showDiffDialog.value = true;
     loadConnections();
   } catch (e) {
     if (e.message?.includes("OperationError") || e.name === "OperationError") {
@@ -175,6 +225,38 @@ async function handleDownload() {
   } finally {
     downloading.value = false;
   }
+}
+
+function handleMerge() {
+  const cloudMap = new Map(pendingCloudConnections.value.map((c) => [c.id, c]));
+  const merged = [...pendingCloudConnections.value];
+  for (const conn of localOnlyItems.value) {
+    if (!cloudMap.has(conn.id)) {
+      merged.push(conn);
+    }
+  }
+  saveConnections(merged);
+  const conflictCount = diffItems.value.length;
+  const localOnlyCount = localOnlyItems.value.length;
+  showDiffDialog.value = false;
+  let msg = "合并完成";
+  if (conflictCount > 0) msg += `，更新 ${conflictCount} 个差异连接`;
+  if (localOnlyCount > 0) msg += `，保留 ${localOnlyCount} 个本地独有连接`;
+  success(msg);
+  loadConnections();
+}
+
+function handleOverwrite() {
+  saveConnections(pendingCloudConnections.value);
+  showDiffDialog.value = false;
+  success("已使用云端数据覆盖本地");
+  loadConnections();
+}
+
+function handleSkipConflict() {
+  showDiffDialog.value = false;
+  success("已跳过差异连接，保留本地版本");
+  loadConnections();
 }
 
 async function handleKeySaved() {
@@ -292,6 +374,57 @@ onMounted(() => {
       @saved="handleKeySaved"
       @reset="handleKeyReset"
     />
+
+    <el-dialog
+      v-model="showDiffDialog"
+      title="云端数据与本地存在差异"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="diffItems.length > 0" class="diff-section">
+        <div class="diff-hint">
+          以下 {{ diffItems.length }} 个连接在本地和云端的数据不一致：
+        </div>
+        <div class="diff-list">
+          <div v-for="(item, index) in diffItems" :key="index" class="diff-item">
+            <div class="diff-item-header">
+              {{ item.cloud.name }}（{{ item.cloud.host }}）
+            </div>
+            <el-table :data="item.diffs" size="small" border>
+              <el-table-column label="字段" prop="label" width="100" />
+              <el-table-column label="本地" min-width="140">
+                <template #default="{ row }">
+                  <span class="diff-local">{{ row.localValue }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="云端" min-width="140">
+                <template #default="{ row }">
+                  <span class="diff-cloud">{{ row.cloudValue }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="localOnlyItems.length > 0" class="diff-section">
+        <div class="diff-hint">
+          以下 {{ localOnlyItems.length }} 个连接仅存在于本地，云端不包含：
+        </div>
+        <el-table :data="localOnlyItems" size="small" border>
+          <el-table-column label="名称" prop="name" min-width="100" />
+          <el-table-column label="主机" min-width="130">
+            <template #default="{ row }">{{ row.username }}@{{ row.host }}:{{ row.port }}</template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <template #footer>
+        <el-button @click="handleSkipConflict">跳过</el-button>
+        <el-button type="primary" @click="handleMerge">合并（云端 + 本地独有）</el-button>
+        <el-button type="danger" @click="handleOverwrite">覆盖本地全部数据</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -383,5 +516,47 @@ onMounted(() => {
   color: #c0c4cc;
   font-size: 13px;
   padding: 24px 12px;
+}
+
+.diff-hint {
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.diff-section {
+  margin-bottom: 20px;
+}
+
+.diff-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.diff-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.diff-item {
+  margin-bottom: 16px;
+}
+
+.diff-item:last-child {
+  margin-bottom: 0;
+}
+
+.diff-item-header {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.diff-local {
+  color: #f56c6c;
+}
+
+.diff-cloud {
+  color: #67c23a;
 }
 </style>
