@@ -158,6 +158,7 @@ func PublishJSONWithID(routingKey, replyTo string, v any, id string) (string, er
 			Body:         msg,
 			ReplyTo:      replyTo,
 			MessageId:    id,
+			Expiration:   "30000", // 30 seconds
 		},
 	)
 }
