@@ -11,7 +11,7 @@ export function getConnections() {
   }
 }
 
-function saveConnections(connections) {
+export function saveConnections(connections) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(connections));
 }
 
