@@ -38,16 +38,23 @@ func getConn() (*amqp.Connection, error) {
 	go func() {
 		for err := range errCh {
 			log.Printf("RabbitMQ connection closed: %v. Attempting to reconnect...", err)
-			time.Sleep(1 * time.Second) // backoff before reconnecting
-			newConn, err := amqp.Dial(mqURL)
-			if err != nil {
-				log.Printf("Failed to reconnect to RabbitMQ: %v", err)
-				continue
+			backoff := 1 * time.Second
+			for {
+				newConn, dialErr := amqp.Dial(mqURL)
+				if dialErr != nil {
+					log.Printf("Failed to reconnect to RabbitMQ: %v. Retrying in %v...", dialErr, backoff)
+					time.Sleep(backoff)
+					if backoff < 60*time.Second {
+						backoff *= 2
+					}
+					continue
+				}
+				sharedConn = newConn
+				newConn.NotifyClose(errCh)
+				sharedChannel = nil
+				log.Println("Successfully reconnected to RabbitMQ")
+				break
 			}
-			sharedConn = newConn
-			newConn.NotifyClose(errCh)
-			sharedChannel = nil // reset channel pool
-			log.Println("Successfully reconnected to RabbitMQ")
 		}
 	}()
 	return conn, nil
@@ -215,8 +222,20 @@ func Subscribe(routingKey string, ctx context.Context, handler func(d *amqp.Deli
 				}()
 			case err := <-errCh:
 				log.Printf("RabbitMQ channel closed: %v. Attempting to reconnect...", err)
-				time.Sleep(1 * time.Second) // backoff before reconnecting
-				ch, msgs, errCh, _ = initCh()
+				backoff := 1 * time.Second
+				for {
+					var initErr error
+					ch, msgs, errCh, initErr = initCh()
+					if initErr != nil {
+						log.Printf("Failed to reconnect channel: %v. Retrying in %v...", initErr, backoff)
+						time.Sleep(backoff)
+						if backoff < 60*time.Second {
+							backoff *= 2
+						}
+						continue
+					}
+					break
+				}
 			}
 		}
 	}()
