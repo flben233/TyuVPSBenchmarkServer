@@ -4,7 +4,9 @@ on:
   push:
     branches: ["master"]
     paths:
-      - "web/lolicon-vps/Caddyfile"
+      - 'web/lolicon-vps/**'
+      - '.github/workflows/frontend.yml'
+      - '.github/workflows/souin.yml'
   workflow_dispatch:
 
 env:
