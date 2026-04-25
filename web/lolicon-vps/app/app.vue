@@ -25,7 +25,7 @@
   <div id="app">
     <NuxtLoadingIndicator color="#39C5BB" />
     <Sidebar v-if="!excludePaths.some(path => activePath.includes(path))"/>
-    <NuxtPage/>
+    <NuxtPage class="page"/>
   </div>
 </template>
 
@@ -43,6 +43,9 @@
     height: 100vh;
     width: 100vw;
     font-family: sans-serif;
+  }
+  .page {
+    flex: 1;  /* 这里不能写 width: 100%，否则会导致menu空间被挤占使得动画出现跳变 */
   }
   body {
     margin: 0;
