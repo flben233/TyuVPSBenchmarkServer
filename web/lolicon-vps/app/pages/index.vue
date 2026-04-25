@@ -10,15 +10,13 @@ useHead({
   ]
 });
 
-// const { userInfo, token, login } = useAuth();
 const { listReports } = useReport();
 const reports = ref([]);
-const page = ref(1);
+const page = useState("indexPage", () => 1);
 const disabled = ref(false);
 const total = ref(0);
 const loading = ref(false);
 const pageSize = 7;
-const paginationSize = ref("default");
 const resp = await listReports(page.value, pageSize);
 let reportsData = { data: [], total: 0 };
 if (resp.data.value && resp.data.value.code === 0) {
@@ -145,7 +143,6 @@ onUnmounted(() => {
 
 <style scoped>
 #index-root {
-  width: 100%;
   padding: 16px;
   box-sizing: border-box;
   overflow-x: hidden;

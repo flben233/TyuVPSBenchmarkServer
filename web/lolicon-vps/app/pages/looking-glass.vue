@@ -40,7 +40,6 @@ if (resp.data.value && resp.data.value.code === 0) {
   #lg-root {
     padding: 16px;
     box-sizing: border-box;
-    width: 100%;
     height: 100%;
     overflow-y: auto;
   }

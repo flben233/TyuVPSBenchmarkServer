@@ -358,7 +358,6 @@ const spanMethod = ({ row, column, rowIndex, columnIndex }) => {
 
 <style scoped>
 #tool-root {
-  width: 100%;
   padding: 16px;
   box-sizing: border-box;
 }

@@ -15,6 +15,7 @@ const activePath = computed(() => {
   return useRoute().path;
 });
 const ellipse = ref(false);
+const collapse = ref(true);
 
 if (userInfo.value) {
   avatarUrl.value = userInfo.value.avatarUrl;
@@ -28,6 +29,18 @@ function handleWidthChange() {
   }
 
   ellipse.value = window.innerWidth < 512;
+}
+
+function handleMouseEnter() {
+  if (mode.value === "vertical") {
+    collapse.value = false;
+  }
+}
+
+function handleMouseLeave() {
+  if (mode.value === "vertical") {
+    collapse.value = true;
+  }
 }
 
 watch(userInfo, (newVal) => {
@@ -65,10 +78,12 @@ const avatarNav = (command) => {
   <el-menu
     id="m-root"
     :mode="mode"
-    :collapse="true"
+    :collapse="collapse"
     :default-active="activePath"
     router
     :ellipsis="ellipse"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
     <div class="m-avatar-container">
       <el-dropdown @command="avatarNav" class="m-avatar-dropdown">
@@ -110,6 +125,7 @@ const avatarNav = (command) => {
         <el-icon size="24">
           <Odometer />
         </el-icon>
+        <span>探针工具</span>
       </template>
       <el-menu-item index="/monitor" class="menu-item">
         公共服务器监控
@@ -140,6 +156,7 @@ const avatarNav = (command) => {
         <el-icon size="24">
           <More />
         </el-icon>
+        <span>实用工具</span>
       </template>
       <el-menu-item index="/tools/ipquery" class="menu-item">
         IP查询
@@ -164,13 +181,15 @@ const avatarNav = (command) => {
 
 .menu-item {
   display: flex;
-  align-items: center;
-  justify-content: center;
   min-width: 64px;
 }
 
 .menu-item:nth-child(2) {
   margin-left: auto;
+}
+
+#m-root:not(.el-menu--collapse) {
+  width: 200px;
 }
 
 @media screen and (max-width: 768px) {

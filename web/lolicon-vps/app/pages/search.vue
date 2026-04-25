@@ -566,7 +566,6 @@ const gotoDetail = (reportId) => {
 
 <style>
 #search-root {
-  width: 100%;
   padding: 16px;
   box-sizing: border-box;
 }
