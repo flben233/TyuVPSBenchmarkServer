@@ -27,9 +27,9 @@ export default defineNuxtConfig({
         },
       ],
       link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
-      // script: [
-      //   { type: 'text/javascript', src: 'https://hm.baidu.com/hm.js?b812ec888c5b927ccd8fef3a34a5dc16' }
-      // ]
+      script: [
+        { type: 'text/javascript', src: 'https://hm.baidu.com/hm.js?b812ec888c5b927ccd8fef3a34a5dc16' }
+      ]
     },
   },
   vite: {
