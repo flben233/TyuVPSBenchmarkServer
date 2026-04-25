@@ -16,6 +16,7 @@ const activePath = computed(() => {
 });
 const ellipse = ref(false);
 const collapse = ref(true);
+const dropdownVisible = ref(false);
 
 if (userInfo.value) {
   avatarUrl.value = userInfo.value.avatarUrl;
@@ -38,7 +39,14 @@ function handleMouseEnter() {
 }
 
 function handleMouseLeave() {
-  if (mode.value === "vertical") {
+  if (mode.value === "vertical" && !dropdownVisible.value) {
+    collapse.value = true;
+  }
+}
+
+function handleDropdownVisibleChange(visible) {
+  dropdownVisible.value = visible;
+  if (!visible && mode.value === "vertical") {
     collapse.value = true;
   }
 }
@@ -86,7 +94,7 @@ const avatarNav = (command) => {
     @mouseleave="handleMouseLeave"
   >
     <div class="m-avatar-container">
-      <el-dropdown @command="avatarNav" class="m-avatar-dropdown">
+      <el-dropdown @command="avatarNav" @visible-change="handleDropdownVisibleChange" class="m-avatar-dropdown">
         <el-avatar v-if="avatarUrl" :src="avatarUrl" />
         <el-avatar v-else :icon="UserFilled" />
         <template #dropdown>
