@@ -6,32 +6,37 @@ import (
 )
 
 type HostData struct {
-	Sent            float64         `json:"sent"`
-	Recv            float64         `json:"recv"`
-	Ping            []PingPointData `json:"ping"`
-	Loss            float64         `json:"loss"`
-	LatestPing      float32         `json:"latest_ping"`
-	ID              string          `json:"id"`
-	Target          string          `json:"target"`
-	MonitorType     string          `json:"monitor_type"`
-	Name            string          `json:"name"`
-	Tags            string          `json:"tags"` // json array of strings
-	Notify          bool            `json:"notify"`
-	NotifyTolerance int64           `json:"notify_tolerance"`
-	LastUpdate      time.Time       `json:"last_update"`
+	Sent                 float64         `json:"sent"`
+	Recv                 float64         `json:"recv"`
+	Ping                 []PingPointData `json:"ping"`
+	Loss                 float64         `json:"loss"`
+	LatestPing           float32         `json:"latest_ping"`
+	ID                   string          `json:"id"`
+	Target               string          `json:"target"`
+	MonitorType          string          `json:"monitor_type"`
+	Name                 string          `json:"name"`
+	Tags                 string          `json:"tags"` // json array of strings
+	Notify               bool            `json:"notify"`
+	NotifyTolerance      int64           `json:"notify_tolerance"`
+	TrafficSettlementDay int             `json:"traffic_settlement_day"`
+	MonthlyTrafficLimit  float64         `json:"monthly_traffic_limit"`
+	TrafficUsage         float64         `json:"traffic_usage"`
+	LastUpdate           time.Time       `json:"last_update"`
 	perfmon.ServerStatus
 }
 
 type HostListResponse struct {
-	ID              string    `json:"id"`
-	UserID          int64     `json:"user_id"`
-	Target          string    `json:"target"`
-	MonitorType     string    `json:"monitor_type"`
-	Name            string    `json:"name"`
-	Tags            string    `json:"tags"` // json array of strings
-	Notify          bool      `json:"notify"`
-	NotifyTolerance int64     `json:"notify_tolerance"`
-	LastUpdate      time.Time `json:"last_update"`
+	ID                   string    `json:"id"`
+	UserID               int64     `json:"user_id"`
+	Target               string    `json:"target"`
+	MonitorType          string    `json:"monitor_type"`
+	Name                 string    `json:"name"`
+	Tags                 string    `json:"tags"` // json array of strings
+	Notify               bool      `json:"notify"`
+	NotifyTolerance      int64     `json:"notify_tolerance"`
+	TrafficSettlementDay int       `json:"traffic_settlement_day"`
+	MonthlyTrafficLimit  float64   `json:"monthly_traffic_limit"`
+	LastUpdate           time.Time `json:"last_update"`
 	perfmon.ServerStatus
 }
 

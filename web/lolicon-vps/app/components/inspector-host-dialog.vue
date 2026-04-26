@@ -35,6 +35,8 @@ const form = ref({
   tagsInput: "",
   notify: false,
   notifyTolerance: 0,
+  trafficSettlementDay: 0,
+  monthlyTrafficLimit: 0,
 });
 
 const isEditMode = computed(() => props.mode === "edit");
@@ -53,6 +55,8 @@ watch(
       tagsInput: Array.isArray(props.host?.tags) ? props.host.tags.join(", ") : "",
       notify: Boolean(props.host?.notify),
       notifyTolerance: Math.max(0, Math.floor(Number(props.host?.notifyTolerance) || 0)),
+      trafficSettlementDay: Math.max(0, Math.min(31, Math.floor(Number(props.host?.trafficSettlementDay) || 0))),
+      monthlyTrafficLimit: Math.max(0, (Number(props.host?.monthlyTrafficLimit) || 0) / 1024),
     };
   },
   { immediate: true },
@@ -81,6 +85,8 @@ function handleSubmit() {
     tags: stringifyTagList(form.value.tagsInput),
     notify: Boolean(form.value.notify),
     notify_tolerance: Math.max(0, Math.floor(Number(form.value.notifyTolerance) || 0)),
+    traffic_settlement_day: Math.max(0, Math.min(31, Math.floor(Number(form.value.trafficSettlementDay) || 0))),
+    monthly_traffic_limit: Math.max(0, (Number(form.value.monthlyTrafficLimit) || 0) * 1024),
   });
 }
 </script>
@@ -133,6 +139,33 @@ function handleSubmit() {
         />
         <div class="field-tip">0 表示立即通知；大于 0 表示连续异常达到该次数后再通知。</div>
       </el-form-item>
+      <el-form-item label="每月结算日">
+        <el-input-number
+          v-model="form.trafficSettlementDay"
+          :min="0"
+          :max="31"
+          :step="1"
+          :precision="0"
+          step-strictly
+          controls-position="right"
+          placeholder="不设置"
+        />
+        <div class="field-tip">0 表示不设置；设置后每月该日将作为流量统计的结算周期起点。</div>
+      </el-form-item>
+      <el-form-item label="每月流量上限">
+        <div class="limit-input-row">
+          <el-input-number
+            v-model="form.monthlyTrafficLimit"
+            :min="0"
+            :step="0.1"
+            :precision="1"
+            controls-position="right"
+            class="limit-input"
+          />
+          <span class="limit-unit">GB</span>
+        </div>
+        <div class="field-tip">0 表示不限制；设置后可在卡片上查看本周期已用流量。</div>
+      </el-form-item>
       <el-form-item>
         <el-link type="primary" target="_blank" href="https://note.shirakawatyu.top/note/article/422">点我查看数据采集端部署说明</el-link>
       </el-form-item>
@@ -151,5 +184,21 @@ function handleSubmit() {
   margin-left: 8px;
   color: #909399;
   font-size: 12px;
+}
+
+.limit-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.limit-input {
+  width: 200px;
+}
+
+.limit-unit {
+  color: #909399;
+  font-size: 13px;
+  white-space: nowrap;
 }
 </style>

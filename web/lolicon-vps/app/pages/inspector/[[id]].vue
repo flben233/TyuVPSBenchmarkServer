@@ -447,6 +447,8 @@ async function handleUpdateHost(payload) {
     tags: payload.tags,
     notify: payload.notify,
     notify_tolerance: payload.notify_tolerance,
+    traffic_settlement_day: payload.traffic_settlement_day,
+    monthly_traffic_limit: payload.monthly_traffic_limit,
   });
   submittingHost.value = false;
 

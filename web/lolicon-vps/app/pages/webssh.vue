@@ -114,7 +114,7 @@ onUnmounted(() => {
         </div>
         <div class="toolbar-right">
           <el-button
-            v-if="status === 'connected'"
+            :disabled="status !== 'connected'"
             :type="showAgentPanel ? 'primary' : 'default'"
             size="small"
             :icon="ChatDotRound"
