@@ -197,6 +197,8 @@ export function normalizeHost(host = {}) {
     rawTags: host.tags || "",
     notify: Boolean(host.notify),
     notifyTolerance: normalizeNotifyTolerance(host.notify_tolerance),
+    trafficSettlementDay: toNumber(host.traffic_settlement_day, 0),
+    monthlyTrafficLimit: toNumber(host.monthly_traffic_limit, 0),
     latestPing: toNumber(host.latest_ping),
     uptimeSeconds: toNumber(host.uptime_seconds),
     lastUpdate: lastUpdate,
@@ -218,6 +220,9 @@ export function normalizeHostData(item = {}) {
     sent: toNumber(item.sent),
     recv: toNumber(item.recv),
     loss: toNumber(item.loss),
+    trafficUsage: toNumber(item.traffic_usage),
+    trafficSettlementDay: toNumber(item.traffic_settlement_day, 0),
+    monthlyTrafficLimit: toNumber(item.monthly_traffic_limit, 0),
     ping: Array.isArray(item.ping)
       ? item.ping.map((point) => ({
           hostId: toNumber(point.host_id),

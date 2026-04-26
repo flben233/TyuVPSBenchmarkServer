@@ -109,7 +109,16 @@ export function useInspector() {
       "/inspector/hosts/create",
         "POST",
       "创建服务器失败",
-      { body: payload }
+      { body: {
+        target: payload.target,
+        monitor_type: payload.monitor_type,
+        name: payload.name,
+        tags: payload.tags,
+        notify: Boolean(payload.notify),
+        notify_tolerance: payload.notify_tolerance,
+        traffic_settlement_day: payload.traffic_settlement_day || 0,
+        monthly_traffic_limit: payload.monthly_traffic_limit || 0,
+      } }
     );
   }
 
@@ -118,7 +127,16 @@ export function useInspector() {
       `/inspector/hosts/update/${id}`,
 "POST",
       "更新服务器失败",
-      { body: payload }
+      { body: {
+        name: payload.name,
+        tags: payload.tags,
+        target: payload.target,
+        monitor_type: payload.monitor_type,
+        notify: Boolean(payload.notify),
+        notify_tolerance: payload.notify_tolerance,
+        traffic_settlement_day: payload.traffic_settlement_day || 0,
+        monthly_traffic_limit: payload.monthly_traffic_limit || 0,
+      } }
     );
   }
 

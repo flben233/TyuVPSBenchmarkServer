@@ -6,21 +6,25 @@ import (
 )
 
 type CreateHostRequest struct {
-	Target          string `json:"target" binding:"required"`
-	MonitorType     string `json:"monitor_type"`
-	Name            string `json:"name" binding:"required"`
-	Tags            string `json:"tags"`
-	Notify          bool   `json:"notify"`
-	NotifyTolerance int64  `json:"notify_tolerance"`
+	Target               string  `json:"target" binding:"required"`
+	MonitorType          string  `json:"monitor_type"`
+	Name                 string  `json:"name" binding:"required"`
+	Tags                 string  `json:"tags"`
+	Notify               bool    `json:"notify"`
+	NotifyTolerance      int64   `json:"notify_tolerance"`
+	TrafficSettlementDay int     `json:"traffic_settlement_day"`
+	MonthlyTrafficLimit  float64 `json:"monthly_traffic_limit"`
 }
 
 type UpdateHostRequest struct {
-	Name            string `json:"name"`
-	Tags            string `json:"tags"`
-	Target          string `json:"target"`
-	MonitorType     string `json:"monitor_type"`
-	Notify          bool   `json:"notify"`
-	NotifyTolerance int64  `json:"notify_tolerance"`
+	Name                 string  `json:"name"`
+	Tags                 string  `json:"tags"`
+	Target               string  `json:"target"`
+	MonitorType          string  `json:"monitor_type"`
+	Notify               bool    `json:"notify"`
+	NotifyTolerance      int64   `json:"notify_tolerance"`
+	TrafficSettlementDay int     `json:"traffic_settlement_day"`
+	MonthlyTrafficLimit  float64 `json:"monthly_traffic_limit"`
 }
 
 type PutDataRequest struct {

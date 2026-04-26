@@ -4,6 +4,7 @@ import {
   formatBytes,
   formatNetworkSpeed,
   formatPercent,
+  formatTrafficAmount,
   formatUptime, generateIdStar, generateIpStar,
   getLatestPingValue,
 } from "~/utils/inspector";
@@ -79,6 +80,15 @@ const detailItems = computed(() => {
     )
   }
   items.push({ label: "丢包率", value: packetLossRateText.value })
+
+  if (props.host.monthlyTrafficLimit > 0) {
+    const used = formatTrafficAmount(props.host.trafficUsage);
+    const limit = formatTrafficAmount(props.host.monthlyTrafficLimit);
+    items.push({ label: "结算周期已用", value: `${used} / ${limit}` });
+  } else if (props.host.trafficUsage > 0 && props.host.trafficSettlementDay > 0) {
+    items.push({ label: "结算周期已用", value: formatTrafficAmount(props.host.trafficUsage) });
+  }
+
   return items;
 });
 </script>
@@ -117,6 +127,7 @@ const detailItems = computed(() => {
               {{ host.notify ? "通知已开启" : "通知未开启" }}
             </el-tag>
             <el-tag size="small" type="success" effect="dark">{{ monitorTypeLabel }}</el-tag>
+            <el-tag v-if="host.trafficSettlementDay > 0" size="small" type="warning" effect="dark">每月{{ host.trafficSettlementDay }}日结算</el-tag>
             <el-tag size="small" type="info" effect="dark">
               {{ host.lastUpdate ? `上次上报 ${formatUptime((Date.now() - new Date(host.lastUpdate).getTime()) / 1000)} 前` : "未上报" }}
             </el-tag>

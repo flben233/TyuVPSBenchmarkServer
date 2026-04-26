@@ -117,6 +117,32 @@ func QueryTrafficSum(hostID int64, start, end int64) (float64, float64, error) {
 	return 0, 0, row.Err()
 }
 
+func QueryTrafficSince(hostID int64, since time.Time) (float64, error) {
+	row, err := pgConn.Query(context.Background(),
+		"SELECT SUM(recv) + SUM(sent) AS total FROM "+TrafficMeasurement+" WHERE host_id = $1 AND ts >= $2",
+		strconv.FormatInt(hostID, 10),
+		since,
+	)
+	if err != nil {
+		return 0, err
+	}
+	defer row.Close()
+	if row.Next() {
+		var total sql.NullFloat64
+		if err = row.Scan(&total); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return 0, nil
+			}
+			return 0, err
+		}
+		if !total.Valid {
+			return 0, nil
+		}
+		return total.Float64, nil
+	}
+	return 0, row.Err()
+}
+
 func QueryLatestPing(hostID int64, start, end int64) (float32, error) {
 	row, err := pgConn.Query(context.Background(),
 		"SELECT latency FROM "+PingMeasurement+" WHERE host_id = $1 AND ts >= $2 AND ts <= $3 ORDER BY ts DESC LIMIT 1",

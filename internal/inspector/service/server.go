@@ -115,7 +115,7 @@ func postPing(msg *amqp.Delivery) error {
 	return nil
 }
 
-func CreateHost(userID int64, target, monitorType, name, tags string, notify bool, notifyTolerance int64) (int64, error) {
+func CreateHost(userID int64, target, monitorType, name, tags string, notify bool, notifyTolerance int64, trafficSettlementDay int, monthlyTrafficLimit float64) (int64, error) {
 	hosts, err := store.CountUserHosts(userID)
 	if err != nil {
 		return 0, err
@@ -131,14 +131,16 @@ func CreateHost(userID int64, target, monitorType, name, tags string, notify boo
 		id = rand.Int63()
 	}
 	host := &model.InspectHost{
-		ID:              id,
-		UserID:          userID,
-		Target:          target,
-		MonitorType:     monitorType,
-		Name:            name,
-		Tags:            tags,
-		Notify:          notify,
-		NotifyTolerance: notifyTolerance,
+		ID:                   id,
+		UserID:               userID,
+		Target:               target,
+		MonitorType:          monitorType,
+		Name:                 name,
+		Tags:                 tags,
+		Notify:               notify,
+		NotifyTolerance:      notifyTolerance,
+		TrafficSettlementDay: trafficSettlementDay,
+		MonthlyTrafficLimit:  monthlyTrafficLimit,
 	}
 	if err := store.CreateHost(host); err != nil {
 		return 0, err
@@ -146,7 +148,7 @@ func CreateHost(userID int64, target, monitorType, name, tags string, notify boo
 	return host.ID, nil
 }
 
-func UpdateHost(userID int64, hostID int64, name, tags, target, monitorType string, notify bool, notifyTolerance int64) error {
+func UpdateHost(userID int64, hostID int64, name, tags, target, monitorType string, notify bool, notifyTolerance int64, trafficSettlementDay int, monthlyTrafficLimit float64) error {
 	// 校验主机属于当前用户
 	ids := store.GetHostIDByUser(userID)
 	found := false
@@ -170,6 +172,8 @@ func UpdateHost(userID int64, hostID int64, name, tags, target, monitorType stri
 	host.MonitorType = monitorType
 	host.Notify = notify
 	host.NotifyTolerance = notifyTolerance
+	host.TrafficSettlementDay = trafficSettlementDay
+	host.MonthlyTrafficLimit = monthlyTrafficLimit
 
 	store.UpdateHost(host)
 	return nil
@@ -199,16 +203,18 @@ func ListHosts(userID int64) ([]response.HostListResponse, error) {
 	inspectHosts := make([]response.HostListResponse, len(hosts))
 	for i, host := range hosts {
 		inspectHosts[i] = response.HostListResponse{
-			ID:              strconv.FormatInt(host.ID, 10),
-			UserID:          host.UserID,
-			Target:          host.Target,
-			MonitorType:     host.MonitorType,
-			Name:            host.Name,
-			Tags:            host.Tags,
-			Notify:          host.Notify,
-			NotifyTolerance: host.NotifyTolerance,
-			LastUpdate:      host.LastUpdate,
-			ServerStatus:    host.ServerStatus,
+			ID:                   strconv.FormatInt(host.ID, 10),
+			UserID:               host.UserID,
+			Target:               host.Target,
+			MonitorType:          host.MonitorType,
+			Name:                 host.Name,
+			Tags:                 host.Tags,
+			Notify:               host.Notify,
+			NotifyTolerance:      host.NotifyTolerance,
+			TrafficSettlementDay: host.TrafficSettlementDay,
+			MonthlyTrafficLimit:  host.MonthlyTrafficLimit,
+			LastUpdate:           host.LastUpdate,
+			ServerStatus:         host.ServerStatus,
 		}
 	}
 	return inspectHosts, nil
@@ -268,6 +274,14 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 		if err != nil {
 			return nil, err
 		}
+		var trafficUsage float64
+		if host.TrafficSettlementDay > 0 {
+			since := calculateLastSettlementDate(host.TrafficSettlementDay, time.Now())
+			trafficUsage, err = store.QueryTrafficSince(host.ID, since)
+			if err != nil {
+				return nil, err
+			}
+		}
 		latestPing, err := store.QueryLatestPing(host.ID, start, end)
 		if err != nil {
 			return nil, err
@@ -277,20 +291,23 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 			return nil, err
 		}
 		data[i] = &response.HostData{
-			Ping:            pingPoints,
-			Loss:            lossRate,
-			Sent:            sent,
-			Recv:            recv,
-			ID:              strconv.FormatInt(host.ID, 10),
-			Target:          host.Target,
-			MonitorType:     host.MonitorType,
-			Name:            host.Name,
-			Tags:            host.Tags,
-			Notify:          host.Notify,
-			NotifyTolerance: host.NotifyTolerance,
-			LatestPing:      latestPing,
-			LastUpdate:      host.LastUpdate,
-			ServerStatus:    host.ServerStatus,
+			Ping:                 pingPoints,
+			Loss:                 lossRate,
+			Sent:                 sent,
+			Recv:                 recv,
+			ID:                   strconv.FormatInt(host.ID, 10),
+			Target:               host.Target,
+			MonitorType:          host.MonitorType,
+			Name:                 host.Name,
+			Tags:                 host.Tags,
+			Notify:               host.Notify,
+			NotifyTolerance:      host.NotifyTolerance,
+			TrafficSettlementDay: host.TrafficSettlementDay,
+			MonthlyTrafficLimit:  host.MonthlyTrafficLimit,
+			TrafficUsage:         trafficUsage,
+			LatestPing:           latestPing,
+			LastUpdate:           host.LastUpdate,
+			ServerStatus:         host.ServerStatus,
 		}
 	}
 	return data, nil
@@ -394,4 +411,27 @@ func formatAllowedHostIDs(hostIDs []string) (string, error) {
 		return "", err
 	}
 	return string(data), nil
+}
+
+func calculateLastSettlementDate(day int, now time.Time) time.Time {
+	if day <= 0 {
+		return time.Time{}
+	}
+	year, month, today := now.Date()
+	var settlementDay int
+	if today >= day {
+		settlementDay = day
+	} else {
+		month--
+		if month == 0 {
+			month = 12
+			year--
+		}
+		settlementDay = day
+	}
+	lastDay := time.Date(year, month+1, 0, 0, 0, 0, 0, time.UTC).Day()
+	if settlementDay > lastDay {
+		settlementDay = lastDay
+	}
+	return time.Date(year, month, settlementDay, 0, 0, 0, 0, time.UTC)
 }
