@@ -121,7 +121,7 @@ def build_candidate_context_messages(
     context_messages = [
         {
             "role": str(message.get("role", "user")),
-            "content": str(message.get("content", "")),
+            "content": split_thinking_content(str(message.get("content", "")))[0],
         }
         for message in (request_messages or [])
     ]
@@ -129,7 +129,8 @@ def build_candidate_context_messages(
     if request_message:
         context_messages.append({"role": "user", "content": request_message})
     if assistant_response:
-        context_messages.append({"role": "assistant", "content": assistant_response})
+        content, _ = split_thinking_content(assistant_response)
+        context_messages.append({"role": "assistant", "content": content})
     return context_messages
 
 
