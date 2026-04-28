@@ -174,7 +174,6 @@ async def stop_chat(request: StopRequest) -> StopResponse:
     runtime = conversation_runtimes.get(request.conversation_id)
     if not runtime:
         raise HTTPException(status_code=404, detail="conversation not found")
-    _validate_chat_message_lengths(request, runtime.max_chat_message_chars)
     runtime.stop_event.set()
     return StopResponse(stopped=True)
 

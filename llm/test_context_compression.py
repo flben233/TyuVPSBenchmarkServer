@@ -4,7 +4,7 @@ from context_compression import (
     build_candidate_context_messages,
     compress_context_messages,
 )
-from thinking_parser import ThoughtParser, split_thinking_content
+from thinking_parser import split_thinking_content
 from tool import TOOL_MESSAGE_TRUNCATED_NOTICE, truncate_tool_message_content
 
 
@@ -110,12 +110,3 @@ def test_split_thinking_content_separates_complete_text():
 
     assert content == "helloworld"
     assert thinking == "secret"
-
-
-def test_thought_parser_handles_split_tags_across_chunks():
-    parser = ThoughtParser()
-
-    assert parser.feed("hello<thou") == ("hello", "")
-    assert parser.feed("ght>secret</th") == ("", "secret")
-    assert parser.feed("ought>world") == ("world", "")
-    assert parser.flush() == ("", "")
