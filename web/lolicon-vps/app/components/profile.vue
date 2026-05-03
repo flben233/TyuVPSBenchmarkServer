@@ -4,7 +4,7 @@
     <el-avatar size="large" src="/avatar.jpg" />
     <div id="site-owner">
       <div>ShirakawaTyu</div>
-      <div style="display: grid; grid-template-columns: auto auto; gap: 8px">
+      <div style="display: grid; grid-template-columns: auto auto auto; gap: 8px">
         <el-link :underline="'never'" href="https://github.com/flben233">
           <img src="/github-mark.svg" alt="GitHub Icon" class="a-icon" />
           <div style="font-size: 13px">GitHub</div>
@@ -15,6 +15,10 @@
         >
           <img src="/bilibili-mark.svg" alt="Bilibili Icon" class="a-icon" />
           <div style="font-size: 13px">Bilibili</div>
+        </el-link>
+        <el-link :underline="'never'" @click="useRouter().push('/about')">
+          <el-icon><InfoFilled /></el-icon>
+          <div style="font-size: 12px; margin-left: 1px">关于本站</div>
         </el-link>
       </div>
     </div>
@@ -52,3 +56,6 @@
   margin-right: 2px;
 }
 </style>
+<script setup>
+import { InfoFilled } from "@element-plus/icons-vue";
+</script>
