@@ -69,7 +69,7 @@ func runToolCommand(ctx context.Context, request mcp.CallToolRequest) (string, e
 	result := ""
 	timer := time.After(time.Duration(timeout) * time.Second)
 	outputCh := readOutput(reader)
-	finalCommand := command + "; echo '\n" + commandSentinel + "'"
+	finalCommand := command + "; echo -e '\\n" + commandSentinel + "'"
 	if err := session.WriteInput([]byte(finalCommand + "\n")); err != nil {
 		return "", err
 	}
