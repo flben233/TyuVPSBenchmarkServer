@@ -1,5 +1,5 @@
 <script setup>
-import { ArrowDown, ArrowUp, Sort } from "@element-plus/icons-vue";
+import { ArrowDown, ArrowUp, Rank } from "@element-plus/icons-vue";
 
 const props = defineProps({
   modelValue: {
@@ -23,8 +23,9 @@ const dialogVisible = computed({
 });
 
 const orderedHosts = ref([]);
-const draggingIndex = ref(-1);
 const saving = ref(false);
+const draggingIndex = ref(-1);
+const listRef = ref(null);
 
 watch(
   () => [props.hosts, props.modelValue],
@@ -37,39 +38,77 @@ watch(
   { immediate: true },
 );
 
-function onDragStart(index) {
+function getItemHeight() {
+  const item = listRef.value?.querySelector(".order-item");
+  return item ? item.offsetHeight + 1 : 49;
+}
+
+function getIndexFromY(clientY) {
+  if (!listRef.value) return -1;
+  const rect = listRef.value.getBoundingClientRect();
+  const relativeY = clientY - rect.top + listRef.value.scrollTop;
+  const index = Math.floor(relativeY / getItemHeight());
+  return Math.max(0, Math.min(index, orderedHosts.value.length - 1));
+}
+
+function moveTo(fromIndex, toIndex) {
+  if (fromIndex === toIndex) return;
+  const item = orderedHosts.value.splice(fromIndex, 1)[0];
+  orderedHosts.value.splice(toIndex, 0, item);
+}
+
+// Mouse events
+function onMouseDown(e, index) {
+  e.preventDefault();
+  draggingIndex.value = index;
+
+  const onMouseMove = (moveEvent) => {
+    const newIndex = getIndexFromY(moveEvent.clientY);
+    if (newIndex !== -1 && newIndex !== draggingIndex.value) {
+      moveTo(draggingIndex.value, newIndex);
+      draggingIndex.value = newIndex;
+    }
+  };
+
+  const onMouseUp = () => {
+    draggingIndex.value = -1;
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  };
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+}
+
+// Touch events
+function onTouchStart(e, index) {
   draggingIndex.value = index;
 }
 
-function onDragOver(event, index) {
-  event.preventDefault();
-  if (draggingIndex.value === -1 || draggingIndex.value === index) {
-    return;
+function onTouchMove(e) {
+  if (draggingIndex.value === -1) return;
+  e.preventDefault();
+
+  const newIndex = getIndexFromY(e.touches[0].clientY);
+  if (newIndex !== -1 && newIndex !== draggingIndex.value) {
+    moveTo(draggingIndex.value, newIndex);
+    draggingIndex.value = newIndex;
   }
-
-  const draggedItem = orderedHosts.value[draggingIndex.value];
-  orderedHosts.value.splice(draggingIndex.value, 1);
-  orderedHosts.value.splice(index, 0, draggedItem);
-  draggingIndex.value = index;
 }
 
-function onDragEnd() {
+function onTouchEnd() {
   draggingIndex.value = -1;
 }
 
 function moveUp(index) {
-  if (index <= 0) {
-    return;
-  }
+  if (index <= 0) return;
   const temp = orderedHosts.value[index];
   orderedHosts.value[index] = orderedHosts.value[index - 1];
   orderedHosts.value[index - 1] = temp;
 }
 
 function moveDown(index) {
-  if (index >= orderedHosts.value.length - 1) {
-    return;
-  }
+  if (index >= orderedHosts.value.length - 1) return;
   const temp = orderedHosts.value[index];
   orderedHosts.value[index] = orderedHosts.value[index + 1];
   orderedHosts.value[index + 1] = temp;
@@ -100,16 +139,19 @@ async function handleSave() {
     destroy-on-close
   >
     <div class="order-tip">拖拽主机或使用箭头按钮调整顺序，排序将应用于所有页面。</div>
-    <div class="order-list">
+    <div
+      ref="listRef"
+      class="order-list"
+      @touchmove="onTouchMove"
+      @touchend="onTouchEnd"
+    >
       <div
         v-for="(host, index) in orderedHosts"
         :key="host.id"
         class="order-item"
         :class="{ dragging: draggingIndex === index }"
-        draggable="true"
-        @dragstart="onDragStart(index)"
-        @dragover="(e) => onDragOver(e, index)"
-        @dragend="onDragEnd"
+        @mousedown="(e) => onMouseDown(e, index)"
+        @touchstart.passive="(e) => onTouchStart(e, index)"
       >
         <div class="order-item-content">
           <el-icon class="drag-handle">
@@ -122,13 +164,13 @@ async function handleSave() {
             link
             :icon="ArrowUp"
             :disabled="index === 0"
-            @click="moveUp(index)"
+            @click.stop="moveUp(index)"
           />
           <el-button
             link
             :icon="ArrowDown"
             :disabled="index === orderedHosts.length - 1"
-            @click="moveDown(index)"
+            @click.stop="moveDown(index)"
           />
         </div>
       </div>
@@ -153,6 +195,7 @@ async function handleSave() {
   overflow-y: auto;
   border: 1px solid #e4e7ed;
   border-radius: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .order-item {
@@ -162,8 +205,10 @@ async function handleSave() {
   padding: 10px 12px;
   border-bottom: 1px solid #e4e7ed;
   background: #fff;
-  cursor: grab;
   transition: background-color 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
 }
 
 .order-item:last-child {
@@ -177,6 +222,7 @@ async function handleSave() {
 .order-item.dragging {
   background: #ecf5ff;
   opacity: 0.8;
+  cursor: grabbing;
 }
 
 .order-item-content {
@@ -185,11 +231,11 @@ async function handleSave() {
   gap: 8px;
   flex: 1;
   min-width: 0;
+  pointer-events: none;
 }
 
 .drag-handle {
   color: #909399;
-  cursor: grab;
   flex-shrink: 0;
 }
 
@@ -197,7 +243,6 @@ async function handleSave() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1;
 }
 
 .order-actions {
