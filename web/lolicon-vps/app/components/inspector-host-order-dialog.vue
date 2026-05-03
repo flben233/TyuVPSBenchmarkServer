@@ -26,6 +26,13 @@ const orderedHosts = ref([]);
 const saving = ref(false);
 const draggingIndex = ref(-1);
 const listRef = ref(null);
+const touchPendingIndex = ref(-1);
+const touchStartPoint = ref({ x: 0, y: 0 });
+
+const TOUCH_LONG_PRESS_MS = 300;
+const TOUCH_CANCEL_MOVE_PX = 10;
+
+let touchHoldTimer = null;
 
 watch(
   () => [props.hosts, props.modelValue],
@@ -82,14 +89,43 @@ function onMouseDown(e, index) {
 
 // Touch events
 function onTouchStart(e, index) {
-  draggingIndex.value = index;
+  const touch = e.touches[0];
+  touchStartPoint.value = { x: touch.clientX, y: touch.clientY };
+  touchPendingIndex.value = index;
+
+  if (touchHoldTimer) {
+    clearTimeout(touchHoldTimer);
+  }
+
+  touchHoldTimer = setTimeout(() => {
+    if (touchPendingIndex.value === index) {
+      draggingIndex.value = index;
+    }
+  }, TOUCH_LONG_PRESS_MS);
 }
 
 function onTouchMove(e) {
-  if (draggingIndex.value === -1) return;
+  const touch = e.touches[0];
+
+  if (draggingIndex.value === -1) {
+    if (touchPendingIndex.value !== -1) {
+      const deltaX = Math.abs(touch.clientX - touchStartPoint.value.x);
+      const deltaY = Math.abs(touch.clientY - touchStartPoint.value.y);
+
+      if (deltaX > TOUCH_CANCEL_MOVE_PX || deltaY > TOUCH_CANCEL_MOVE_PX) {
+        touchPendingIndex.value = -1;
+        if (touchHoldTimer) {
+          clearTimeout(touchHoldTimer);
+          touchHoldTimer = null;
+        }
+      }
+    }
+    return;
+  }
+
   e.preventDefault();
 
-  const newIndex = getIndexFromY(e.touches[0].clientY);
+  const newIndex = getIndexFromY(touch.clientY);
   if (newIndex !== -1 && newIndex !== draggingIndex.value) {
     moveTo(draggingIndex.value, newIndex);
     draggingIndex.value = newIndex;
@@ -97,6 +133,11 @@ function onTouchMove(e) {
 }
 
 function onTouchEnd() {
+  touchPendingIndex.value = -1;
+  if (touchHoldTimer) {
+    clearTimeout(touchHoldTimer);
+    touchHoldTimer = null;
+  }
   draggingIndex.value = -1;
 }
 
@@ -138,7 +179,7 @@ async function handleSave() {
     width="480px"
     destroy-on-close
   >
-    <div class="order-tip">拖拽主机或使用箭头按钮调整顺序，排序将应用于所有页面。</div>
+    <div class="order-tip">触摸屏长按后可拖拽，或使用箭头按钮调整顺序，排序将应用于所有页面。</div>
     <div
       ref="listRef"
       class="order-list"
