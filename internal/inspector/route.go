@@ -22,6 +22,7 @@ func RegisterRoute(base string, r *gin.Engine) {
 		protectedAPI.POST("/hosts/create", handler.CreateHost)
 		protectedAPI.POST("/hosts/update/:id", handler.UpdateHost)
 		protectedAPI.POST("/hosts/delete/:id", handler.DeleteHost)
+		protectedAPI.POST("/hosts/order", handler.UpdateHostOrder)
 
 		protectedAPI.GET("/data", handler.QueryData)
 		protectedAPI.GET("/settings", handler.GetUserSettings)

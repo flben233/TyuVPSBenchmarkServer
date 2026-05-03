@@ -1,5 +1,5 @@
 <script setup>
-import { ArrowLeft, Plus, RefreshRight, Setting } from "@element-plus/icons-vue";
+import { ArrowLeft, Plus, Sort, RefreshRight, Setting } from "@element-plus/icons-vue";
 import { ElMessageBox } from "element-plus";
 import {
   exceedsInspectorPointLimit,
@@ -58,6 +58,7 @@ const settings = ref(getEmptyInspectorSettings());
 const addDialogVisible = ref(false);
 const editDialogVisible = ref(false);
 const settingsDialogVisible = ref(false);
+const orderDialogVisible = ref(false);
 const selectedHost = ref(null);
 const refreshTimer = ref(null);
 const defaultQuery = getDefaultInspectorQuery();
@@ -499,6 +500,10 @@ async function handleSaveSettings(payload) {
   success("设置已保存");
 }
 
+async function handleOrderSaved() {
+  await loadInspectorData({ silent: true });
+}
+
 watch(
   () => token.value,
   async (currentToken) => {
@@ -543,6 +548,7 @@ onUnmounted(() => {
         <div class="toolbar">
           <el-button class="tool-btn" link :icon="ArrowLeft" @click="router.back()"/>
           <el-button class="tool-btn" link :icon="RefreshRight" :loading="refreshing" @click="loadInspectorData({ silent: true })"/>
+          <el-button v-if="!readOnly" class="tool-btn" link :icon="Sort" @click="orderDialogVisible = true" :disabled="!isLoggedIn"/>
           <el-button v-if="!readOnly" class="tool-btn" link :icon="Setting" @click="settingsDialogVisible = true" :disabled="!isLoggedIn"/>
           <el-button v-if="!readOnly" class="tool-btn" link type="primary" :icon="Plus" @click="addDialogVisible = true" :disabled="!isLoggedIn"/>
         </div>
@@ -634,6 +640,13 @@ onUnmounted(() => {
       :owner-id="ownerId"
       :submitting="submittingSettings"
       @save="handleSaveSettings"
+    />
+
+    <InspectorHostOrderDialog
+      :class="childTheme"
+      v-model="orderDialogVisible"
+      :hosts="hosts"
+      @saved="handleOrderSaved"
     />
   </div>
 </template>

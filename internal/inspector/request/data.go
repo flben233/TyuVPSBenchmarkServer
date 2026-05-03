@@ -50,6 +50,10 @@ type TestNotifyRequest struct {
 	NotifyURL string `json:"notify_url" binding:"required"`
 }
 
+type UpdateHostOrderRequest struct {
+	HostIDs []string `json:"host_ids" binding:"required"`
+}
+
 type VisitorPageRequest struct {
 	Start    int64  `form:"start" binding:"required"`
 	End      int64  `form:"end" binding:"required"`

@@ -4,6 +4,7 @@ import (
 	"VPSBenchmarkBackend/internal/common"
 	"VPSBenchmarkBackend/internal/inspector/request"
 	"VPSBenchmarkBackend/internal/inspector/service"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -136,6 +137,49 @@ func ListHosts(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, common.Success(hosts))
+}
+
+// UpdateHostOrder
+//
+// @Summary Update Inspect Host Order
+// @Tags inspector
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body request.UpdateHostOrderRequest true "Host IDs in desired order"
+// @Success 200 {object} common.APIResponse[any]
+// @Router /inspector/hosts/order [post]
+func UpdateHostOrder(ctx *gin.Context) {
+	var req request.UpdateHostOrderRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, err.Error()))
+		return
+	}
+
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, common.Error(common.BadRequestCode, "User not authenticated"))
+		return
+	}
+
+	// 将字符串ID转换为int64
+	hostIDs := make([]int64, len(req.HostIDs))
+	for i, idStr := range req.HostIDs {
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, common.Error(common.BadRequestCode, fmt.Sprintf("invalid host id: %s", idStr)))
+			return
+		}
+		hostIDs[i] = id
+	}
+
+	err := service.UpdateHostOrder(userID.(int64), hostIDs)
+	if err != nil {
+		common.DefaultErrorHandler(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, common.Success[any](nil))
 }
 
 // PutData

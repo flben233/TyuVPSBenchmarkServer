@@ -148,6 +148,15 @@ export function useInspector() {
     );
   }
 
+  async function updateHostOrder(hostIds) {
+    return request(
+      "/inspector/hosts/order",
+      "POST",
+      "更新排序失败",
+      { body: { host_ids: hostIds } }
+    );
+  }
+
   async function getSettings() {
     const result = await request(
       "/inspector/settings",
@@ -234,6 +243,7 @@ export function useInspector() {
     createHost,
     updateHost,
     deleteHost,
+    updateHostOrder,
     getSettings,
     updateSettings,
     testNotify,
