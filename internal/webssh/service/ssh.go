@@ -248,10 +248,9 @@ func (s *SSHSession) ReadOutput(sendOutput func([]byte), sendMsg func(*model.Ser
 			if s.sideOut != nil {
 				select {
 				case <-s.sideOut.SideClose:
-					fmt.Println("Side buffer closed, stop sending data")
-					// 释放锁
+					fmt.Println(string(data))
 				case s.sideOut.Buf <- data:
-					fmt.Println("Sent data to side buffer")
+					fmt.Println("Sent data to side buffer:", string(data))
 				}
 			}
 			s.sideMu.Unlock()

@@ -65,14 +65,14 @@ func runToolCommand(ctx context.Context, request mcp.CallToolRequest) (string, e
 	sideBuffer := session.SetSideBuffer()
 	defer session.ClearSideBuffer()
 
-	if err := session.WriteInput([]byte(command + "; echo '" + commandSentinel + "'" + "\n")); err != nil {
-		return "", err
-	}
-
 	reader := bufio.NewReader(sideBuffer)
 	result := ""
 	timer := time.After(time.Duration(timeout) * time.Second)
 	outputCh := readOutput(reader)
+	finalCommand := command + "; echo '\n" + commandSentinel + "'"
+	if err := session.WriteInput([]byte(finalCommand + "\n")); err != nil {
+		return "", err
+	}
 	for {
 		select {
 		case <-timer:
@@ -84,6 +84,9 @@ func runToolCommand(ctx context.Context, request mcp.CallToolRequest) (string, e
 				return result, nil
 			}
 			fmt.Println(line)
+			if strings.Contains(line, finalCommand) {
+				continue
+			}
 			if strings.TrimSpace(line) == commandSentinel {
 				return result, nil
 			}
