@@ -83,7 +83,6 @@ func runToolCommand(ctx context.Context, request mcp.CallToolRequest) (string, e
 			if !ok {
 				return result, nil
 			}
-			fmt.Println(line)
 			if strings.Contains(line, finalCommand) {
 				continue
 			}
