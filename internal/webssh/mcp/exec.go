@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const commandSentinel = "miku_chan_daisuki"
+const injectPrefix = "[Injection Message]"
 
 func CommandTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	result, err := runToolCommand(ctx, request)
@@ -69,7 +69,7 @@ func runToolCommand(ctx context.Context, request mcp.CallToolRequest) (string, e
 	result := ""
 	timer := time.After(time.Duration(timeout) * time.Second)
 	outputCh := readOutput(reader)
-	finalCommand := command + "; echo -e '\\n" + commandSentinel + "'"
+	finalCommand := command + "; echo -e '\\n[Injection Message] Command execution finished. Return code:' $?"
 	if err := session.WriteInput([]byte(finalCommand + "\n")); err != nil {
 		return "", err
 	}
@@ -86,10 +86,10 @@ func runToolCommand(ctx context.Context, request mcp.CallToolRequest) (string, e
 			if strings.Contains(line, finalCommand) {
 				continue
 			}
-			if strings.TrimSpace(line) == commandSentinel {
+			result += line
+			if strings.Index(line, injectPrefix) == 0 {
 				return result, nil
 			}
-			result += line
 		}
 	}
 }
