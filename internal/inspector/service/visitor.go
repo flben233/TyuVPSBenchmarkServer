@@ -45,6 +45,9 @@ func GetVisitorPage(ownerID, start, end int64, interval string) (*response.Visit
 		return nil, err
 	}
 
+	// 按 custom_order 和名称排序
+	util.SortHosts(hosts)
+
 	visitorHosts := make([]response.VisitorHostData, 0, len(allowedHostSet))
 	for _, host := range hosts {
 		if _, ok := allowedHostSet[host.ID]; !ok {

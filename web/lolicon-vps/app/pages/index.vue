@@ -135,7 +135,6 @@ onUnmounted(() => {
               </div>
             </div>
           </ClientOnly>
-          <el-divider />
           <el-link @click="useRouter().push('/about')" type="primary">关于本站</el-link>
         </Profile>
       </el-col>

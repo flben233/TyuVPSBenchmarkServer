@@ -195,11 +195,40 @@ func DeleteHost(userID int64, hostID int64) error {
 	return store.DeleteHost(hostID)
 }
 
+func UpdateHostOrder(userID int64, hostIDs []int64) error {
+	// 校验所有主机属于当前用户
+	ids := store.GetHostIDByUser(userID)
+	idSet := make(map[int64]bool)
+	for _, id := range ids {
+		idSet[id] = true
+	}
+	for _, hostID := range hostIDs {
+		if !idSet[hostID] {
+			return &common.InvalidParamError{Message: fmt.Sprintf("host %d not found or not owned by user", hostID)}
+		}
+	}
+
+	// 更新custom_order，使用索引作为排序值
+	for i, hostID := range hostIDs {
+		host, err := store.GetHostByID(hostID)
+		if err != nil {
+			return err
+		}
+		host.CustomOrder = i
+		store.UpdateHost(host)
+	}
+	return nil
+}
+
 func ListHosts(userID int64) ([]response.HostListResponse, error) {
 	hosts, err := store.ListHostsByUser(userID)
 	if err != nil {
 		return nil, err
 	}
+
+	// 按 custom_order 和名称排序
+	util.SortHosts(hosts)
+
 	inspectHosts := make([]response.HostListResponse, len(hosts))
 	for i, host := range hosts {
 		inspectHosts[i] = response.HostListResponse{
@@ -213,6 +242,7 @@ func ListHosts(userID int64) ([]response.HostListResponse, error) {
 			NotifyTolerance:      host.NotifyTolerance,
 			TrafficSettlementDay: host.TrafficSettlementDay,
 			MonthlyTrafficLimit:  host.MonthlyTrafficLimit,
+			CustomOrder:          host.CustomOrder,
 			LastUpdate:           host.LastUpdate,
 			ServerStatus:         host.ServerStatus,
 		}
@@ -261,6 +291,10 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 	if err != nil {
 		return nil, err
 	}
+
+	// 按 custom_order 和名称排序
+	util.SortHosts(hosts)
+
 	data := make([]*response.HostData, len(hosts))
 	for i, host := range hosts {
 		withLossPoints := (end - start) <= 24*3600*1000000000
@@ -304,6 +338,7 @@ func QueryData(userID int64, start, end int64, interval string) ([]*response.Hos
 			NotifyTolerance:      host.NotifyTolerance,
 			TrafficSettlementDay: host.TrafficSettlementDay,
 			MonthlyTrafficLimit:  host.MonthlyTrafficLimit,
+			CustomOrder:          host.CustomOrder,
 			TrafficUsage:         trafficUsage,
 			LatestPing:           latestPing,
 			LastUpdate:           host.LastUpdate,

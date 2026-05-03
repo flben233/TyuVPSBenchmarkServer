@@ -16,6 +16,7 @@ type InspectHost struct {
 	NotifyTolerance      int64     `json:"notify_tolerance"` // 0: 立刻通知, >0: 当异常值超过该值才通知
 	TrafficSettlementDay int       `json:"traffic_settlement_day" gorm:"default:0"`
 	MonthlyTrafficLimit  float64   `json:"monthly_traffic_limit" gorm:"default:0"`
+	CustomOrder          int       `json:"custom_order" gorm:"default:2147483647"`
 	LastUpdate           time.Time `json:"last_update"`
 	perfmon.ServerStatus
 }

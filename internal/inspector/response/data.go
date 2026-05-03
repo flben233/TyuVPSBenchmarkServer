@@ -20,6 +20,7 @@ type HostData struct {
 	NotifyTolerance      int64           `json:"notify_tolerance"`
 	TrafficSettlementDay int             `json:"traffic_settlement_day"`
 	MonthlyTrafficLimit  float64         `json:"monthly_traffic_limit"`
+	CustomOrder          int             `json:"custom_order"`
 	TrafficUsage         float64         `json:"traffic_usage"`
 	LastUpdate           time.Time       `json:"last_update"`
 	perfmon.ServerStatus
@@ -36,6 +37,7 @@ type HostListResponse struct {
 	NotifyTolerance      int64     `json:"notify_tolerance"`
 	TrafficSettlementDay int       `json:"traffic_settlement_day"`
 	MonthlyTrafficLimit  float64   `json:"monthly_traffic_limit"`
+	CustomOrder          int       `json:"custom_order"`
 	LastUpdate           time.Time `json:"last_update"`
 	perfmon.ServerStatus
 }

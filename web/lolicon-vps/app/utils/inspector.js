@@ -199,6 +199,7 @@ export function normalizeHost(host = {}) {
     notifyTolerance: normalizeNotifyTolerance(host.notify_tolerance),
     trafficSettlementDay: toNumber(host.traffic_settlement_day, 0),
     monthlyTrafficLimit: toNumber(host.monthly_traffic_limit, 0),
+    customOrder: toNumber(host.custom_order, 2147483647),
     latestPing: toNumber(host.latest_ping),
     uptimeSeconds: toNumber(host.uptime_seconds),
     lastUpdate: lastUpdate,
@@ -264,7 +265,7 @@ export function normalizeVisitorPage(payload = {}) {
     ownerName: payload.owner_name || "",
     ownerId: payload.owner_id || "",
     bgUrl: payload.bg_url || "",
-    hosts: sortHostsByName(hosts),
+    hosts: hosts,
   };
 }
 
@@ -300,25 +301,7 @@ export function mergeHostData(hosts = [], queryData = []) {
     };
   });
 
-  return sortHostsByName(merged);
-}
-
-export function sortHostsByName(hosts = []) {
-  return [...hosts].sort((left, right) => {
-    const leftName = String(left?.name || "");
-    const rightName = String(right?.name || "");
-    const compared = leftName.localeCompare(rightName, "zh-Hans-CN-u-co-pinyin", {
-      sensitivity: "base",
-      numeric: true,
-    });
-    if (compared !== 0) {
-      return compared;
-    }
-
-    return String(left?.id || "").localeCompare(String(right?.id || ""), "zh-Hans-CN", {
-      numeric: true,
-    });
-  });
+  return merged;
 }
 
 export function formatPercent(value, digits = 1) {

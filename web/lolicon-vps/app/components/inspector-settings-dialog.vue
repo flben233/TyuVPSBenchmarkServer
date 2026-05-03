@@ -68,12 +68,10 @@ onMounted(() => {
 });
 
 const hostOptions = computed(() =>
-  [...props.hosts]
-    .sort((left, right) => String(left.name || "").localeCompare(String(right.name || ""), "zh-CN"))
-    .map((host) => ({
-      value: String(host.id),
-      label: host.name || `主机 ${host.id}`,
-    })),
+  props.hosts.map((host) => ({
+    value: String(host.id),
+    label: host.name || `主机 ${host.id}`,
+  })),
 );
 
 function openBuilder() {
