@@ -465,24 +465,23 @@ async function handleUpdateHost(payload) {
 }
 
 async function handleDeleteHost(host) {
-  try {
-    ElMessageBox.confirm(`确定删除服务器「${host.name}」吗？`, "删除确认", {
-      type: "warning",
-      confirmButtonText: "删除",
-      cancelButtonText: "取消",
-    });
-  } catch {
-    return;
-  }
+  ElMessageBox.confirm(`确定删除服务器「${host.name}」吗？`, "删除确认", {
+    type: "warning",
+    confirmButtonText: "删除",
+    cancelButtonText: "取消",
+  }).then(() => {
+    return deleteHost(host.id);
+  }).then((result) => {
+    if (!result.success) {
+      err(result.message || "删除服务器失败");
+      return;
+    }
 
-  const result = await deleteHost(host.id);
-  if (!result.success) {
-    err(result.message || "删除服务器失败");
-    return;
-  }
-
-  success("服务器已删除");
-  await loadInspectorData({ silent: true });
+    success("服务器已删除");
+    loadInspectorData({ silent: true });
+  }).catch(() => {
+    // 用户取消删除或发生错误时不做任何操作
+  });
 }
 
 async function handleSaveSettings(payload) {
