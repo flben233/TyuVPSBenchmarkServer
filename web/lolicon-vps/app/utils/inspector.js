@@ -43,7 +43,7 @@ export const NOTIFY_PRESET_FIELDS = {
     description: "填写 Bot Token 与 Chat ID。",
     fields: [
       { key: "botToken", label: "Bot Token", required: true, placeholder: "123456:ABCDEF" },
-      { key: "chatId", label: "Chat ID", required: true, placeholder: "请输入 Chat ID" },
+      { key: "chatId", label: "Chat ID", required: false, placeholder: "Chat ID，可不填，此时需要先给自己的机器人发一条消息" },
     ],
   },
   qq: {
