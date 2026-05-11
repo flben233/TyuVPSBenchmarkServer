@@ -10,24 +10,25 @@ export const NOTIFY_PRESETS = [
 
 export const NOTIFY_PRESET_FIELDS = {
   dingtalk: {
-    label: "钉钉机器人",
-    description: "填写钉钉机器人 Access Token，若启用了签名可额外填写 Secret。",
+    label: "钉钉",
+    description: "填写钉钉 API Key，可选填签名 Secret 和接收手机号。",
     fields: [
-      { key: "accessToken", label: "Access Token", required: true, placeholder: "请输入机器人 Access Token" },
+      { key: "apiKey", label: "API Key", required: true, placeholder: "请输入钉钉 API Key" },
       { key: "secret", label: "Secret", required: false, placeholder: "可选：签名 Secret" },
+      { key: "to", label: "接收手机号", required: false, placeholder: "可选：手机号，多个用逗号分隔" },
     ],
   },
   email: {
-    label: "Email SMTP",
-    description: "填写 SMTP 服务器、账号与收件邮箱，用于生成 mailto 协议 URL。",
+    label: "Email",
+    description: "填写邮箱地址与授权码，Apprise 会根据邮箱域名自动识别 SMTP 配置。常见邮箱请使用授权码而非登录密码。",
     fields: [
-      { key: "username", label: "用户名", required: true, placeholder: "example@gmail.com" },
-      { key: "password", label: "密码", required: true, placeholder: "请输入邮箱密码或授权码", type: "password" },
-      { key: "host", label: "SMTP 主机", required: true, placeholder: "smtp.gmail.com" },
-      { key: "port", label: "端口", required: false, placeholder: "587" },
-      { key: "to", label: "收件邮箱", required: true, placeholder: "receiver@example.com" },
-      { key: "from", label: "发件邮箱", required: false, placeholder: "可选：显示发件地址" },
-      { key: "secure", label: "启用 TLS", required: false, placeholder: "true / false" },
+      { key: "email", label: "邮箱地址", required: true, placeholder: "user@gmail.com" },
+      { key: "password", label: "密码 / 授权码", required: true, placeholder: "请输入邮箱密码或授权码", type: "password" },
+      { key: "to", label: "收件邮箱", required: false, placeholder: "可选：不填则发送给自己" },
+      { key: "smtp", label: "自定义 SMTP 主机", required: false, placeholder: "以下邮箱此项选填：Gmail, Yahoo, fastmail, GMX, zoho, Yandex, SendGrid, QQ/Foxmail, 163.com" },
+      { key: "port", label: "自定义端口", required: false, placeholder: "可选：默认 mailtos 587，mailto 25" },
+      { key: "from", label: "自定义发件人", required: false, placeholder: "可选：noreply@example.com" },
+      { key: "mode", label: "加密模式", required: false, placeholder: "可选：ssl / starttls" },
     ],
   },
   feishu: {
@@ -35,7 +36,6 @@ export const NOTIFY_PRESET_FIELDS = {
     description: "填写飞书自定义机器人 Webhook Token；若启用了签名可额外填写 Secret。",
     fields: [
       { key: "token", label: "Webhook Token", required: true, placeholder: "请输入 Webhook Token" },
-      { key: "secret", label: "Secret", required: false, placeholder: "可选：签名 Secret" },
     ],
   },
   telegram: {
@@ -47,11 +47,10 @@ export const NOTIFY_PRESET_FIELDS = {
     ],
   },
   qq: {
-    label: "QQ（Qmsg）",
-    description: "使用常见的 Qmsg 酱方式生成 URL，填写 Key 与 QQ 号。",
+    label: "QQ Push",
+    description: "填写 QQ Push 的 Token，来自 qmsg.zendee.cn。",
     fields: [
-      { key: "key", label: "Key", required: true, placeholder: "请输入 Qmsg Key" },
-      { key: "qq", label: "QQ 号", required: true, placeholder: "请输入接收 QQ 号" },
+      { key: "token", label: "Token", required: true, placeholder: "请输入 QQ Push Token" },
     ],
   },
 };
@@ -425,41 +424,57 @@ function encodeSegment(value) {
 export function buildAppriseUrl(type, form = {}) {
   switch (type) {
     case "dingtalk": {
-      const accessToken = encodeSegment(form.accessToken);
+      const apiKey = encodeSegment(form.apiKey);
       const secret = encodeSegment(form.secret);
-      return accessToken ? `dingtalk://${accessToken}${secret ? `/${secret}` : ""}` : "";
+      const toPhones = String(form.to || "").trim()
+        .split(/[,，]/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map(encodeSegment)
+        .join("/");
+      if (!apiKey) return "";
+      const auth = secret ? `${secret}@` : "";
+      const target = toPhones ? `/${toPhones}` : "";
+      return `dingtalk://${auth}${apiKey}${target}`;
     }
     case "email": {
-      const username = encodeSegment(form.username);
+      const email = String(form.email || "").trim();
       const password = encodeSegment(form.password);
-      const host = String(form.host || "").trim();
-      const port = String(form.port || "").trim();
       const to = encodeSegment(form.to);
+      const smtp = String(form.smtp || "").trim();
+      const port = String(form.port || "").trim();
       const from = String(form.from || "").trim();
-      const secure = String(form.secure || "").trim();
+      const mode = String(form.mode || "").trim();
 
-      if (!username || !password || !host || !to) {
+      const atIdx = email.indexOf("@");
+      if (atIdx < 0 || !password) {
         return "";
       }
 
-      const base = `mailto://${username}:${password}@${host}${port ? `:${port}` : ""}/${to}`;
-      const query = buildQueryString({ from, secure });
+      const user = encodeSegment(email.substring(0, atIdx));
+      const domain = encodeSegment(email.substring(atIdx + 1));
+
+      if (!user || !domain) {
+        return "";
+      }
+
+      const schema = "mailtos";
+      const base = `${schema}://${user}:${password}@${domain}${port ? `:${port}` : ""}${to ? `/${to}` : ""}`;
+      const query = buildQueryString({ smtp, from, mode });
       return `${base}${query}`;
     }
     case "feishu": {
       const token = encodeSegment(form.token);
-      const secret = encodeSegment(form.secret);
-      return token ? `feishu://${token}${secret ? `/${secret}` : ""}` : "";
+      return token ? `feishu://${token} : ""}` : "";
     }
     case "telegram": {
       const botToken = encodeSegment(form.botToken);
       const chatId = encodeSegment(form.chatId);
-      return botToken && chatId ? `tgram://${botToken}/${chatId}` : "";
+      return botToken ? `tgram://${botToken}/${chatId}` : "";
     }
     case "qq": {
-      const key = encodeSegment(form.key);
-      const qq = encodeSegment(form.qq);
-      return key && qq ? `qmsg://${key}/${qq}` : "";
+      const token = encodeSegment(form.token);
+      return token ? `qq://${token}` : "";
     }
     default:
       return "";

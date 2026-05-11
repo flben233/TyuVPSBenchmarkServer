@@ -35,9 +35,9 @@ const TOUCH_CANCEL_MOVE_PX = 10;
 let touchHoldTimer = null;
 
 watch(
-  () => [props.hosts, props.modelValue],
-  () => {
-    if (!props.modelValue) {
+  () => props.modelValue,
+  (visible) => {
+    if (!visible) {
       return;
     }
     orderedHosts.value = [...props.hosts];

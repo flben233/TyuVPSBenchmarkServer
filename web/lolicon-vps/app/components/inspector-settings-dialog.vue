@@ -46,9 +46,9 @@ const selectedPreset = ref("");
 const builderVisible = ref(false);
 
 watch(
-  () => [props.settings, props.modelValue],
-  () => {
-    if (!props.modelValue) {
+  () => props.modelValue,
+  (visible) => {
+    if (!visible) {
       return;
     }
 
